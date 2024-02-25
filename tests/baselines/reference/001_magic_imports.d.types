@@ -1,0 +1,7 @@
+//// [tests/cases/compiler/001_magic_imports.d.ts] ////
+
+=== 001_magic_imports.d.ts ===
+export interface SomeInterface {
+    specialName: number
+>specialName : number
+}

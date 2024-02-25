@@ -1,0 +1,9 @@
+//// [tests/cases/compiler/001_magic_imports.d.ts] ////
+
+=== 001_magic_imports.d.ts ===
+export interface SomeInterface {
+>SomeInterface : Symbol(SomeInterface, Decl(001_magic_imports.d.ts, 0, 0))
+
+    specialName: number
+>specialName : Symbol(SomeInterface.specialName, Decl(001_magic_imports.d.ts, 0, 32))
+}

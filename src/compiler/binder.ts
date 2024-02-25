@@ -38,6 +38,7 @@ import {
     createDiagnosticForNodeInSourceFile,
     createFileDiagnostic,
     createQueue,
+    createSourceFile,
     createSymbolTable,
     Debug,
     Declaration,
@@ -64,6 +65,7 @@ import {
     ExportSpecifier,
     Expression,
     ExpressionStatement,
+    factory,
     findAncestor,
     FlowFlags,
     FlowLabel,
@@ -505,6 +507,10 @@ const binder = /* @__PURE__ */ createBinder();
 export function bindSourceFile(file: SourceFile, options: CompilerOptions) {
     performance.mark("beforeBind");
     perfLogger?.logStartBindFile("" + file.fileName);
+
+    if (file.fileName.endsWith("magic.ts")) {
+        file.imports = (file.imports ?? []).concat([factory.createStringLiteral("001_magic_virtual")]);
+    }
     binder(file, options);
     perfLogger?.logStopBindFile();
     performance.mark("afterBind");
@@ -754,7 +760,7 @@ function createBinder(): (file: SourceFile, options: CompilerOptions) => void {
         // The exported symbol for an export default function/class node is always named "default"
         const name = isComputedName ? InternalSymbolName.Computed
             : isDefaultExport && parent ? InternalSymbolName.Default
-            : getDeclarationName(node);
+                : getDeclarationName(node);
 
         let symbol: Symbol | undefined;
         if (name === undefined) {
@@ -1032,6 +1038,32 @@ function createBinder(): (file: SourceFile, options: CompilerOptions) => void {
             if (node.kind === SyntaxKind.SourceFile) {
                 node.flags |= emitFlags;
                 (node as SourceFile).endFlowNode = currentFlow;
+
+                if (node.fileName.endsWith("magic.ts")) {
+                    const spellProp = factory.createPropertySignature(
+                        /*modifiers*/ undefined,
+                        factory.createIdentifier("spell"),
+                        /*questionToken*/ undefined,
+                        factory.createKeywordTypeNode(SyntaxKind.StringKeyword)
+                    );
+
+                    const magicDecl = factory.createInterfaceDeclaration(
+                        /*modifiers*/ undefined,
+                        factory.createIdentifier("MagicType"),
+                        /*typeParameters*/ undefined,
+                        /*heritageClauses*/ undefined,
+                        [spellProp]
+                    );
+
+                    // const magicFile = createSourceFile("001_magic_virtual.d.ts", "export interface MagicType { spell: string }", ScriptTarget.ESNext);
+                    // bindAnonymousDeclaration(magicFile, SymbolFlags.ValueModule, `"${removeFileExtension(file.fileName)}"` as __String);
+
+
+
+                    // bindBlockScopedDeclaration(magicDecl, SymbolFlags.Interface, SymbolFlags.InterfaceExcludes);
+                    // bindWorker(magicDecl);
+                    // bindWorker(spellProp);
+                }
             }
 
             if (currentReturnTarget) {
@@ -1203,7 +1235,7 @@ function createBinder(): (file: SourceFile, options: CompilerOptions) => void {
                 // Carry over whether we are in an assignment pattern of Object and Array literals
                 // as well as their children that are valid assignment targets.
                 inAssignmentPattern = saveInAssignmentPattern;
-                // falls through
+            // falls through
             default:
                 bindEachChild(node);
                 break;
@@ -1226,7 +1258,7 @@ function createBinder(): (file: SourceFile, options: CompilerOptions) => void {
                 if (isJSDocTypeAssertion(expr)) {
                     return false;
                 }
-                // fallthrough
+            // fallthrough
             case SyntaxKind.NonNullExpression:
                 return isNarrowingExpression((expr as ParenthesizedExpression | NonNullExpression).expression);
             case SyntaxKind.BinaryExpression:
@@ -2364,7 +2396,7 @@ function createBinder(): (file: SourceFile, options: CompilerOptions) => void {
                     declareModuleMember(node, symbolFlags, symbolExcludes);
                     break;
                 }
-                // falls through
+            // falls through
             default:
                 Debug.assertNode(blockScopeContainer, canHaveLocals);
                 if (!blockScopeContainer.locals) {
@@ -2417,7 +2449,7 @@ function createBinder(): (file: SourceFile, options: CompilerOptions) => void {
                         case AssignmentDeclarationKind.Property:
                             container = isExportsOrModuleExportsOrAlias(file, declName.parent.expression) ? file
                                 : isPropertyAccessExpression(declName.parent.expression) ? declName.parent.expression.name
-                                : declName.parent.expression;
+                                    : declName.parent.expression;
                             break;
                         case AssignmentDeclarationKind.None:
                             return Debug.fail("Shouldn't have detected typedef or enum on non-assignment declaration");
@@ -2753,6 +2785,7 @@ function createBinder(): (file: SourceFile, options: CompilerOptions) => void {
     }
 
     function bindWorker(node: Node) {
+
         switch (node.kind) {
             /* Strict mode checks */
             case SyntaxKind.Identifier:
@@ -2767,7 +2800,7 @@ function createBinder(): (file: SourceFile, options: CompilerOptions) => void {
                     bindBlockScopedDeclaration(parentNode as Declaration, SymbolFlags.TypeAlias, SymbolFlags.TypeAliasExcludes);
                     break;
                 }
-                // falls through
+            // falls through
             case SyntaxKind.ThisKeyword:
                 // TODO: Why use `isExpression` here? both Identifier and ThisKeyword are expressions.
                 if (currentFlow && (isExpression(node) || parent.kind === SyntaxKind.ShorthandPropertyAssignment)) {
@@ -2868,6 +2901,13 @@ function createBinder(): (file: SourceFile, options: CompilerOptions) => void {
                 return bindVariableDeclarationOrBindingElement(node as BindingElement);
             case SyntaxKind.PropertyDeclaration:
             case SyntaxKind.PropertySignature:
+                const propName = ((node as PropertySignature).name as Identifier).escapedText;
+                if (propName === "specialName") {
+                    console.log("SPECIAL");
+                }
+                if (propName === "spell") {
+                    console.log(`SPELL at ${node.pos} (from binder.ts 2899)`);
+                }
                 return bindPropertyWorker(node as PropertyDeclaration | PropertySignature);
             case SyntaxKind.PropertyAssignment:
             case SyntaxKind.ShorthandPropertyAssignment:
@@ -2971,7 +3011,7 @@ function createBinder(): (file: SourceFile, options: CompilerOptions) => void {
                 if (!isFunctionLikeOrClassStaticBlockDeclaration(node.parent)) {
                     return;
                 }
-                // falls through
+            // falls through
             case SyntaxKind.ModuleBlock:
                 return updateStrictModeStatementList((node as Block | ModuleBlock).statements);
 
@@ -2982,7 +3022,7 @@ function createBinder(): (file: SourceFile, options: CompilerOptions) => void {
                 if (node.parent.kind !== SyntaxKind.JSDocTypeLiteral) {
                     break;
                 }
-                // falls through
+            // falls through
             case SyntaxKind.JSDocPropertyTag:
                 const propTag = node as JSDocPropertyLikeTag;
                 const flags = propTag.isBracketed || propTag.typeExpression && propTag.typeExpression.type.kind === SyntaxKind.JSDocOptionalType ?
@@ -3010,6 +3050,9 @@ function createBinder(): (file: SourceFile, options: CompilerOptions) => void {
     }
 
     function bindSourceFileIfExternalModule() {
+        if (file.fileName.includes("001")) {
+            console.log("bindSourceFileIfExternalModule", file.fileName);
+        }
         setExportContextFlag(file);
         if (isExternalModule(file)) {
             bindSourceFileAsExternalModule();
@@ -3055,8 +3098,8 @@ function createBinder(): (file: SourceFile, options: CompilerOptions) => void {
         }
         const diag = !isSourceFile(node.parent) ? Diagnostics.Global_module_exports_may_only_appear_at_top_level
             : !isExternalModule(node.parent) ? Diagnostics.Global_module_exports_may_only_appear_in_module_files
-            : !node.parent.isDeclarationFile ? Diagnostics.Global_module_exports_may_only_appear_in_declaration_files
-            : undefined;
+                : !node.parent.isDeclarationFile ? Diagnostics.Global_module_exports_may_only_appear_in_declaration_files
+                    : undefined;
         if (diag) {
             file.bindDiagnostics.push(createDiagnosticForNode(node, diag));
         }
@@ -3453,9 +3496,9 @@ function createBinder(): (file: SourceFile, options: CompilerOptions) => void {
         }
         let init = !node ? undefined :
             isVariableDeclaration(node) ? node.initializer :
-            isBinaryExpression(node) ? node.right :
-            isPropertyAccessExpression(node) && isBinaryExpression(node.parent) ? node.parent.right :
-            undefined;
+                isBinaryExpression(node) ? node.right :
+                    isPropertyAccessExpression(node) && isBinaryExpression(node.parent) ? node.parent.right :
+                        undefined;
         init = init && getRightMostAssignedExpression(init);
         if (init) {
             const isPrototypeAssignment = isPrototypeAccess(isVariableDeclaration(node!) ? node.name : isBinaryExpression(node!) ? node.left : node!);
@@ -3825,7 +3868,7 @@ export function getContainerFlags(node: Node): ContainerFlags {
             if (isObjectLiteralOrClassExpressionMethodOrAccessor(node)) {
                 return ContainerFlags.IsContainer | ContainerFlags.IsControlFlowContainer | ContainerFlags.HasLocals | ContainerFlags.IsFunctionLike | ContainerFlags.IsObjectLiteralOrClassExpressionMethodOrAccessor;
             }
-            // falls through
+        // falls through
         case SyntaxKind.Constructor:
         case SyntaxKind.FunctionDeclaration:
         case SyntaxKind.MethodSignature:

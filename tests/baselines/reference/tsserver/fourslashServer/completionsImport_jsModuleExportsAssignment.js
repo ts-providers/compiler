@@ -1032,19 +1032,6 @@ Info seq  [hh:mm:ss:mss] response:
             "sortText": "15"
           },
           {
-            "name": "changeDefaults",
-            "kind": "property",
-            "kindModifiers": "",
-            "sortText": "16",
-            "hasAction": true,
-            "source": "/third_party/marked/src/defaults",
-            "data": {
-              "exportName": "changeDefaults",
-              "exportMapKey": "14 * changeDefaults ",
-              "fileName": "/third_party/marked/src/defaults.js"
-            }
-          },
-          {
             "name": "defaults",
             "kind": "alias",
             "kindModifiers": "",
@@ -1067,6 +1054,19 @@ Info seq  [hh:mm:ss:mss] response:
             "data": {
               "exportName": "getDefaults",
               "exportMapKey": "11 * getDefaults ",
+              "fileName": "/third_party/marked/src/defaults.js"
+            }
+          },
+          {
+            "name": "changeDefaults",
+            "kind": "property",
+            "kindModifiers": "",
+            "sortText": "16",
+            "hasAction": true,
+            "source": "/third_party/marked/src/defaults",
+            "data": {
+              "exportName": "changeDefaults",
+              "exportMapKey": "14 * changeDefaults ",
               "fileName": "/third_party/marked/src/defaults.js"
             }
           },
@@ -1916,19 +1916,6 @@ Info seq  [hh:mm:ss:mss] response:
             "sortText": "15"
           },
           {
-            "name": "changeDefaults",
-            "kind": "property",
-            "kindModifiers": "",
-            "sortText": "16",
-            "hasAction": true,
-            "source": "/third_party/marked/src/defaults",
-            "data": {
-              "exportName": "changeDefaults",
-              "exportMapKey": "14 * changeDefaults ",
-              "fileName": "/third_party/marked/src/defaults.js"
-            }
-          },
-          {
             "name": "defaults",
             "kind": "alias",
             "kindModifiers": "",
@@ -1951,6 +1938,19 @@ Info seq  [hh:mm:ss:mss] response:
             "data": {
               "exportName": "getDefaults",
               "exportMapKey": "11 * getDefaults ",
+              "fileName": "/third_party/marked/src/defaults.js"
+            }
+          },
+          {
+            "name": "changeDefaults",
+            "kind": "property",
+            "kindModifiers": "",
+            "sortText": "16",
+            "hasAction": true,
+            "source": "/third_party/marked/src/defaults",
+            "data": {
+              "exportName": "changeDefaults",
+              "exportMapKey": "14 * changeDefaults ",
               "fileName": "/third_party/marked/src/defaults.js"
             }
           },

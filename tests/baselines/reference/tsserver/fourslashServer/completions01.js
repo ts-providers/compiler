@@ -266,6 +266,12 @@ Info seq  [hh:mm:ss:mss] response:
         "isNewIdentifierLocation": false,
         "entries": [
           {
+            "name": "concat",
+            "kind": "method",
+            "kindModifiers": "declare",
+            "sortText": "11"
+          },
+          {
             "name": "charAt",
             "kind": "method",
             "kindModifiers": "declare",
@@ -273,12 +279,6 @@ Info seq  [hh:mm:ss:mss] response:
           },
           {
             "name": "charCodeAt",
-            "kind": "method",
-            "kindModifiers": "declare",
-            "sortText": "11"
-          },
-          {
-            "name": "concat",
             "kind": "method",
             "kindModifiers": "declare",
             "sortText": "11"
@@ -795,6 +795,12 @@ Info seq  [hh:mm:ss:mss] response:
         "isNewIdentifierLocation": false,
         "entries": [
           {
+            "name": "concat",
+            "kind": "method",
+            "kindModifiers": "declare",
+            "sortText": "11"
+          },
+          {
             "name": "charAt",
             "kind": "method",
             "kindModifiers": "declare",
@@ -802,12 +808,6 @@ Info seq  [hh:mm:ss:mss] response:
           },
           {
             "name": "charCodeAt",
-            "kind": "method",
-            "kindModifiers": "declare",
-            "sortText": "11"
-          },
-          {
-            "name": "concat",
             "kind": "method",
             "kindModifiers": "declare",
             "sortText": "11"
