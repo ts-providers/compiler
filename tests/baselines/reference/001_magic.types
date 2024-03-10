@@ -1,0 +1,41 @@
+//// [tests/cases/compiler/001_magic.ts] ////
+
+=== 001_magic.ts ===
+import { ImportedType } from "./001_magic_imported";
+>ImportedType : any
+
+// import { MagicType } from "./001_magic_magic";
+
+const localValue: LocalType = {
+>localValue : LocalType
+>{    someProp: "boring"} : { someProp: string; }
+
+    someProp: "boring"
+>someProp : string
+>"boring" : "boring"
+
+};
+
+const refValue: ImportedType = {
+>refValue : ImportedType
+>{    someNumProp: 42} : { someNumProp: number; }
+
+    someNumProp: 42
+>someNumProp : number
+>42 : 42
+
+};
+
+const magicValue: MagicType = {
+>magicValue : MagicType
+>{    someMagicProp: "abraka dabra"} : { someMagicProp: string; }
+
+    someMagicProp: "abraka dabra"
+>someMagicProp : string
+>"abraka dabra" : "abraka dabra"
+}
+
+interface LocalType {
+    someProp: string
+>someProp : string
+}

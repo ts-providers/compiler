@@ -1348,8 +1348,8 @@ export function getImpliedNodeFormatForFileWorker(
         case ModuleResolutionKind.NodeNext:
             return fileExtensionIsOneOf(fileName, [Extension.Dmts, Extension.Mts, Extension.Mjs]) ? ModuleKind.ESNext :
                 fileExtensionIsOneOf(fileName, [Extension.Dcts, Extension.Cts, Extension.Cjs]) ? ModuleKind.CommonJS :
-                fileExtensionIsOneOf(fileName, [Extension.Dts, Extension.Ts, Extension.Tsx, Extension.Js, Extension.Jsx]) ? lookupFromPackageJson() :
-                undefined; // other extensions, like `json` or `tsbuildinfo`, are set as `undefined` here but they should never be fed through the transformer pipeline
+                    fileExtensionIsOneOf(fileName, [Extension.Dts, Extension.Ts, Extension.Tsx, Extension.Js, Extension.Jsx]) ? lookupFromPackageJson() :
+                        undefined; // other extensions, like `json` or `tsbuildinfo`, are set as `undefined` here but they should never be fed through the transformer pipeline
         default:
             return undefined;
     }
@@ -3366,6 +3366,30 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
             collectModuleReferences(node, /*inAmbientModule*/ false);
         }
 
+        // if (file.fileName.includes("001_magic.ts")) {
+        //     console.log("Adding magic to compilation");
+
+        //     const decl = factory.createImportDeclaration(
+        //         /*modifiers*/ undefined,
+        //         factory.createImportClause(
+        //             /*isTypeOnly*/ false,
+        //             /*name*/ undefined,
+        //             factory.createNamedImports([factory.createImportSpecifier(
+        //                 /*isTypeOnly*/ true,
+        //                 /*propertyName*/ undefined,
+        //                 factory.createIdentifier("MagicType")
+        //             )])
+        //         ),
+        //         factory.createStringLiteral("./virtual_magic"),
+        //         /*attributes*/ undefined
+        //     );
+
+        //     // decl.parent = file;
+        //     file.statements = factory.createNodeArray([decl, ...file.statements]);
+
+        //     collectModuleReferences(decl, /*inAmbientModule*/ false);
+        // }
+
         if ((file.flags & NodeFlags.PossiblyContainsDynamicImport) || isJavaScriptFile) {
             collectDynamicImportOrRequireCalls(file);
         }
@@ -3377,6 +3401,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
         return;
 
         function collectModuleReferences(node: Statement, inAmbientModule: boolean): void {
+            // if (node.kind === )
             if (isAnyImportOrReExport(node)) {
                 const moduleNameExpr = getExternalModuleName(node);
                 // TypeScript 1.0 spec (April 2014): 12.1.6

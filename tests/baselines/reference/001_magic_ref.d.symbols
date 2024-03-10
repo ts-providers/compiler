@@ -1,0 +1,9 @@
+//// [tests/cases/compiler/001_magic_ref.d.ts] ////
+
+=== 001_magic_ref.d.ts ===
+export interface ReferredType {
+>ReferredType : Symbol(ReferredType, Decl(001_magic_ref.d.ts, 0, 0))
+
+    someNumProp: number
+>someNumProp : Symbol(ReferredType.someNumProp, Decl(001_magic_ref.d.ts, 0, 31))
+}

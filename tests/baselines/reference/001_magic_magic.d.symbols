@@ -1,0 +1,9 @@
+//// [tests/cases/compiler/001_magic_magic.d.ts] ////
+
+=== 001_magic_magic.d.ts ===
+export interface MagicType {
+>MagicType : Symbol(MagicType, Decl(001_magic_magic.d.ts, 0, 0))
+
+    someMagicProp: string
+>someMagicProp : Symbol(MagicType.someMagicProp, Decl(001_magic_magic.d.ts, 0, 28))
+}

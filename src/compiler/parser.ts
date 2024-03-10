@@ -396,6 +396,7 @@ import {
     YieldExpression,
 } from "./_namespaces/ts";
 import * as performance from "./_namespaces/ts.performance";
+import { createMagicDeclarationFile } from "./providers/codegen";
 
 const enum SignatureFlags {
     None = 0,
@@ -469,10 +470,10 @@ export function isFileProbablyExternalModule(sourceFile: SourceFile) {
 
 function isAnExternalModuleIndicatorNode(node: Node) {
     return canHaveModifiers(node) && hasModifierOfKind(node, SyntaxKind.ExportKeyword)
-            || isImportEqualsDeclaration(node) && isExternalModuleReference(node.moduleReference)
-            || isImportDeclaration(node)
-            || isExportAssignment(node)
-            || isExportDeclaration(node) ? node : undefined;
+        || isImportEqualsDeclaration(node) && isExternalModuleReference(node.moduleReference)
+        || isImportDeclaration(node)
+        || isExportAssignment(node)
+        || isExportDeclaration(node) ? node : undefined;
 }
 
 function getImportMetaIfNecessary(sourceFile: SourceFile) {
@@ -1085,13 +1086,13 @@ const forEachChildTable: ForEachChildTable = {
     [SyntaxKind.JSDocTypedefTag]: function forEachChildInJSDocTypedefTag<T>(node: JSDocTypedefTag, cbNode: (node: Node) => T | undefined, cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
         return visitNode(cbNode, node.tagName) ||
             (node.typeExpression &&
-                    node.typeExpression.kind === SyntaxKind.JSDocTypeExpression
+                node.typeExpression.kind === SyntaxKind.JSDocTypeExpression
                 ? visitNode(cbNode, node.typeExpression) ||
-                    visitNode(cbNode, node.fullName) ||
-                    (typeof node.comment === "string" ? undefined : visitNodes(cbNode, cbNodes, node.comment))
+                visitNode(cbNode, node.fullName) ||
+                (typeof node.comment === "string" ? undefined : visitNodes(cbNode, cbNodes, node.comment))
                 : visitNode(cbNode, node.fullName) ||
-                    visitNode(cbNode, node.typeExpression) ||
-                    (typeof node.comment === "string" ? undefined : visitNodes(cbNode, cbNodes, node.comment)));
+                visitNode(cbNode, node.typeExpression) ||
+                (typeof node.comment === "string" ? undefined : visitNodes(cbNode, cbNodes, node.comment)));
     },
     [SyntaxKind.JSDocCallbackTag]: function forEachChildInJSDocCallbackTag<T>(node: JSDocCallbackTag, cbNode: (node: Node) => T | undefined, cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
         return visitNode(cbNode, node.tagName) ||
@@ -1600,6 +1601,18 @@ namespace Parser {
             result.pragmas = emptyMap as ReadonlyPragmaMap;
             return result;
         }
+        // else if (scriptKind === ScriptKind.Provided) {
+        else if (fileName.includes("providers/csv")) {
+            console.log("parseSourceFile", fileName);
+
+            const result = createMagicDeclarationFile(fileName, "CsvMagicType", ["abraka", "dabra"]);
+
+            if (setParentNodes) {
+                fixupParentReferences(result);
+            }
+
+            return result;
+        }
 
         initializeState(fileName, sourceText, languageVersion, syntaxCursor, scriptKind, jsDocParsingMode);
 
@@ -1662,7 +1675,7 @@ namespace Parser {
                             expression = parseLiteralNode() as StringLiteral | NumericLiteral;
                             break;
                         }
-                        // falls through
+                    // falls through
                     default:
                         expression = parseObjectLiteralExpression();
                         break;
@@ -2605,10 +2618,10 @@ namespace Parser {
         const pos = getNodePos();
         const result = kind === SyntaxKind.Identifier ? factoryCreateIdentifier("", /*originalKeywordKind*/ undefined) :
             isTemplateLiteralKind(kind) ? factory.createTemplateLiteralLikeNode(kind, "", "", /*templateFlags*/ undefined) :
-            kind === SyntaxKind.NumericLiteral ? factoryCreateNumericLiteral("", /*numericLiteralFlags*/ undefined) :
-            kind === SyntaxKind.StringLiteral ? factoryCreateStringLiteral("", /*isSingleQuote*/ undefined) :
-            kind === SyntaxKind.MissingDeclaration ? factory.createMissingDeclaration() :
-            factoryCreateToken(kind);
+                kind === SyntaxKind.NumericLiteral ? factoryCreateNumericLiteral("", /*numericLiteralFlags*/ undefined) :
+                    kind === SyntaxKind.StringLiteral ? factoryCreateStringLiteral("", /*isSingleQuote*/ undefined) :
+                        kind === SyntaxKind.MissingDeclaration ? factory.createMissingDeclaration() :
+                            factoryCreateToken(kind);
         return finishNode(result, pos) as T;
     }
 
@@ -2769,9 +2782,9 @@ namespace Parser {
     function canFollowExportModifier(): boolean {
         return token() === SyntaxKind.AtToken
             || token() !== SyntaxKind.AsteriskToken
-                && token() !== SyntaxKind.AsKeyword
-                && token() !== SyntaxKind.OpenBraceToken
-                && canFollowModifier();
+            && token() !== SyntaxKind.AsKeyword
+            && token() !== SyntaxKind.OpenBraceToken
+            && canFollowModifier();
     }
 
     function nextTokenCanFollowExportModifier(): boolean {
@@ -2877,7 +2890,7 @@ namespace Parser {
                     case SyntaxKind.DotToken: // Not an array literal member, but don't want to close the array (see `tests/cases/fourslash/completionsDotInArrayLiteralInObjectLiteral.ts`)
                         return true;
                 }
-                // falls through
+            // falls through
             case ParsingContext.ArgumentExpressions:
                 return token() === SyntaxKind.DotDotDotToken || isStartOfExpression();
             case ParsingContext.Parameters:
@@ -3193,53 +3206,53 @@ namespace Parser {
             case ParsingContext.Parameters:
                 return isReusableParameter(node);
 
-                // Any other lists we do not care about reusing nodes in.  But feel free to add if
-                // you can do so safely.  Danger areas involve nodes that may involve speculative
-                // parsing.  If speculative parsing is involved with the node, then the range the
-                // parser reached while looking ahead might be in the edited range (see the example
-                // in canReuseVariableDeclaratorNode for a good case of this).
+            // Any other lists we do not care about reusing nodes in.  But feel free to add if
+            // you can do so safely.  Danger areas involve nodes that may involve speculative
+            // parsing.  If speculative parsing is involved with the node, then the range the
+            // parser reached while looking ahead might be in the edited range (see the example
+            // in canReuseVariableDeclaratorNode for a good case of this).
 
-                // case ParsingContext.HeritageClauses:
-                // This would probably be safe to reuse.  There is no speculative parsing with
-                // heritage clauses.
+            // case ParsingContext.HeritageClauses:
+            // This would probably be safe to reuse.  There is no speculative parsing with
+            // heritage clauses.
 
-                // case ParsingContext.TypeParameters:
-                // This would probably be safe to reuse.  There is no speculative parsing with
-                // type parameters.  Note that that's because type *parameters* only occur in
-                // unambiguous *type* contexts.  While type *arguments* occur in very ambiguous
-                // *expression* contexts.
+            // case ParsingContext.TypeParameters:
+            // This would probably be safe to reuse.  There is no speculative parsing with
+            // type parameters.  Note that that's because type *parameters* only occur in
+            // unambiguous *type* contexts.  While type *arguments* occur in very ambiguous
+            // *expression* contexts.
 
-                // case ParsingContext.TupleElementTypes:
-                // This would probably be safe to reuse.  There is no speculative parsing with
-                // tuple types.
+            // case ParsingContext.TupleElementTypes:
+            // This would probably be safe to reuse.  There is no speculative parsing with
+            // tuple types.
 
-                // Technically, type argument list types are probably safe to reuse.  While
-                // speculative parsing is involved with them (since type argument lists are only
-                // produced from speculative parsing a < as a type argument list), we only have
-                // the types because speculative parsing succeeded.  Thus, the lookahead never
-                // went past the end of the list and rewound.
-                // case ParsingContext.TypeArguments:
+            // Technically, type argument list types are probably safe to reuse.  While
+            // speculative parsing is involved with them (since type argument lists are only
+            // produced from speculative parsing a < as a type argument list), we only have
+            // the types because speculative parsing succeeded.  Thus, the lookahead never
+            // went past the end of the list and rewound.
+            // case ParsingContext.TypeArguments:
 
-                // Note: these are almost certainly not safe to ever reuse.  Expressions commonly
-                // need a large amount of lookahead, and we should not reuse them as they may
-                // have actually intersected the edit.
-                // case ParsingContext.ArgumentExpressions:
+            // Note: these are almost certainly not safe to ever reuse.  Expressions commonly
+            // need a large amount of lookahead, and we should not reuse them as they may
+            // have actually intersected the edit.
+            // case ParsingContext.ArgumentExpressions:
 
-                // This is not safe to reuse for the same reason as the 'AssignmentExpression'
-                // cases.  i.e. a property assignment may end with an expression, and thus might
-                // have lookahead far beyond it's old node.
-                // case ParsingContext.ObjectLiteralMembers:
+            // This is not safe to reuse for the same reason as the 'AssignmentExpression'
+            // cases.  i.e. a property assignment may end with an expression, and thus might
+            // have lookahead far beyond it's old node.
+            // case ParsingContext.ObjectLiteralMembers:
 
-                // This is probably not safe to reuse.  There can be speculative parsing with
-                // type names in a heritage clause.  There can be generic names in the type
-                // name list, and there can be left hand side expressions (which can have type
-                // arguments.)
-                // case ParsingContext.HeritageClauseElement:
+            // This is probably not safe to reuse.  There can be speculative parsing with
+            // type names in a heritage clause.  There can be generic names in the type
+            // name list, and there can be left hand side expressions (which can have type
+            // arguments.)
+            // case ParsingContext.HeritageClauseElement:
 
-                // Perhaps safe to reuse, but it's unlikely we'd see more than a dozen attributes
-                // on any given element. Same for children.
-                // case ParsingContext.JsxAttributes:
-                // case ParsingContext.JsxChildren:
+            // Perhaps safe to reuse, but it's unlikely we'd see more than a dozen attributes
+            // on any given element. Same for children.
+            // case ParsingContext.JsxAttributes:
+            // case ParsingContext.JsxChildren:
         }
 
         return false;
@@ -3733,9 +3746,9 @@ namespace Parser {
             // We also do not need to check for negatives because any prefix operator would be part of a
             // parent unary expression.
             kind === SyntaxKind.NumericLiteral ? factoryCreateNumericLiteral(scanner.getTokenValue(), scanner.getNumericLiteralFlags()) :
-            kind === SyntaxKind.StringLiteral ? factoryCreateStringLiteral(scanner.getTokenValue(), /*isSingleQuote*/ undefined, scanner.hasExtendedUnicodeEscape()) :
-            isLiteralKind(kind) ? factoryCreateLiteralLikeNode(kind, scanner.getTokenValue()) :
-            Debug.fail();
+                kind === SyntaxKind.StringLiteral ? factoryCreateStringLiteral(scanner.getTokenValue(), /*isSingleQuote*/ undefined, scanner.hasExtendedUnicodeEscape()) :
+                    isLiteralKind(kind) ? factoryCreateLiteralLikeNode(kind, scanner.getTokenValue()) :
+                        Debug.fail();
 
         if (scanner.hasExtendedUnicodeEscape()) {
             node.hasExtendedUnicodeEscape = true;
@@ -4569,13 +4582,13 @@ namespace Parser {
             case SyntaxKind.AsteriskEqualsToken:
                 // If there is '*=', treat it as * followed by postfix =
                 scanner.reScanAsteriskEqualsToken();
-                // falls through
+            // falls through
             case SyntaxKind.AsteriskToken:
                 return parseJSDocAllType();
             case SyntaxKind.QuestionQuestionToken:
                 // If there is '??', treat it as prefix-'?' in JSDoc type.
                 scanner.reScanQuestionToken();
-                // falls through
+            // falls through
             case SyntaxKind.QuestionToken:
                 return parseJSDocUnknownOrNullableType();
             case SyntaxKind.FunctionKeyword:
@@ -5783,7 +5796,7 @@ namespace Parser {
                 if (isAwaitExpression()) {
                     return parseAwaitExpression();
                 }
-                // falls through
+            // falls through
             default:
                 return parseUpdateExpression();
         }
@@ -5817,8 +5830,8 @@ namespace Parser {
                 if (languageVariant !== LanguageVariant.JSX) {
                     return false;
                 }
-                // We are in JSX context and the token is part of JSXElement.
-                // falls through
+            // We are in JSX context and the token is part of JSXElement.
+            // falls through
             default:
                 return true;
         }
@@ -6634,7 +6647,7 @@ namespace Parser {
     function parseArgumentOrArrayLiteralElement(): Expression {
         return token() === SyntaxKind.DotDotDotToken ? parseSpreadElement() :
             token() === SyntaxKind.CommaToken ? finishNode(factory.createOmittedExpression(), getNodePos()) :
-            parseAssignmentExpressionOrHigher(/*allowReturnTypeInArrowFunction*/ true);
+                parseAssignmentExpressionOrHigher(/*allowReturnTypeInArrowFunction*/ true);
     }
 
     function parseArgumentExpression(): Expression {
@@ -6735,8 +6748,8 @@ namespace Parser {
         const isAsync = some(modifiers, isAsyncModifier) ? SignatureFlags.Await : SignatureFlags.None;
         const name = isGenerator && isAsync ? doInYieldAndAwaitContext(parseOptionalBindingIdentifier) :
             isGenerator ? doInYieldContext(parseOptionalBindingIdentifier) :
-            isAsync ? doInAwaitContext(parseOptionalBindingIdentifier) :
-            parseOptionalBindingIdentifier();
+                isAsync ? doInAwaitContext(parseOptionalBindingIdentifier) :
+                    parseOptionalBindingIdentifier();
 
         const typeParameters = parseTypeParameters();
         const parameters = parseParameters(isGenerator | isAsync);
@@ -8895,7 +8908,7 @@ namespace Parser {
                                 linkEnd = scanner.getTokenEnd();
                                 break;
                             }
-                            // fallthrough if it's not a {@link sequence
+                        // fallthrough if it's not a {@link sequence
                         default:
                             // Anything else is doc comment text. We just save it. Because it
                             // wasn't a tag, we can no longer parse a tag on this line until we hit the next
@@ -9172,8 +9185,8 @@ namespace Parser {
                                 indent += 1;
                                 break;
                             }
-                            // record the * as a comment
-                            // falls through
+                        // record the * as a comment
+                        // falls through
                         default:
                             if (state !== JSDocState.SavingBackticks) {
                                 state = JSDocState.SavingComments; // leading identifiers start recording as well
@@ -9217,7 +9230,7 @@ namespace Parser {
                 }
                 const create = linkType === "link" ? factory.createJSDocLink
                     : linkType === "linkcode" ? factory.createJSDocLinkCode
-                    : factory.createJSDocLinkPlain;
+                        : factory.createJSDocLinkPlain;
                 return finishNode(create(name, text.join("")), start, scanner.getTokenEnd());
             }
 

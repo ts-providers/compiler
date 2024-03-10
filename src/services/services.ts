@@ -336,8 +336,8 @@ export const servicesVersion = "0.8";
 function createNode<TKind extends SyntaxKind>(kind: TKind, pos: number, end: number, parent: Node): NodeObject | TokenObject<TKind> | IdentifierObject | PrivateIdentifierObject {
     const node = isNodeKind(kind) ? new NodeObject(kind, pos, end) :
         kind === SyntaxKind.Identifier ? new IdentifierObject(SyntaxKind.Identifier, pos, end) :
-        kind === SyntaxKind.PrivateIdentifier ? new PrivateIdentifierObject(SyntaxKind.PrivateIdentifier, pos, end) :
-        new TokenObject(kind, pos, end);
+            kind === SyntaxKind.PrivateIdentifier ? new PrivateIdentifierObject(SyntaxKind.PrivateIdentifier, pos, end) :
+                new TokenObject(kind, pos, end);
     node.parent = parent;
     node.flags = parent.flags & NodeFlags.ContextFlags;
     return node;
@@ -1249,7 +1249,7 @@ class SourceFileObject extends NodeObject implements SourceFile {
 
 class SourceMapSourceObject implements SourceMapSource {
     lineMap!: number[];
-    constructor(public fileName: string, public text: string, public skipTrivia?: (pos: number) => number) {}
+    constructor(public fileName: string, public text: string, public skipTrivia?: (pos: number) => number) { }
 
     public getLineAndCharacterOfPosition(pos: number): LineAndCharacter {
         return getLineAndCharacterOfPosition(this, pos);
@@ -1348,7 +1348,7 @@ class SyntaxTreeCache {
         const version = this.host.getScriptVersion(fileName);
         let sourceFile: SourceFile | undefined;
 
-        if (this.currentFileName !== fileName) {
+        if (this.currentFileName !== fileName || scriptKind === ScriptKind.Provided) {
             // This is a new file, just parse it
             const options: CreateSourceFileOptions = {
                 languageVersion: ScriptTarget.Latest,
@@ -1428,8 +1428,8 @@ export function updateLanguageServiceSourceFile(sourceFile: SourceFile, scriptSn
                 newText = prefix && suffix
                     ? prefix + changedText + suffix
                     : prefix
-                    ? (prefix + changedText)
-                    : (changedText + suffix);
+                        ? (prefix + changedText)
+                        : (changedText + suffix);
             }
 
             const newSourceFile = updateSourceFile(sourceFile, newText, textChangeRange, aggressiveChecks);
@@ -3262,8 +3262,8 @@ function getContainingObjectLiteralElementWorker(node: Node): ObjectLiteralEleme
 
         case SyntaxKind.Identifier:
             return isObjectLiteralElement(node.parent) &&
-                    (node.parent.parent.kind === SyntaxKind.ObjectLiteralExpression || node.parent.parent.kind === SyntaxKind.JsxAttributes) &&
-                    node.parent.name === node ? node.parent : undefined;
+                (node.parent.parent.kind === SyntaxKind.ObjectLiteralExpression || node.parent.parent.kind === SyntaxKind.JsxAttributes) &&
+                node.parent.name === node ? node.parent : undefined;
     }
     return undefined;
 }
