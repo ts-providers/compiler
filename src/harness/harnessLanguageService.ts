@@ -282,6 +282,7 @@ class NativeLanguageServiceHost extends LanguageServiceAdapterHost implements ts
     }
 
     getScriptFileNames(): string[] {
+        this.log("HARNESS FILE NAMES");
         return this.getFilenames().filter(ts.isAnySupportedFileExtension);
     }
 

@@ -3,15 +3,13 @@
 {
     // To use the locally built compiler, after 'npm run build':
     // "typescript.tsdk": "built/local"
-
     // Enables dprint formatting on all supported files. We explicitly list
     // languages here to ensure that these are more specific than those in a
     // user's settings.json so take precedence.
     "[typescript][typescriptreact][javascript][javascriptreact][json][jsonc][yaml][github-actions-workflow]": {
         "editor.defaultFormatter": "dprint.dprint",
-        "editor.formatOnSave": true
+        "editor.formatOnSave": false
     },
-
     // To ignore commits listed in .git-blame-ignore-revs in GitLens:
     "gitlens.advanced.blame.customArguments": [
         "--ignore-revs-file",
@@ -36,12 +34,17 @@
         "organizeImportsNumericCollation": true,
         "organizeImportsTypeOrder": "inline"
     },
-
     // These options search the repo recursively and slow down
     // the build task menu. We define our own in tasks.json.
     "typescript.tsc.autoDetect": "off",
     "npm.autoDetect": "off",
     "grunt.autoDetect": "off",
     "jake.autoDetect": "off",
-    "gulp.autoDetect": "off"
+    "gulp.autoDetect": "off",
+    // "typescript.tsdk": "node_modules\\typescript\\lib"
+    "typescript.tsdk": "built\\local",
+    "[json]": {
+        "editor.defaultFormatter": "vscode.json-language-features"
+    },
+    "eslint.enable": false
 }

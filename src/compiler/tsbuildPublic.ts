@@ -440,7 +440,7 @@ function createSolutionBuilderState<T extends BuilderProgram>(watch: boolean, ho
                 containingSourceFile,
                 host,
                 moduleResolutionCache,
-                createModuleResolutionLoader,
+                createModuleLiteralResolutionLoader,
             );
         compilerHost.getModuleResolutionCache = () => moduleResolutionCache;
     }

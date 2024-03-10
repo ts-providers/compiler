@@ -49,6 +49,7 @@ import {
     getTsBuildInfoEmitOutputFilePath,
     HasInvalidatedLibResolutions,
     HasInvalidatedResolutions,
+    ImportAttributes,
     isArray,
     isIgnoredFileFromWildCardWatching,
     isIncrementalBuildInfo,
@@ -95,6 +96,7 @@ import {
     WatchTypeRegistry,
     WildcardDirectoryWatcher,
 } from "./_namespaces/ts.js";
+import { ModuleImport } from "./providers/types.js";
 
 export interface ReadBuildProgramHost {
     useCaseSensitiveFileNames(): boolean;
@@ -740,7 +742,7 @@ export function createWatchProgram<T extends BuilderProgram>(host: WatchCompiler
         return directoryStructureHost.fileExists(fileName);
     }
 
-    function getVersionedSourceFileByPath(fileName: string, path: Path, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, onError?: (message: string) => void, shouldCreateNewSourceFile?: boolean): SourceFile | undefined {
+    function getVersionedSourceFileByPath(fileName: string, path: Path, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, onError?: (message: string) => void, shouldCreateNewSourceFile?: boolean, importAttributes?: ImportAttributes): SourceFile | undefined {
         const hostSourceFile = sourceFilesCache.get(path);
         // No source file on the host
         if (isFileMissingOnHost(hostSourceFile)) {
@@ -750,7 +752,7 @@ export function createWatchProgram<T extends BuilderProgram>(host: WatchCompiler
         // Create new source file if requested or the versions dont match
         const impliedNodeFormat = typeof languageVersionOrOptions === "object" ? languageVersionOrOptions.impliedNodeFormat : undefined;
         if (hostSourceFile === undefined || shouldCreateNewSourceFile || isFilePresenceUnknownOnHost(hostSourceFile) || hostSourceFile.sourceFile.impliedNodeFormat !== impliedNodeFormat) {
-            const sourceFile = getNewSourceFile(fileName, languageVersionOrOptions, onError);
+            const sourceFile = getNewSourceFile(fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile, importAttributes);
             if (hostSourceFile) {
                 if (sourceFile) {
                     // Set the source file and create file watcher now that file was present on the disk

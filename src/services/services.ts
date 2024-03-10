@@ -1,3 +1,4 @@
+import { ModuleImport } from "../compiler/providers/types";
 import {
     __String,
     ApplicableRefactorInfo,
@@ -137,6 +138,7 @@ import {
     identity,
     idText,
     ImplementationLocation,
+    ImportAttributes,
     ImportDeclaration,
     IndexKind,
     IndexType,
@@ -362,8 +364,8 @@ export const servicesVersion = "0.8";
 function createNode<TKind extends SyntaxKind>(kind: TKind, pos: number, end: number, parent: Node): NodeObject<TKind> | TokenObject<TKind> | IdentifierObject | PrivateIdentifierObject {
     const node = isNodeKind(kind) ? new NodeObject(kind, pos, end) :
         kind === SyntaxKind.Identifier ? new IdentifierObject(SyntaxKind.Identifier, pos, end) :
-        kind === SyntaxKind.PrivateIdentifier ? new PrivateIdentifierObject(SyntaxKind.PrivateIdentifier, pos, end) :
-        new TokenObject(kind, pos, end);
+            kind === SyntaxKind.PrivateIdentifier ? new PrivateIdentifierObject(SyntaxKind.PrivateIdentifier, pos, end) :
+                new TokenObject(kind, pos, end);
     node.parent = parent;
     node.flags = parent.flags & NodeFlags.ContextFlags;
     return node;
@@ -1090,7 +1092,7 @@ class SourceFileObject extends NodeObject<SyntaxKind.SourceFile> implements Sour
     public languageVariant!: LanguageVariant;
     public identifiers!: Map<string, string>;
     public nameTable: Map<__String, number> | undefined;
-    public imports!: readonly StringLiteralLike[];
+    public imports!: readonly ModuleImport[];
     public moduleAugmentations!: StringLiteral[];
     private namedDeclarations: Map<string, Declaration[]> | undefined;
     public ambientModuleNames!: string[];
@@ -1405,7 +1407,7 @@ class SyntaxTreeCache {
         const version = this.host.getScriptVersion(fileName);
         let sourceFile: SourceFile | undefined;
 
-        if (this.currentFileName !== fileName) {
+        if (this.currentFileName !== fileName || scriptKind === ScriptKind.Provided || fileName.includes("@ts-providers")) {
             // This is a new file, just parse it
             const options: CreateSourceFileOptions = {
                 languageVersion: ScriptTarget.Latest,
@@ -1451,8 +1453,9 @@ export function createLanguageServiceSourceFile(
     version: string,
     setNodeParents: boolean,
     scriptKind?: ScriptKind,
+    importAttributes?: ImportAttributes
 ): SourceFile {
-    const sourceFile = createSourceFile(fileName, getSnapshotText(scriptSnapshot), scriptTargetOrOptions, setNodeParents, scriptKind);
+    const sourceFile = createSourceFile(fileName, getSnapshotText(scriptSnapshot), scriptTargetOrOptions, setNodeParents, scriptKind, importAttributes);
     setSourceFileFields(sourceFile, scriptSnapshot, version);
     return sourceFile;
 }
@@ -1460,7 +1463,7 @@ export function createLanguageServiceSourceFile(
 export function updateLanguageServiceSourceFile(sourceFile: SourceFile, scriptSnapshot: IScriptSnapshot, version: string, textChangeRange: TextChangeRange | undefined, aggressiveChecks?: boolean): SourceFile {
     // If we were given a text change range, and our version or open-ness changed, then
     // incrementally parse this file.
-    if (textChangeRange) {
+    if (textChangeRange && !sourceFile.fileName.includes("@ts-providers")) {
         if (version !== sourceFile.version) {
             let newText: string;
 
@@ -1485,8 +1488,8 @@ export function updateLanguageServiceSourceFile(sourceFile: SourceFile, scriptSn
                 newText = prefix && suffix
                     ? prefix + changedText + suffix
                     : prefix
-                    ? (prefix + changedText)
-                    : (changedText + suffix);
+                        ? (prefix + changedText)
+                        : (changedText + suffix);
             }
 
             const newSourceFile = updateSourceFile(sourceFile, newText, textChangeRange, aggressiveChecks);
@@ -1714,6 +1717,9 @@ export function createLanguageService(
         // like every program always has the host's current list of root files.
         const rootFileNames = host.getScriptFileNames().slice();
 
+        log("SYNCHRONIZE ROOT FILE NAMES");
+        log(JSON.stringify(rootFileNames));
+
         // Get a fresh cache of the host information
         const newSettings = host.getCompilationSettings() || getDefaultCompilerOptions();
         const hasInvalidatedResolutions: HasInvalidatedResolutions = host.hasInvalidatedResolutions || returnFalse;
@@ -1877,11 +1883,11 @@ export function createLanguageService(
             documentRegistry.releaseDocumentWithKey(oldSourceFile.resolvedPath, oldSettingsKey, oldSourceFile.scriptKind, oldSourceFile.impliedNodeFormat);
         }
 
-        function getOrCreateSourceFile(fileName: string, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, onError?: (message: string) => void, shouldCreateNewSourceFile?: boolean): SourceFile | undefined {
-            return getOrCreateSourceFileByPath(fileName, toPath(fileName, currentDirectory, getCanonicalFileName), languageVersionOrOptions, onError, shouldCreateNewSourceFile);
+        function getOrCreateSourceFile(fileName: string, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, onError?: (message: string) => void, shouldCreateNewSourceFile?: boolean, importAttributes?: ImportAttributes): SourceFile | undefined {
+            return getOrCreateSourceFileByPath(fileName, toPath(fileName, currentDirectory, getCanonicalFileName), languageVersionOrOptions, onError, shouldCreateNewSourceFile, importAttributes);
         }
 
-        function getOrCreateSourceFileByPath(fileName: string, path: Path, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, _onError?: (message: string) => void, shouldCreateNewSourceFile?: boolean): SourceFile | undefined {
+        function getOrCreateSourceFileByPath(fileName: string, path: Path, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, _onError?: (message: string) => void, shouldCreateNewSourceFile?: boolean, importAttributes?: ImportAttributes): SourceFile | undefined {
             Debug.assert(compilerHost, "getOrCreateSourceFileByPath called after typical CompilerHost lifetime, check the callstack something with a reference to an old host.");
             // The program is asking for this file, check first if the host can locate it.
             // If the host can not locate the file, then it does not exist. return undefined
@@ -1897,7 +1903,7 @@ export function createLanguageService(
             // Check if the language version has changed since we last created a program; if they are the same,
             // it is safe to reuse the sourceFiles; if not, then the shape of the AST can change, and the oldSourceFile
             // can not be reused. we have to dump all syntax trees and create new ones.
-            if (!shouldCreateNewSourceFile) {
+            if (!shouldCreateNewSourceFile && !fileName.includes("@ts-providers")) {
                 // Check if the old program had this file already
                 const oldSourceFile = program && program.getSourceFileByPath(path);
                 if (oldSourceFile) {
@@ -1940,7 +1946,7 @@ export function createLanguageService(
             }
 
             // Could not find this file in the old program, create a new SourceFile for it.
-            return documentRegistry.acquireDocumentWithKey(fileName, path, host, documentRegistryBucketKey, scriptSnapshot, scriptVersion, scriptKind, languageVersionOrOptions);
+            return documentRegistry.acquireDocumentWithKey(fileName, path, host, documentRegistryBucketKey, scriptSnapshot, scriptVersion, scriptKind, languageVersionOrOptions, importAttributes);
         }
     }
 
@@ -3504,8 +3510,8 @@ function getContainingObjectLiteralElementWorker(node: Node): ObjectLiteralEleme
 
         case SyntaxKind.Identifier:
             return isObjectLiteralElement(node.parent) &&
-                    (node.parent.parent.kind === SyntaxKind.ObjectLiteralExpression || node.parent.parent.kind === SyntaxKind.JsxAttributes) &&
-                    node.parent.name === node ? node.parent : undefined;
+                (node.parent.parent.kind === SyntaxKind.ObjectLiteralExpression || node.parent.parent.kind === SyntaxKind.JsxAttributes) &&
+                node.parent.name === node ? node.parent : undefined;
     }
     return undefined;
 }

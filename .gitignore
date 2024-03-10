@@ -1,3 +1,4 @@
+.logs/
 node_modules/
 .node_modules/
 built/*
@@ -48,7 +49,9 @@ internal/
 **/.vscode/*
 !**/.vscode/tasks.json
 !**/.vscode/settings.template.json
+!**/.vscode/settings.json
 !**/.vscode/launch.template.json
+!**/.vscode/launch.json
 !**/.vscode/extensions.json
 !tests/cases/projects/projectOption/**/node_modules
 !tests/cases/projects/NodeModulesSearch/**/*

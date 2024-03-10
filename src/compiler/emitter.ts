@@ -541,9 +541,9 @@ function getSourceMapFilePath(jsFilePath: string, options: CompilerOptions) {
 export function getOutputExtension(fileName: string, options: Pick<CompilerOptions, "jsx">): Extension {
     return fileExtensionIs(fileName, Extension.Json) ? Extension.Json :
         options.jsx === JsxEmit.Preserve && fileExtensionIsOneOf(fileName, [Extension.Jsx, Extension.Tsx]) ? Extension.Jsx :
-        fileExtensionIsOneOf(fileName, [Extension.Mts, Extension.Mjs]) ? Extension.Mjs :
-        fileExtensionIsOneOf(fileName, [Extension.Cts, Extension.Cjs]) ? Extension.Cjs :
-        Extension.Js;
+            fileExtensionIsOneOf(fileName, [Extension.Mts, Extension.Mjs]) ? Extension.Mjs :
+                fileExtensionIsOneOf(fileName, [Extension.Cts, Extension.Cjs]) ? Extension.Cjs :
+                    Extension.Js;
 }
 
 function getOutputPathWithoutChangingExt(
@@ -1476,7 +1476,7 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
                 if (onEmitNode !== noEmitNotification && (!isEmitNotificationEnabled || isEmitNotificationEnabled(node))) {
                     return pipelineEmitWithNotification;
                 }
-                // falls through
+            // falls through
             case PipelinePhase.Substitution:
                 if (substituteNode !== noEmitSubstitution && (lastSubstitution = substituteNode(emitHint, node) || node) !== node) {
                     if (currentParenthesizerRule) {
@@ -1484,17 +1484,17 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
                     }
                     return pipelineEmitWithSubstitution;
                 }
-                // falls through
+            // falls through
             case PipelinePhase.Comments:
                 if (shouldEmitComments(node)) {
                     return pipelineEmitWithComments;
                 }
-                // falls through
+            // falls through
             case PipelinePhase.SourceMaps:
                 if (shouldEmitSourceMaps(node)) {
                     return pipelineEmitWithSourceMaps;
                 }
-                // falls through
+            // falls through
             case PipelinePhase.Emit:
                 return pipelineEmitWithHint;
             default:
@@ -1506,9 +1506,13 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
         return getPipelinePhase(currentPhase + 1, emitHint, node);
     }
 
+    function getTextPos() {
+        return writer.getTextPos();
+    }
+
     function pipelineEmitWithNotification(hint: EmitHint, node: Node) {
         const pipelinePhase = getNextPipelinePhase(PipelinePhase.Notification, hint, node);
-        onEmitNode(hint, node, pipelinePhase);
+        onEmitNode(hint, node, pipelinePhase, getTextPos);
     }
 
     function pipelineEmitWithHint(hint: EmitHint, node: Node): void {
@@ -3315,8 +3319,8 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
         else {
             const head = isLet(node) ? "let" :
                 isVarConst(node) ? "const" :
-                isVarUsing(node) ? "using" :
-                "var";
+                    isVarUsing(node) ? "using" :
+                        "var";
             writeKeyword(head);
         }
         writeSpace();
@@ -5177,7 +5181,7 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
                 const text = isNumericLiteral(textSourceNode) ? textSourceNode.text : getTextOfNode(textSourceNode);
                 return jsxAttributeEscape ? `"${escapeJsxAttributeString(text)}"` :
                     neverAsciiEscape || (getEmitFlags(node) & EmitFlags.NoAsciiEscaping) ? `"${escapeString(text)}"` :
-                    `"${escapeNonAsciiString(text)}"`;
+                        `"${escapeNonAsciiString(text)}"`;
             }
             else {
                 return getLiteralTextOfNode(textSourceNode, neverAsciiEscape, jsxAttributeEscape);
@@ -6278,5 +6282,5 @@ function emitListItemWithParenthesizerRule(node: Node, emit: EmitFunction, paren
 function getEmitListItem<T extends Node>(emit: EmitFunction, parenthesizerRule: ParenthesizerRuleOrSelector<T> | undefined): EmitListItemFunction<T> {
     return emit.length === 1 ? emitListItemNoParenthesizer as EmitListItemFunction<T> :
         typeof parenthesizerRule === "object" ? emitListItemWithParenthesizerRuleSelector as EmitListItemFunction<T> :
-        emitListItemWithParenthesizerRule as EmitListItemFunction<T>;
+            emitListItemWithParenthesizerRule as EmitListItemFunction<T>;
 }

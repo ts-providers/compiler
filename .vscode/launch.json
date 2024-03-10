@@ -11,7 +11,6 @@
   },
 
 */
-
 {
     // Use IntelliSense to learn about possible attributes.
     // Hover to view descriptions of existing attributes.
@@ -21,8 +20,37 @@
         {
             "type": "node",
             "request": "launch",
+            "name": "Debug source",
+            "runtimeArgs": [
+                "--nolazy"
+            ],
+            "preLaunchTask": "npm: build:compiler",
+            "program": "${workspaceRoot}/built/local/tsc.js",
+            "args": [
+                "--skipDefaultLibCheck",
+                "${workspaceRoot}/experiments/002_csv_poc.ts"
+            ],
+            "sourceMaps": true,
+            "pauseForSourceMap": true,
+            "smartStep": true,
+            "console": "integratedTerminal",
+            "env": {
+                "NODE_ENV": "development"
+            },
+            "outFiles": [
+                "${workspaceRoot}/built/**/*.js",
+                "${workspaceRoot}/built/**/*.mjs",
+                "${workspaceRoot}/built/**/*.cjs",
+                "!**/node_modules/**"
+            ],
+        },
+        {
+            "type": "node",
+            "request": "launch",
             "name": "Mocha Tests (currently opened test)",
-            "runtimeArgs": ["--nolazy"],
+            "runtimeArgs": [
+                "--nolazy"
+            ],
             "program": "${workspaceRoot}/node_modules/mocha/bin/_mocha",
             "args": [
                 "-u",
@@ -52,13 +80,23 @@
             "console": "integratedTerminal",
             "customDescriptionGenerator": "'__tsDebuggerDisplay' in this ? this.__tsDebuggerDisplay(defaultValue) : defaultValue"
         },
+        // {
+        //     // See: https://github.com/microsoft/TypeScript/wiki/Debugging-Language-Service-in-VS-Code
+        //     "type": "node",
+        //     "request": "attach",
+        //     "name": "Attach to VS Code TS Server via Port",
+        //     "processId": "${command:PickProcess}",
+        //     "customDescriptionGenerator": "'__tsDebuggerDisplay' in this ? this.__tsDebuggerDisplay(defaultValue) : defaultValue"
+        // },
         {
-            // See: https://github.com/microsoft/TypeScript/wiki/Debugging-Language-Service-in-VS-Code
+            "name": "Attach to TS Server",
             "type": "node",
             "request": "attach",
-            "name": "Attach to VS Code TS Server via Port",
-            "processId": "${command:PickProcess}",
-            "customDescriptionGenerator": "'__tsDebuggerDisplay' in this ? this.__tsDebuggerDisplay(defaultValue) : defaultValue"
+            "port": 5859,
+            "sourceMaps": true,
+            "outFiles": [
+                "${workspaceFolder}/built/local"
+            ],
         }
     ]
 }

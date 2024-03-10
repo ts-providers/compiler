@@ -118,7 +118,7 @@ function updateTsconfigFiles(program: Program, changeTracker: textChanges.Change
                 if (foundExactMatch || propertyName !== "include" || !isArrayLiteralExpression(property.initializer)) return;
                 const includes = mapDefined(property.initializer.elements, e => isStringLiteral(e) ? e.text : undefined);
                 if (includes.length === 0) return;
-                const matchers = getFileMatcherPatterns(configDir, /*excludes*/ [], includes, useCaseSensitiveFileNames, currentDirectory);
+                const matchers = getFileMatcherPatterns(configDir, /*excludes*/[], includes, useCaseSensitiveFileNames, currentDirectory);
                 // If there isn't some include for this, add a new one.
                 if (
                     getRegexFromPattern(Debug.checkDefined(matchers.includeFilePattern), useCaseSensitiveFileNames).test(oldFileOrDirPath) &&
@@ -296,7 +296,8 @@ function updateImportsWorker(sourceFile: SourceFile, changeTracker: textChanges.
         if (updated !== undefined && updated !== sourceFile.text.slice(ref.pos, ref.end)) changeTracker.replaceRangeWithText(sourceFile, ref, updated);
     }
 
-    for (const importStringLiteral of sourceFile.imports) {
+    for (const moduleImport of sourceFile.imports) {
+        const importStringLiteral = moduleImport.specifier;
         const updated = updateImport(importStringLiteral);
         if (updated !== undefined && updated !== importStringLiteral.text) changeTracker.replaceRangeWithText(sourceFile, createStringRange(importStringLiteral, sourceFile), updated);
     }

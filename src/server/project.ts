@@ -1,4 +1,5 @@
 import * as ts from "./_namespaces/ts.js";
+import { providerPackageIndex } from "../compiler/providers/debugging.js";
 import {
     addRange,
     append,
@@ -2454,10 +2455,17 @@ export class AutoImportProviderProject extends Project {
             packageJson.peerDependencies?.forEach((_, dependencyName) => addDependency(dependencyName));
         }
 
+        console.log("DEPENDENCY NAMES", [...dependencyNames?.entries() ?? []]);
+
         let dependenciesAdded = 0;
         if (dependencyNames) {
             const symlinkCache = hostProject.getSymlinkCache();
             for (const name of arrayFrom(dependencyNames.keys())) {
+                // TODO(OR): Handle this properly
+                if (name.includes("@ts-providers")) {
+                    continue;
+                }
+
                 // Avoid creating a large project that would significantly slow down time to editor interactivity
                 if (dependencySelection === PackageJsonAutoImportPreference.Auto && dependenciesAdded > this.maxDependencies) {
                     hostProject.log(`AutoImportProviderProject: attempted to add more than ${this.maxDependencies} dependencies. Aborting.`);
@@ -2475,8 +2483,10 @@ export class AutoImportProviderProject extends Project {
                     host,
                     program.getModuleResolutionCache(),
                 );
+                console.log("BEFORE FILE ADDED 1 PACKAGE DIR", packageJson?.packageDirectory);
                 if (packageJson) {
                     const entrypoints = getRootNamesFromPackageJson(packageJson, program, symlinkCache);
+                    console.log("BEFORE FILE ADDED 1 ENTRYPOINTS", entrypoints?.length, entrypoints ?? []);
                     if (entrypoints) {
                         dependenciesAdded += addRootNames(entrypoints);
                         continue;
@@ -2620,10 +2630,14 @@ export class AutoImportProviderProject extends Project {
             ...this.compilerOptionsOverrides,
         };
 
+        console.log("AUTO IMPORT CREATE", hostProject.getRootFiles());
+
         const rootNames = this.getRootFileNames(dependencySelection, hostProject, host, compilerOptions);
         if (!rootNames.length) {
             return undefined;
         }
+
+        console.log("AUTO IMPORT CREATE 2", rootNames);
 
         return new AutoImportProviderProject(hostProject, rootNames, documentRegistry, compilerOptions);
     }
@@ -2639,6 +2653,7 @@ export class AutoImportProviderProject extends Project {
     ) {
         super(hostProject.projectService.newAutoImportProviderProjectName(), ProjectKind.AutoImportProvider, hostProject.projectService, documentRegistry, /*hasExplicitListOfFiles*/ false, /*lastFileExceededProgramSize*/ undefined, compilerOptions, /*compileOnSaveEnabled*/ false, hostProject.getWatchOptions(), hostProject.projectService.host, hostProject.currentDirectory);
 
+        if (this.trace) this.trace("autoimport ctor: " + JSON.stringify(initialRootNames));
         this.rootFileNames = initialRootNames;
         this.useSourceOfProjectReferenceRedirect = maybeBind(this.hostProject, this.hostProject.useSourceOfProjectReferenceRedirect);
         this.getParsedCommandLine = maybeBind(this.hostProject, this.hostProject.getParsedCommandLine);
@@ -2655,6 +2670,7 @@ export class AutoImportProviderProject extends Project {
     }
 
     override updateGraph() {
+        if (this.trace) this.trace("updateGraph");
         let rootFileNames = this.rootFileNames;
         if (!rootFileNames) {
             rootFileNames = AutoImportProviderProject.getRootFileNames(
@@ -2687,11 +2703,13 @@ export class AutoImportProviderProject extends Project {
 
     /** @internal */
     override markAsDirty() {
+        if (this.trace) this.trace("markAsDirty");
         this.rootFileNames = undefined;
         super.markAsDirty();
     }
 
     override getScriptFileNames() {
+        this.log("OVERRIDE PROJECT FILE NAMES");
         return this.rootFileNames || ts.emptyArray;
     }
 

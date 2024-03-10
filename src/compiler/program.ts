@@ -206,6 +206,7 @@ import {
     isRequireCall,
     isRootedDiskPath,
     isSourceFileJS,
+    isStatementWithImportAttributes,
     isString,
     isStringLiteral,
     isStringLiteralLike,
@@ -330,6 +331,11 @@ import {
     writeFileEnsuringDirectories,
 } from "./_namespaces/ts.js";
 import * as performance from "./_namespaces/ts.performance.js";
+import { logIfProviderFile, providerPackageIndex, providerPackagePrefix } from "./providers/debugging.js";
+import { createTypeProviderHost, TypeProviderHost } from "./providers/host.js";
+import { getFileNameWithSample, getImportAttributeProperties, getModuleNameWithSample, getProviderSamplePath } from "./providers/utils.js";
+import { ModuleImport as ModuleImport } from "./providers/types.js";
+import { createProvidedSourceFile } from "./providers/codegen.js";
 
 export function findConfigFile(searchPath: string, fileExists: (fileName: string) => boolean, configName = "tsconfig.json"): string | undefined {
     return forEachAncestorDirectory(searchPath, ancestor => {
@@ -399,21 +405,29 @@ export function createGetSourceFile(
     readFile: ProgramHost<any>["readFile"],
     setParentNodes: boolean | undefined,
 ): CompilerHost["getSourceFile"] {
-    return (fileName, languageVersionOrOptions, onError) => {
+    return (fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile, importAttributes) => {
+        logIfProviderFile(fileName, "getSourceFile", "SAMPLE", getProviderSamplePath(importAttributes));
+        const isProvidedImport = getProviderSamplePath(importAttributes) !== undefined;
         let text: string | undefined;
-        try {
-            performance.mark("beforeIORead");
-            text = readFile(fileName);
-            performance.mark("afterIORead");
-            performance.measure("I/O Read", "beforeIORead", "afterIORead");
-        }
-        catch (e) {
-            if (onError) {
-                onError(e.message);
-            }
+
+        if (isProvidedImport) {
             text = "";
+        } else {
+            try {
+                performance.mark("beforeIORead");
+                text = readFile(fileName);
+                performance.mark("afterIORead");
+                performance.measure("I/O Read", "beforeIORead", "afterIORead");
+            }
+            catch (e) {
+                if (onError) {
+                    onError(e.message);
+                }
+                text = "";
+            }
         }
-        return text !== undefined ? createSourceFile(fileName, text, languageVersionOrOptions, setParentNodes) : undefined;
+
+        return text !== undefined ? createSourceFile(fileName, text, languageVersionOrOptions, setParentNodes, /*scriptKind*/ undefined, importAttributes) : undefined;
     };
 }
 
@@ -550,14 +564,24 @@ export function changeCompilerHostLikeToUseCache(
         return setReadFileCache(key, fileName);
     };
 
-    const getSourceFileWithCache: CompilerHost["getSourceFile"] | undefined = getSourceFile ? (fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile) => {
+    const getSourceFileWithCache: CompilerHost["getSourceFile"] | undefined = getSourceFile ? (fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile, importAttributes) => {
+        logIfProviderFile(fileName, "CACHE 1", "SAMPLE", getProviderSamplePath(importAttributes));
         const key = toPath(fileName);
         const impliedNodeFormat: ResolutionMode = typeof languageVersionOrOptions === "object" ? languageVersionOrOptions.impliedNodeFormat : undefined;
         const forImpliedNodeFormat = sourceFileCache.get(impliedNodeFormat);
         const value = forImpliedNodeFormat?.get(key);
+        logIfProviderFile(fileName, "CACHE 2", key, impliedNodeFormat, value);
         if (value) return value;
 
-        const sourceFile = getSourceFile(fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile);
+        let sourceFile = getSourceFile(fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile, importAttributes);
+
+        if (fileName && fileName.includes(providerPackageIndex)) {
+            sourceFile = createProvidedSourceFile(fileName, importAttributes!, true);
+            console.log("CACHE 2.5", sourceFile.fileName);
+        }
+
+        logIfProviderFile(fileName, "CACHE 3", sourceFile?.fileName, sourceFile);
+
         if (sourceFile && (isDeclarationFileName(fileName) || fileExtensionIs(fileName, Extension.Json))) {
             sourceFileCache.set(impliedNodeFormat, (forImpliedNodeFormat || new Map()).set(key, sourceFile));
         }
@@ -870,7 +894,7 @@ export function getModeForResolutionAtIndex(file: SourceFileImportsList, index: 
 export function getModeForResolutionAtIndex(file: SourceFileImportsList, index: number, compilerOptions?: CompilerOptions): ResolutionMode {
     // we ensure all elements of file.imports and file.moduleAugmentations have the relevant parent pointers set during program setup,
     // so it's safe to use them even pre-bind
-    return getModeForUsageLocationWorker(file, getModuleNameStringLiteralAt(file, index), compilerOptions);
+    return getModeForUsageLocationWorker(file, getModuleImportAt(file, index).specifier, compilerOptions);
 }
 
 /** @internal */
@@ -970,14 +994,15 @@ const emptyResolution: ResolvedModuleWithFailedLookupLocations & ResolvedTypeRef
 };
 
 /** @internal */
-export interface ResolutionNameAndModeGetter<Entry, SourceFile> {
+export interface ResolutionPropertiesGetter<Entry, SourceFile> {
     getName(entry: Entry): string;
     getMode(entry: Entry, file: SourceFile, compilerOptions: CompilerOptions): ResolutionMode;
+    getAttributeKey(entry: Entry): string | undefined;
 }
 
 /** @internal */
 export interface ResolutionLoader<Entry, Resolution, SourceFile> {
-    nameAndMode: ResolutionNameAndModeGetter<Entry, SourceFile>;
+    nameAndMode: ResolutionPropertiesGetter<Entry, SourceFile>;
     resolve(name: string, mode: ResolutionMode): Resolution;
 }
 
@@ -986,9 +1011,18 @@ function getModuleResolutionName(literal: StringLiteralLike) {
 }
 
 /** @internal */
-export const moduleResolutionNameAndModeGetter: ResolutionNameAndModeGetter<StringLiteralLike, SourceFile> = {
-    getName: getModuleResolutionName,
+export const moduleResolutionNameAndModeGetter: ResolutionPropertiesGetter<ModuleImport, SourceFile> = {
+    getName: entry => getModuleResolutionName(entry.specifier),
+    getMode: (entry, file, compilerOptions) => getModeForUsageLocation(file, entry.specifier, compilerOptions),
+    // TODO(OR): Rework
+    getAttributeKey: entry => getProviderSamplePath(entry.attributes)
+};
+
+/** @internal */
+export const moduleLiteralResolutionNameAndModeGetter: ResolutionPropertiesGetter<StringLiteralLike, SourceFile> = {
+    getName: entry => getModuleResolutionName(entry),
     getMode: (entry, file, compilerOptions) => getModeForUsageLocation(file, entry, compilerOptions),
+    getAttributeKey: () => ""
 };
 
 /** @internal */
@@ -998,9 +1032,32 @@ export function createModuleResolutionLoader(
     options: CompilerOptions,
     host: ModuleResolutionHost,
     cache: ModuleResolutionCache | undefined,
-): ResolutionLoader<StringLiteralLike, ResolvedModuleWithFailedLookupLocations, SourceFile> {
+): ResolutionLoader<ModuleImport, ResolvedModuleWithFailedLookupLocations, SourceFile> {
     return {
         nameAndMode: moduleResolutionNameAndModeGetter,
+        resolve: (moduleName, resolutionMode) =>
+            resolveModuleName(
+                moduleName,
+                containingFile,
+                options,
+                host,
+                cache,
+                redirectedReference,
+                resolutionMode,
+            ),
+    };
+}
+
+/** @internal */
+export function createModuleLiteralResolutionLoader(
+    containingFile: string,
+    redirectedReference: ResolvedProjectReference | undefined,
+    options: CompilerOptions,
+    host: ModuleResolutionHost,
+    cache: ModuleResolutionCache | undefined,
+): ResolutionLoader<StringLiteralLike, ResolvedModuleWithFailedLookupLocations, SourceFile> {
+    return {
+        nameAndMode: moduleLiteralResolutionNameAndModeGetter,
         resolve: (moduleName, resolutionMode) =>
             resolveModuleName(
                 moduleName,
@@ -1018,10 +1075,11 @@ function getTypeReferenceResolutionName<T extends FileReference | string>(entry:
     return !isString(entry) ? entry.fileName : entry;
 }
 
-const typeReferenceResolutionNameAndModeGetter: ResolutionNameAndModeGetter<FileReference | string, SourceFile | undefined> = {
+const typeReferenceResolutionNameAndModeGetter: ResolutionPropertiesGetter<FileReference | string, SourceFile | undefined> = {
     getName: getTypeReferenceResolutionName,
     getMode: (entry, file) => getModeForFileReference(entry, file?.impliedNodeFormat),
-};
+    getAttributeKey: () => ""
+}
 
 /** @internal */
 export function createTypeReferenceResolutionLoader<T extends FileReference | string>(
@@ -1066,16 +1124,38 @@ export function loadWithModeAwareCache<Entry, SourceFile, ResolutionCache, Resol
     if (entries.length === 0) return emptyArray;
     const resolutions: Resolution[] = [];
     const cache = new Map<ModeAwareCacheKey, Resolution>();
+    // const providedCache = new Map<string, Resolution>();
     const loader = createLoader(containingFile, redirectedReference, options, host, resolutionCache);
     for (const entry of entries) {
-        const name = loader.nameAndMode.getName(entry);
-        const mode = loader.nameAndMode.getMode(entry, containingSourceFile, redirectedReference?.commandLine.options || options);
-        const key = createModeAwareCacheKey(name, mode);
-        let result = cache.get(key);
-        if (!result) {
-            cache.set(key, result = loader.resolve(name, mode));
+        // TODO: Provider aware cache
+        const attributeKey = loader.nameAndMode.getAttributeKey(entry);
+
+        if (attributeKey) {
+            const name = loader.nameAndMode.getName(entry);
+            const mode = loader.nameAndMode.getMode(entry, containingSourceFile, redirectedReference?.commandLine.options || options);
+            // let key = createModeAwareCacheKey(name, mode) as string;
+            // key = `${key}|${attributeKey}`;
+            // let result = providedCache.get(key);
+            // if (containingFile.includes("src"))
+            //     console.log("LOAD WITH CACHE", containingFile, key, result);
+            // if (!result) {
+            //     const loaderResult = loader.resolve(name, mode);
+            //     result = loaderResult;
+            //     console.trace("LOADER RESULT", loaderResult);
+            // }
+            const result = loader.resolve(name, mode);
+            console.trace("LOADER RESULT", result);
+            resolutions.push(result);
+        } else {
+            const name = loader.nameAndMode.getName(entry);
+            const mode = loader.nameAndMode.getMode(entry, containingSourceFile, redirectedReference?.commandLine.options || options);
+            const key = createModeAwareCacheKey(name, mode);
+            let result = cache.get(key);
+            if (!result) {
+                cache.set(key, result = loader.resolve(name, mode));
+            }
+            resolutions.push(result);
         }
-        resolutions.push(result);
     }
     return resolutions;
 }
@@ -1202,7 +1282,7 @@ export function getReferencedFileLocation(program: Program, ref: ReferencedFile)
     let pos: number | undefined, end: number | undefined, packageId: PackageId | undefined;
     switch (kind) {
         case FileIncludeKind.Import:
-            const importLiteral = getModuleNameStringLiteralAt(file, index);
+            const importLiteral = getModuleImportAt(file, index).specifier;
             packageId = program.getResolvedModuleFromModuleSpecifier(importLiteral, file)?.resolvedModule?.packageId;
             if (importLiteral.pos === -1) return { file, packageId, text: importLiteral.text };
             pos = skipTrivia(file.text, importLiteral.pos);
@@ -1350,8 +1430,8 @@ export function getImpliedNodeFormatForFileWorker(
         case ModuleResolutionKind.NodeNext:
             return fileExtensionIsOneOf(fileName, [Extension.Dmts, Extension.Mts, Extension.Mjs]) ? ModuleKind.ESNext :
                 fileExtensionIsOneOf(fileName, [Extension.Dcts, Extension.Cts, Extension.Cjs]) ? ModuleKind.CommonJS :
-                fileExtensionIsOneOf(fileName, [Extension.Dts, Extension.Ts, Extension.Tsx, Extension.Js, Extension.Jsx]) ? lookupFromPackageJson() :
-                undefined; // other extensions, like `json` or `tsbuildinfo`, are set as `undefined` here but they should never be fed through the transformer pipeline
+                    fileExtensionIsOneOf(fileName, [Extension.Dts, Extension.Ts, Extension.Tsx, Extension.Js, Extension.Jsx]) ? lookupFromPackageJson() :
+                        undefined; // other extensions, like `json` or `tsbuildinfo`, are set as `undefined` here but they should never be fed through the transformer pipeline
         default:
             return undefined;
     }
@@ -1534,6 +1614,8 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
         }
     }
 
+    console.log("CREATE PROGRAM", JSON.stringify(createProgramOptions));
+
     const reportInvalidIgnoreDeprecations = memoize(() => createOptionValueDiagnostic("ignoreDeprecations", Diagnostics.Invalid_value_for_ignoreDeprecations));
 
     let processingDefaultLibFiles: SourceFile[] | undefined;
@@ -1564,6 +1646,8 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     let resolvedTypeReferenceDirectiveNamesProcessing: Map<Path, readonly ResolvedTypeReferenceDirectiveWithFailedLookupLocations[]> | undefined;
 
     let packageMap: Map<string, boolean> | undefined;
+
+    let typeProviderHost: TypeProviderHost;
 
     // The below settings are to track if a .js file should be add to the program if loaded via searching under node_modules.
     // This works as imported modules are discovered recursively in a depth first manner, specifically:
@@ -1609,7 +1693,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
 
     let moduleResolutionCache: ModuleResolutionCache | undefined;
     let actualResolveModuleNamesWorker: (
-        moduleNames: readonly StringLiteralLike[],
+        moduleImports: readonly ModuleImport[],
         containingFile: string,
         redirectedReference: ResolvedProjectReference | undefined,
         options: CompilerOptions,
@@ -1618,13 +1702,14 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     ) => readonly ResolvedModuleWithFailedLookupLocations[];
     const hasInvalidatedResolutions = host.hasInvalidatedResolutions || returnFalse;
     if (host.resolveModuleNameLiterals) {
-        actualResolveModuleNamesWorker = host.resolveModuleNameLiterals.bind(host);
+        actualResolveModuleNamesWorker = (moduleImports, containingFile, redirectedReference, options, containingSourceFile, reusedNames) =>
+            host.resolveModuleNameLiterals!(moduleImports.map(m => m.specifier), containingFile, redirectedReference, options, containingSourceFile, reusedNames);
         moduleResolutionCache = host.getModuleResolutionCache?.();
     }
     else if (host.resolveModuleNames) {
-        actualResolveModuleNamesWorker = (moduleNames, containingFile, redirectedReference, options, containingSourceFile, reusedNames) =>
+        actualResolveModuleNamesWorker = (moduleImports, containingFile, redirectedReference, options, containingSourceFile, reusedNames) =>
             host.resolveModuleNames!(
-                moduleNames.map(getModuleResolutionName),
+                moduleImports.map(m => getModuleResolutionName(m.specifier)),
                 containingFile,
                 reusedNames?.map(getModuleResolutionName),
                 redirectedReference,
@@ -1641,10 +1726,11 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
         moduleResolutionCache = host.getModuleResolutionCache?.();
     }
     else {
+        // TODO(OR): Provider aware resolution cache
         moduleResolutionCache = createModuleResolutionCache(currentDirectory, getCanonicalFileName, options);
-        actualResolveModuleNamesWorker = (moduleNames, containingFile, redirectedReference, options, containingSourceFile) =>
+        actualResolveModuleNamesWorker = (moduleImports, containingFile, redirectedReference, options, containingSourceFile) =>
             loadWithModeAwareCache(
-                moduleNames,
+                moduleImports,
                 containingFile,
                 redirectedReference,
                 options,
@@ -1910,6 +1996,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
         getBindAndCheckDiagnostics,
         getProgramDiagnostics,
         getTypeChecker,
+        getTypeProviderHost,
         getClassifiableNames,
         getCommonSourceDirectory,
         emit,
@@ -2027,7 +2114,16 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     }
 
     function getResolvedModule(file: SourceFile, moduleName: string, mode: ResolutionMode) {
-        return resolvedModules?.get(file.path)?.get(moduleName, mode);
+        const resolved = resolvedModules?.get(file.path)?.get(moduleName, mode);
+        if (moduleName.includes(providerPackagePrefix)) {
+            console.log("GET RESOLVED MODULE", file.path, moduleName, mode, resolved?.resolvedModule?.resolvedFileName);
+            console.log("\n== FILE NAMES ==\n");
+            resolvedModules?.get(file.path)?.forEach((item, key) => console.log(key, item.resolvedModule?.resolvedFileName));
+            console.log("==\n /FILE NAMES ==\n");
+            // const keys = [...resolvedModules?.keys() ?? []].filter(m => !m.includes("types"));
+            // console.log(keys);
+        }
+        return resolved;
     }
 
     function getResolvedModuleFromModuleSpecifier(moduleSpecifier: StringLiteralLike, sourceFile?: SourceFile): ResolvedModuleWithFailedLookupLocations | undefined {
@@ -2111,16 +2207,27 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
         if (fromCache) addResolutionDiagnostics(fromCache);
     }
 
-    function resolveModuleNamesWorker(moduleNames: readonly StringLiteralLike[], containingFile: SourceFile, reusedNames: readonly StringLiteralLike[] | undefined): readonly ResolvedModuleWithFailedLookupLocations[] {
-        if (!moduleNames.length) return emptyArray;
+    function resolveModuleNamesWorker(moduleImports: readonly ModuleImport[], containingFile: SourceFile, reusedNames: readonly StringLiteralLike[] | undefined): readonly ResolvedModuleWithFailedLookupLocations[] {
+        if (!moduleImports.length) return emptyArray;
+        if (containingFile.fileName.includes("src")) {
+            console.log("** RESOLVE MODULE NAMES", moduleImports?.length);
+        }
         const containingFileName = getNormalizedAbsolutePath(containingFile.originalFileName, currentDirectory);
         const redirectedReference = getRedirectReferenceForResolution(containingFile);
+
+        if (containingFile.fileName.includes("src")) {
+            console.log("*** RESOLVE MODULE NAMES", containingFileName, redirectedReference);
+        }
         tracing?.push(tracing.Phase.Program, "resolveModuleNamesWorker", { containingFileName });
         performance.mark("beforeResolveModule");
-        const result = actualResolveModuleNamesWorker(moduleNames, containingFileName, redirectedReference, options, containingFile, reusedNames);
+        const result = actualResolveModuleNamesWorker(moduleImports, containingFileName, redirectedReference, options, containingFile, reusedNames);
         performance.mark("afterResolveModule");
         performance.measure("ResolveModule", "beforeResolveModule", "afterResolveModule");
         tracing?.pop();
+
+        if (containingFile.fileName.includes("src")) {
+            console.log("**** RESOLVE MODULE NAMES", result.map(a => a.resolvedModule?.resolvedFileName));
+        }
         return result;
     }
 
@@ -2215,11 +2322,13 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
         return classifiableNames;
     }
 
-    function resolveModuleNamesReusingOldState(moduleNames: readonly StringLiteralLike[], file: SourceFile): readonly ResolvedModuleWithFailedLookupLocations[] {
+    function resolveModuleNamesReusingOldState(moduleImports: readonly ModuleImport[], file: SourceFile): readonly ResolvedModuleWithFailedLookupLocations[] {
+        console.log("RESUING OLD STATE", file.ambientModuleNames.length);
         if (structureIsReused === StructureIsReused.Not && !file.ambientModuleNames.length) {
             // If the old program state does not permit reusing resolutions and `file` does not contain locally defined ambient modules,
             // the best we can do is fallback to the default logic.
-            return resolveModuleNamesWorker(moduleNames, file, /*reusedNames*/ undefined);
+            console.log("RESUING OLD STATE TRUE", file.fileName, moduleImports.length);
+            return resolveModuleNamesWorker(moduleImports, file, /*reusedNames*/ undefined);
         }
 
         // At this point, we know at least one of the following hold:
@@ -2228,7 +2337,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
         // With this information, we can infer some module resolutions without performing resolution.
 
         /** An ordered list of module names for which we cannot recover the resolution. */
-        let unknownModuleNames: StringLiteralLike[] | undefined;
+        let unknownModuleNames: ModuleImport[] | undefined;
         /**
          * The indexing of elements in this list matches that of `moduleNames`.
          *
@@ -2244,8 +2353,9 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
         const predictedToResolveToAmbientModuleMarker: ResolvedModuleWithFailedLookupLocations = emptyResolution;
         const oldSourceFile = oldProgram && oldProgram.getSourceFile(file.fileName);
 
-        for (let i = 0; i < moduleNames.length; i++) {
-            const moduleName = moduleNames[i];
+        for (let i = 0; i < moduleImports.length; i++) {
+            const moduleImport = moduleImports[i];
+            const moduleName = moduleImport.specifier;
             // If the source file is unchanged and doesnt have invalidated resolution, reuse the module resolutions
             if (file === oldSourceFile && !hasInvalidatedResolutions(file.path)) {
                 const oldResolution = oldProgram?.getResolvedModule(file, moduleName.text, getModeForUsageLocation(file, moduleName));
@@ -2262,7 +2372,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
                             oldResolution.resolvedModule.packageId && packageIdToString(oldResolution.resolvedModule.packageId),
                         );
                     }
-                    (result ??= new Array(moduleNames.length))[i] = oldResolution;
+                    (result ??= new Array(moduleImports.length))[i] = oldResolution;
                     (reusedNames ??= []).push(moduleName);
                     continue;
                 }
@@ -2283,11 +2393,11 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
             }
 
             if (resolvesToAmbientModuleInNonModifiedFile) {
-                (result || (result = new Array(moduleNames.length)))[i] = predictedToResolveToAmbientModuleMarker;
+                (result || (result = new Array(moduleImports.length)))[i] = predictedToResolveToAmbientModuleMarker;
             }
             else {
                 // Resolution failed in the old program, or resolved to an ambient module for which we can't reuse the result.
-                (unknownModuleNames ??= []).push(moduleName);
+                (unknownModuleNames ??= []).push(moduleImport);
             }
         }
 
@@ -2298,7 +2408,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
         // Combine results of resolutions and predicted results
         if (!result) {
             // There were no unresolved/ambient resolutions.
-            Debug.assert(resolutions.length === moduleNames.length);
+            Debug.assert(resolutions.length === moduleImports.length);
             return resolutions;
         }
 
@@ -2560,7 +2670,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
                 else {
                     // check imports and module augmentations
                     collectExternalModuleReferences(newSourceFile);
-                    if (!arrayIsEqualTo(oldSourceFile.imports, newSourceFile.imports, moduleNameIsEqualTo)) {
+                    if (!arrayIsEqualTo(oldSourceFile.imports, newSourceFile.imports, moduleImportIsEqualTo)) {
                         // imports has changed
                         structureIsReused = StructureIsReused.SafeModules;
                     }
@@ -2604,8 +2714,9 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
 
         // try to verify results of module resolution
         for (const newSourceFile of modifiedSourceFiles) {
-            const moduleNames = getModuleNames(newSourceFile);
-            const resolutions = resolveModuleNamesReusingOldState(moduleNames, newSourceFile);
+            const moduleImports = getModulesToResolve(newSourceFile);
+            const moduleNames = moduleImports.map(m => m.specifier);
+            const resolutions = resolveModuleNamesReusingOldState(moduleImports, newSourceFile);
             (resolvedModulesProcessing ??= new Map()).set(newSourceFile.path, resolutions);
             // ensure that module resolution results are still correct
             const resolutionsChanged = hasChangesInResolutions(
@@ -2800,6 +2911,10 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
         return typeChecker || (typeChecker = createTypeChecker(program));
     }
 
+    function getTypeProviderHost() {
+        return typeProviderHost || (typeProviderHost = createTypeProviderHost());
+    }
+
     function emit(
         sourceFile?: SourceFile,
         writeFileCallback?: WriteFileCallback,
@@ -2883,6 +2998,9 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     }
 
     function getSourceFile(fileName: string): SourceFile | undefined {
+        if (fileName.includes(providerPackagePrefix)) {
+            console.trace("GET SOURCE FILE", fileName);
+        }
         return getSourceFileByPath(toPath(fileName));
     }
 
@@ -3422,6 +3540,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     }
 
     function processRootFile(fileName: string, isDefaultLib: boolean, ignoreNoDefaultLib: boolean, reason: FileIncludeReason) {
+        logIfProviderFile(fileName, "processRootFile", FileIncludeKind[reason.kind]);
         processSourceFile(normalizePath(fileName), isDefaultLib, ignoreNoDefaultLib, /*packageId*/ undefined, reason);
     }
 
@@ -3433,6 +3552,14 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
         return a.kind === SyntaxKind.Identifier
             ? b.kind === SyntaxKind.Identifier && a.escapedText === b.escapedText
             : b.kind === SyntaxKind.StringLiteral && a.text === b.text;
+    }
+
+    function moduleImportIsEqualTo(a: ModuleImport, b: ModuleImport): boolean {
+        return moduleNameIsEqualTo(a.specifier, b.specifier)
+            && arrayIsEqualTo(a.attributes?.elements, b.attributes?.elements, (aa, ba) => {
+                return moduleNameIsEqualTo(aa.name, ba.name)
+                    && moduleNameIsEqualTo(aa.value as StringLiteral, ba.value as StringLiteral);
+            })
     }
 
     function createSyntheticImport(text: string, file: SourceFile) {
@@ -3457,7 +3584,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
         const isExternalModuleFile = isExternalModule(file);
 
         // file.imports may not be undefined if there exists dynamic import
-        let imports: StringLiteralLike[] | undefined;
+        let imports: ModuleImport[] | undefined;
         let moduleAugmentations: (StringLiteral | Identifier)[] | undefined;
         let ambientModules: string[] | undefined;
 
@@ -3469,12 +3596,12 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
         if (isJavaScriptFile || (!file.isDeclarationFile && (getIsolatedModules(options) || isExternalModule(file)))) {
             if (options.importHelpers) {
                 // synthesize 'import "tslib"' declaration
-                imports = [createSyntheticImport(externalHelpersModuleNameText, file)];
+                imports = [{ specifier: createSyntheticImport(externalHelpersModuleNameText, file) }];
             }
             const jsxImport = getJSXRuntimeImport(getJSXImplicitImportBase(options, file), options);
             if (jsxImport) {
                 // synthesize `import "base/jsx-runtime"` declaration
-                (imports ||= []).push(createSyntheticImport(jsxImport, file));
+                (imports ||= []).push({ specifier: createSyntheticImport(jsxImport, file) });
             }
         }
 
@@ -3494,13 +3621,24 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
 
         function collectModuleReferences(node: Statement, inAmbientModule: boolean): void {
             if (isAnyImportOrReExport(node)) {
-                const moduleNameExpr = getExternalModuleName(node);
+                let moduleNameExpr = getExternalModuleName(node);
+
                 // TypeScript 1.0 spec (April 2014): 12.1.6
                 // An ExternalImportDeclaration in an AmbientExternalModuleDeclaration may reference other external modules
                 // only through top - level external module names. Relative external module names are not permitted.
                 if (moduleNameExpr && isStringLiteral(moduleNameExpr) && moduleNameExpr.text && (!inAmbientModule || !isExternalModuleNameRelative(moduleNameExpr.text))) {
                     setParentRecursive(node, /*incremental*/ false); // we need parent data on imports before the program is fully bound, so we ensure it's set here
-                    imports = append(imports, moduleNameExpr);
+                    const attributes = isStatementWithImportAttributes(node)
+                        ? node.attributes
+                        : undefined;
+                    const samplePath = getProviderSamplePath(attributes);
+
+                    if (samplePath && !moduleNameExpr.text.endsWith(".csv")) {
+                        moduleNameExpr.text = getModuleNameWithSample(moduleNameExpr.text, samplePath);
+                    }
+
+                    const moduleImport: ModuleImport = { specifier: moduleNameExpr, attributes };
+                    imports = append(imports, moduleImport);
                     if (!usesUriStyleNodeCoreModules && currentNodeModulesDepth === 0 && !file.isDeclarationFile) {
                         usesUriStyleNodeCoreModules = startsWith(moduleNameExpr.text, "node:");
                     }
@@ -3546,16 +3684,21 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
                 const node = getNodeAtPosition(file, r.lastIndex);
                 if (isJavaScriptFile && isRequireCall(node, /*requireStringLiteralLikeArgument*/ true)) {
                     setParentRecursive(node, /*incremental*/ false); // we need parent data on imports before the program is fully bound, so we ensure it's set here
-                    imports = append(imports, node.arguments[0]);
+                    const moduleImport: ModuleImport = { specifier: node.arguments[0] };
+                    imports = append(imports, moduleImport);
                 }
                 // we have to check the argument list has length of at least 1. We will still have to process these even though we have parsing error.
                 else if (isImportCall(node) && node.arguments.length >= 1 && isStringLiteralLike(node.arguments[0])) {
                     setParentRecursive(node, /*incremental*/ false); // we need parent data on imports before the program is fully bound, so we ensure it's set here
-                    imports = append(imports, node.arguments[0]);
+                    // TODO(OR): Read attributes if possible
+                    const moduleImport: ModuleImport = { specifier: node.arguments[0] };
+                    imports = append(imports, moduleImport);
                 }
                 else if (isLiteralImportTypeNode(node)) {
                     setParentRecursive(node, /*incremental*/ false); // we need parent data on imports before the program is fully bound, so we ensure it's set here
-                    imports = append(imports, node.argument.literal);
+                    const attributes = node.attributes;
+                    const moduleImport: ModuleImport = { specifier: node.argument.literal, attributes };
+                    imports = append(imports, moduleImport);
                 }
                 else if (isJavaScriptFile && isJSDocImportTag(node)) {
                     const moduleNameExpr = getExternalModuleName(node);
@@ -3650,10 +3793,10 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     }
 
     /** This has side effects through `findSourceFile`. */
-    function processSourceFile(fileName: string, isDefaultLib: boolean, ignoreNoDefaultLib: boolean, packageId: PackageId | undefined, reason: FileIncludeReason): void {
+    function processSourceFile(fileName: string, isDefaultLib: boolean, ignoreNoDefaultLib: boolean, packageId: PackageId | undefined, reason: FileIncludeReason, importAttributes?: ImportAttributes): void {
         getSourceFileFromReferenceWorker(
             fileName,
-            fileName => findSourceFile(fileName, isDefaultLib, ignoreNoDefaultLib, reason, packageId), // TODO: GH#18217
+            fileName => findSourceFile(fileName, isDefaultLib, ignoreNoDefaultLib, reason, packageId, importAttributes), // TODO: GH#18217
             (diagnostic, ...args) => addFilePreprocessingFileExplainingDiagnostic(/*file*/ undefined, reason, diagnostic, args),
             reason,
         );
@@ -3686,13 +3829,16 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     }
 
     // Get source file from normalized fileName
-    function findSourceFile(fileName: string, isDefaultLib: boolean, ignoreNoDefaultLib: boolean, reason: FileIncludeReason, packageId: PackageId | undefined): SourceFile | undefined {
+    function findSourceFile(fileName: string, isDefaultLib: boolean, ignoreNoDefaultLib: boolean, reason: FileIncludeReason, packageId: PackageId | undefined, importAttributes?: ImportAttributes): SourceFile | undefined {
         tracing?.push(tracing.Phase.Program, "findSourceFile", {
             fileName,
             isDefaultLib: isDefaultLib || undefined,
             fileIncludeKind: (FileIncludeKind as any)[reason.kind],
         });
-        const result = findSourceFileWorker(fileName, isDefaultLib, ignoreNoDefaultLib, reason, packageId);
+
+        logIfProviderFile(fileName, "FIND", "reason:", reason, "sample", getProviderSamplePath(importAttributes));
+
+        const result = findSourceFileWorker(fileName, isDefaultLib, ignoreNoDefaultLib, reason, packageId, importAttributes);
         tracing?.pop();
         return result;
     }
@@ -3709,9 +3855,18 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
             { languageVersion, impliedNodeFormat: result, setExternalModuleIndicator, jsDocParsingMode: host.jsDocParsingMode };
     }
 
-    function findSourceFileWorker(fileName: string, isDefaultLib: boolean, ignoreNoDefaultLib: boolean, reason: FileIncludeReason, packageId: PackageId | undefined): SourceFile | undefined {
+    function findSourceFileWorker(fileName: string, isDefaultLib: boolean, ignoreNoDefaultLib: boolean, reason: FileIncludeReason, packageId: PackageId | undefined, importAttributes?: ImportAttributes): SourceFile | undefined {
         const path = toPath(fileName);
-        if (useSourceOfProjectReferenceRedirect) {
+
+        const samplePath = getProviderSamplePath(importAttributes);
+        const isProvidedImport = samplePath !== undefined;
+
+        if (isProvidedImport) {
+            // fileName = getFileNameWithSample(fileName, samplePath);
+            console.log("PROVIDED IMPORT", fileName);
+        }
+
+        if (!isProvidedImport && useSourceOfProjectReferenceRedirect) {
             let source = getSourceOfProjectReferenceRedirect(path);
             // If preserveSymlinks is true, module resolution wont jump the symlink
             // but the resolved real path may be the .d.ts from project reference
@@ -3736,7 +3891,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
             }
         }
         const originalFileName = fileName;
-        if (filesByName.has(path)) {
+        if (!isProvidedImport && filesByName.has(path)) {
             const file = filesByName.get(path);
             const addedReason = addFileIncludeReason(file || undefined, reason, /*checkExisting*/ true);
             // try to check if we've already seen this file but with a different casing in path
@@ -3782,7 +3937,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
         }
 
         let redirectedPath: Path | undefined;
-        if (!useSourceOfProjectReferenceRedirect) {
+        if (!isProvidedImport && !useSourceOfProjectReferenceRedirect) {
             const redirectProject = getProjectReferenceRedirectProject(fileName);
             if (redirectProject) {
                 if (redirectProject.commandLine.options.outFile) {
@@ -3801,22 +3956,31 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
         }
 
         // We haven't looked for this file, do so now and cache result
+
+        logIfProviderFile(fileName, "FIND NEW", "SAMPLE", getProviderSamplePath(importAttributes));
+
         const sourceFileOptions = getCreateSourceFileOptions(fileName, moduleResolutionCache, host, options);
         const file = host.getSourceFile(
             fileName,
             sourceFileOptions,
             hostErrorMessage => addFilePreprocessingFileExplainingDiagnostic(/*file*/ undefined, reason, Diagnostics.Cannot_read_file_0_Colon_1, [fileName, hostErrorMessage]),
             shouldCreateNewSourceFile,
+            importAttributes
         );
 
         if (packageId) {
-            const packageIdKey = packageIdToString(packageId);
+            // console.log("PACKAGE ID", packageId);
+            let packageIdKey = packageIdToString(packageId);
+            if (isProvidedImport) {
+                // packageIdKey = getModuleNameWithSample(packageIdKey, samplePath);
+            }
             const fileFromPackageId = packageIdToSourceFile.get(packageIdKey);
             if (fileFromPackageId) {
                 // Some other SourceFile already exists with this package name and version.
                 // Instead of creating a duplicate, just redirect to the existing one.
                 const dupFile = createRedirectedSourceFile(fileFromPackageId, file!, fileName, path, toPath(fileName), originalFileName, sourceFileOptions);
                 redirectTargetsMap.add(fileFromPackageId.path, fileName);
+                console.log("DUPLICATE PACKAGE", packageIdKey);
                 addFileToFilesByName(dupFile, path, fileName, redirectedPath);
                 addFileIncludeReason(dupFile, reason, /*checkExisting*/ false);
                 sourceFileToPackageName.set(path, packageIdToPackageName(packageId));
@@ -3886,7 +4050,13 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     }
 
     function addFileToFilesByName(file: SourceFile | undefined, path: Path, fileName: string, redirectedPath: Path | undefined) {
-        if (redirectedPath) {
+        if (file?.fileName.includes(providerPackageIndex))
+            console.trace("ADD FILE", "file.fileName", file?.fileName, "path", path, "fileName", fileName, "toPath", toPath(fileName), "RedirectedPath", redirectedPath);
+
+        if (file?.scriptKind === ScriptKind.Provided) {
+            updateFilesByNameMap(fileName, toPath(fileName), file);
+        }
+        else if (redirectedPath) {
             updateFilesByNameMap(fileName, redirectedPath, file);
             updateFilesByNameMap(fileName, path, file || false);
         }
@@ -4122,19 +4292,59 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     }
 
     function processImportedModules(file: SourceFile) {
+        if (file.fileName.includes("src")) {
+            console.log("\nSTART IMPORTS", file.fileName, "\n");
+        }
+
         collectExternalModuleReferences(file);
+
+        if (file.fileName.includes("src")) {
+            console.log("== IMPORTS BEGIN ==");
+            file.imports.map(i => `${i.specifier.text} -- ${getProviderSamplePath(i.attributes)}`).forEach(s => console.log(s));
+            console.log("== IMPORTS END ==");
+        }
+
         if (file.imports.length || file.moduleAugmentations.length) {
             // Because global augmentation doesn't have string literal name, we can check for global augmentation as such.
-            const moduleNames = getModuleNames(file);
+            const moduleImports = getModulesToResolve(file);
+            const moduleNames = moduleImports.map(m => m.specifier);
             const resolutions = resolvedModulesProcessing?.get(file.path) ||
-                resolveModuleNamesReusingOldState(moduleNames, file);
-            Debug.assert(resolutions.length === moduleNames.length);
+                resolveModuleNamesReusingOldState(moduleImports, file);
+
+            Debug.assert(resolutions.length === moduleImports.length);
+
+            if (file.fileName.includes("src"))
+                console.log("PROCESS IMPORTED MODULES", file.fileName, "RESOLUTIONS", [...resolutions?.map(r => r.resolvedModule) ?? []]);
+
             const optionsForFile = getRedirectReferenceForResolution(file)?.commandLine.options || options;
             const resolutionsInFile = createModeAwareCache<ResolutionWithFailedLookupLocations>();
             (resolvedModules ??= new Map()).set(file.path, resolutionsInFile);
-            for (let index = 0; index < moduleNames.length; index++) {
+            for (let index = 0; index < moduleImports.length; index++) {
                 const resolution = resolutions[index].resolvedModule;
-                const moduleName = moduleNames[index].text;
+                let moduleName = moduleNames[index].text;
+
+                const importAttributes = moduleImports[index].attributes;
+                const samplePath = getProviderSamplePath(importAttributes);
+                const isProvidedImport = samplePath !== undefined;
+
+                if (resolution && isProvidedImport) {
+                    // TODO(OR): Handle this properly
+                    if (!moduleName.endsWith(".csv")) {
+                        moduleName = getModuleNameWithSample(moduleName, samplePath);
+                    }
+                    const prevResolvedFileName = resolution.resolvedFileName;
+                    const prevPackageId = resolution.packageId;
+                    // TODO(OR): Handle this properly
+                    // Debug.assert(!prevResolvedFileName.endsWith(".csv.d.ts"));
+                    if (prevResolvedFileName.endsWith(".csv.d.ts")) {
+                        console.trace("CACHED PROVIDED MODULE", moduleName, prevResolvedFileName, prevPackageId);
+                    } else {
+                        resolution.resolvedFileName = getFileNameWithSample(prevResolvedFileName, samplePath);
+                        resolution.packageId = { ...prevPackageId!, name: getModuleNameWithSample(prevPackageId!.name, samplePath) };
+                        console.log("NEW PROVIDED MODULE", moduleName);
+                    }
+                }
+
                 const mode = getModeForUsageLocationWorker(file, moduleNames[index], optionsForFile);
                 resolutionsInFile.set(moduleName, mode, resolutions[index]);
                 addResolutionDiagnosticsFromResolutionOrCache(file, moduleName, resolutions[index], mode);
@@ -4167,18 +4377,20 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
                     && index < file.imports.length
                     && !elideImport
                     && !(isJsFile && !getAllowJSCompilerOption(optionsForFile))
-                    && (isInJSFile(file.imports[index]) || !(file.imports[index].flags & NodeFlags.JSDoc));
+                    && (isInJSFile(file.imports[index].specifier) || !(file.imports[index].specifier.flags & NodeFlags.JSDoc));
 
                 if (elideImport) {
                     modulesWithElidedImports.set(file.path, true);
                 }
                 else if (shouldAddFile) {
+                    logIfProviderFile(resolvedFileName, "BEFORE findSourceFile", "SAMPLE", getProviderSamplePath(moduleImports[index].attributes));
                     findSourceFile(
                         resolvedFileName,
                         /*isDefaultLib*/ false,
                         /*ignoreNoDefaultLib*/ false,
                         { kind: FileIncludeKind.Import, file: file.path, index },
                         resolution.packageId,
+                        moduleImports[index].attributes
                     );
                 }
 
@@ -5167,7 +5379,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     }
 
     function getModeForResolutionAtIndex(file: SourceFile, index: number): ResolutionMode {
-        return getModeForUsageLocation(file, getModuleNameStringLiteralAt(file, index));
+        return getModeForUsageLocation(file, getModuleImportAt(file, index).specifier);
     }
 }
 
@@ -5470,11 +5682,11 @@ export function getResolutionDiagnostic(options: CompilerOptions, { extension }:
     }
 }
 
-function getModuleNames({ imports, moduleAugmentations }: SourceFile): StringLiteralLike[] {
-    const res = imports.map(i => i);
+function getModulesToResolve({ imports, moduleAugmentations }: SourceFile): ModuleImport[] {
+    const res = [...imports];
     for (const aug of moduleAugmentations) {
         if (aug.kind === SyntaxKind.StringLiteral) {
-            res.push(aug);
+            res.push({ specifier: aug });
         }
         // Do nothing if it's an Identifier; we don't need to do module resolution for `declare global`.
     }
@@ -5482,12 +5694,12 @@ function getModuleNames({ imports, moduleAugmentations }: SourceFile): StringLit
 }
 
 /** @internal */
-export function getModuleNameStringLiteralAt({ imports, moduleAugmentations }: SourceFileImportsList, index: number): StringLiteralLike {
+export function getModuleImportAt({ imports, moduleAugmentations }: SourceFileImportsList, index: number): ModuleImport {
     if (index < imports.length) return imports[index];
     let augIndex = imports.length;
     for (const aug of moduleAugmentations) {
         if (aug.kind === SyntaxKind.StringLiteral) {
-            if (index === augIndex) return aug;
+            if (index === augIndex) return { specifier: aug };
             augIndex++;
         }
         // Do nothing if it's an Identifier; we don't need to do module resolution for `declare global`.

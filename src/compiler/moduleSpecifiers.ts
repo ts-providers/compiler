@@ -40,7 +40,7 @@ import {
     getDirectoryPath,
     getEmitModuleResolutionKind,
     getModeForResolutionAtIndex,
-    getModuleNameStringLiteralAt,
+    getModuleImportAt as getModuleImportAt,
     getModuleSpecifierEndingPreference,
     getNodeModulePathParts,
     getNormalizedAbsolutePath,
@@ -159,9 +159,9 @@ export function getModuleSpecifierPreferences(
             RelativePreference.Relative :
             RelativePreference.NonRelative) :
             importModuleSpecifierPreference === "relative" ? RelativePreference.Relative :
-            importModuleSpecifierPreference === "non-relative" ? RelativePreference.NonRelative :
-            importModuleSpecifierPreference === "project-relative" ? RelativePreference.ExternalNonRelative :
-            RelativePreference.Shortest,
+                importModuleSpecifierPreference === "non-relative" ? RelativePreference.NonRelative :
+                    importModuleSpecifierPreference === "project-relative" ? RelativePreference.ExternalNonRelative :
+                        RelativePreference.Shortest,
         getAllowedEndingsInPreferredOrder: syntaxImpliedNodeFormat => {
             const preferredEnding = syntaxImpliedNodeFormat !== importingSourceFile.impliedNodeFormat ? getPreferredEnding(syntaxImpliedNodeFormat) : filePreferredEnding;
             if ((syntaxImpliedNodeFormat ?? importingSourceFile.impliedNodeFormat) === ModuleKind.ESNext) {
@@ -426,7 +426,7 @@ function computeModuleSpecifiers(
                 // If the candidate import mode doesn't match the mode we're generating for, don't consider it
                 // TODO: maybe useful to keep around as an alternative option for certain contexts where the mode is overridable
                 if (importingSourceFile.impliedNodeFormat && importingSourceFile.impliedNodeFormat !== getModeForResolutionAtIndex(importingSourceFile, reason.index, compilerOptions)) return undefined;
-                const specifier = getModuleNameStringLiteralAt(importingSourceFile, reason.index).text;
+                const specifier = getModuleImportAt(importingSourceFile, reason.index).specifier.text;
                 // If the preference is for non relative and the module specifier is relative, ignore it
                 return preferences.relativePreference !== RelativePreference.NonRelative || !pathIsRelative(specifier) ?
                     specifier :
@@ -1029,7 +1029,7 @@ function tryGetModuleNameFromExports(options: CompilerOptions, host: ModuleSpeci
             const subPackageName = getNormalizedAbsolutePath(combinePaths(packageName, k), /*currentDirectory*/ undefined);
             const mode = endsWith(k, "/") ? MatchingMode.Directory
                 : k.includes("*") ? MatchingMode.Pattern
-                : MatchingMode.Exact;
+                    : MatchingMode.Exact;
             return tryGetModuleNameFromExportsOrImports(options, host, targetFilePath, packageDirectory, subPackageName, (exports as MapLike<unknown>)[k], conditions, mode, /*isImports*/ false);
         });
     }
@@ -1060,7 +1060,7 @@ function tryGetModuleNameFromPackageJsonImports(moduleFileName: string, sourceDi
         if (!startsWith(k, "#") || k === "#" || startsWith(k, "#/")) return undefined;
         const mode = endsWith(k, "/") ? MatchingMode.Directory
             : k.includes("*") ? MatchingMode.Pattern
-            : MatchingMode.Exact;
+                : MatchingMode.Exact;
         return tryGetModuleNameFromExportsOrImports(options, host, moduleFileName, ancestorDirectoryWithPackageJson, k, (imports as MapLike<unknown>)[k], conditions, mode, /*isImports*/ true);
     })?.moduleFileToTry;
 }

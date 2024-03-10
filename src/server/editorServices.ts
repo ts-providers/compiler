@@ -1,3 +1,4 @@
+import { providerOrg } from "../compiler/providers/types";
 import {
     addToSeen,
     arrayFrom,
@@ -922,8 +923,8 @@ function forEachAnyProjectReferenceKind<T>(
     return project.getCurrentProgram() ?
         project.forEachResolvedProjectReference(cb) :
         project.isInitialLoadPending() ?
-        forEachPotentialProjectReference(project, cbPotentialProjectRef) :
-        forEach(project.getProjectReferences(), cbProjectRef);
+            forEachPotentialProjectReference(project, cbPotentialProjectRef) :
+            forEach(project.getProjectReferences(), cbProjectRef);
 }
 
 function callbackRefProject<T, P extends string>(
@@ -2047,23 +2048,22 @@ export class ProjectService {
                     !info.isAttached(project),
                     "Found script Info still attached to project",
                     () =>
-                        `${project.projectName}: ScriptInfos still attached: ${
-                            JSON.stringify(
-                                arrayFrom(
-                                    mapDefinedIterator(
-                                        this.filenameToScriptInfo.values(),
-                                        info =>
-                                            info.isAttached(project) ?
-                                                {
-                                                    fileName: info.fileName,
-                                                    projects: info.containingProjects.map(p => p.projectName),
-                                                    hasMixedContent: info.hasMixedContent,
-                                                } : undefined,
-                                    ),
+                        `${project.projectName}: ScriptInfos still attached: ${JSON.stringify(
+                            arrayFrom(
+                                mapDefinedIterator(
+                                    this.filenameToScriptInfo.values(),
+                                    info =>
+                                        info.isAttached(project) ?
+                                            {
+                                                fileName: info.fileName,
+                                                projects: info.containingProjects.map(p => p.projectName),
+                                                hasMixedContent: info.hasMixedContent,
+                                            } : undefined,
                                 ),
+                            ),
                                 /*replacer*/ undefined,
-                                " ",
-                            )
+                            " ",
+                        )
                         }`,
                 )
             );
@@ -2817,18 +2817,17 @@ export class ProjectService {
             configFileErrors.push(...parsedCommandLine.errors);
         }
 
-        this.logger.info(`Config: ${configFilename} : ${
-            JSON.stringify(
-                {
-                    rootNames: parsedCommandLine.fileNames,
-                    options: parsedCommandLine.options,
-                    watchOptions: parsedCommandLine.watchOptions,
-                    projectReferences: parsedCommandLine.projectReferences,
-                },
+        this.logger.info(`Config: ${configFilename} : ${JSON.stringify(
+            {
+                rootNames: parsedCommandLine.fileNames,
+                options: parsedCommandLine.options,
+                watchOptions: parsedCommandLine.watchOptions,
+                projectReferences: parsedCommandLine.projectReferences,
+            },
                 /*replacer*/ undefined,
-                " ",
-            )
-        }`);
+            " ",
+        )
+            }`);
 
         const oldCommandLine = configFileExistenceInfo.config?.parsedCommandLine;
         if (!configFileExistenceInfo.config) {
@@ -3491,15 +3490,23 @@ export class ProjectService {
         const path = normalizedPathToPath(fileName, currentDirectory, this.toCanonicalFileName);
         let info = this.filenameToScriptInfo.get(path);
         if (!info) {
-            const isDynamic = isDynamicFileName(fileName);
+            const isProvided = fileName.includes(providerOrg);
+            const isDynamic = isDynamicFileName(fileName) || isProvided;
             Debug.assert(isRootedDiskPath(fileName) || isDynamic || openedByClient, "", () => `${JSON.stringify({ fileName, currentDirectory, hostCurrentDirectory: this.currentDirectory, openKeys: arrayFrom(this.openFilesWithNonRootedDiskPath.keys()) })}\nScript info with non-dynamic relative file name can only be open script info or in context of host currentDirectory`);
             Debug.assert(!isRootedDiskPath(fileName) || this.currentDirectory === currentDirectory || !this.openFilesWithNonRootedDiskPath.has(this.toCanonicalFileName(fileName)), "", () => `${JSON.stringify({ fileName, currentDirectory, hostCurrentDirectory: this.currentDirectory, openKeys: arrayFrom(this.openFilesWithNonRootedDiskPath.keys()) })}\nOpen script files with non rooted disk path opened with current directory context cannot have same canonical names`);
             Debug.assert(!isDynamic || this.currentDirectory === currentDirectory || this.useInferredProjectPerProjectRoot, "", () => `${JSON.stringify({ fileName, currentDirectory, hostCurrentDirectory: this.currentDirectory, openKeys: arrayFrom(this.openFilesWithNonRootedDiskPath.keys()) })}\nDynamic files must always be opened with service's current directory or service should support inferred project per projectRootPath.`);
             // If the file is not opened by client and the file doesnot exist on the disk, return
             if (!openedByClient && !isDynamic && !(hostToQueryFileExistsOn || this.host).fileExists(fileName)) {
+                console.log("CREATE SCRIPT INFO 2", fileName);
+                // console.trace("CREATE SCRIPT INFO 2", fileName, openedByClient, isDynamic);
                 return;
             }
-            info = new ScriptInfo(this.host, fileName, scriptKind!, hasMixedContent, path, this.filenameToScriptInfoVersion.get(path));
+            if (isProvided) {
+                // TODO(OR): Investigate effect of setting hasMixedContent to true
+                info = new ScriptInfo(this.host, fileName, ScriptKind.Provided, true, path, this.filenameToScriptInfoVersion.get(path));
+            } else {
+                info = new ScriptInfo(this.host, fileName, scriptKind!, hasMixedContent, path, this.filenameToScriptInfoVersion.get(path));
+            }
             this.filenameToScriptInfo.set(info.path, info);
             this.filenameToScriptInfoVersion.delete(info.path);
             if (!openedByClient) {

@@ -536,7 +536,7 @@ function verifyProgram(service: ts.server.ProjectService, project: ts.server.Pro
             compilerHost,
             moduleResolutionCache,
             (containingFile, redirectedReference, options) =>
-                ts.createModuleResolutionLoaderUsingGlobalCache(
+                ts.createModuleLiteralResolutionLoaderUsingGlobalCache(
                     containingFile,
                     redirectedReference,
                     options,

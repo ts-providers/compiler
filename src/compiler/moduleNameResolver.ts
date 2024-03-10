@@ -108,6 +108,7 @@ import {
     versionMajorMinor,
     VersionRange,
 } from "./_namespaces/ts.js";
+import { providerPackagePrefix } from "./providers/debugging.js";
 
 /** @internal */
 export function trace(host: ModuleResolutionHost, message: DiagnosticMessage, ...args: any[]): void {
@@ -1107,6 +1108,9 @@ function createPerDirectoryResolutionCache<T>(
 export type ModeAwareCacheKey = string & { __modeAwareCacheKey: any; };
 /** @internal */
 export function createModeAwareCacheKey(specifier: string, mode: ResolutionMode) {
+    if (specifier.includes(providerPackagePrefix)) {
+        console.trace("CACHE KEY", specifier, mode?.toString());
+    }
     return (mode === undefined ? specifier : `${mode}|${specifier}`) as ModeAwareCacheKey;
 }
 /** @internal */
@@ -1411,12 +1415,17 @@ export function resolveModuleName(moduleName: string, containingFile: string, co
     const containingDirectory = getDirectoryPath(containingFile);
     let result = cache?.getFromDirectoryCache(moduleName, resolutionMode, containingDirectory, redirectedReference);
 
-    if (result) {
+    if (result && !moduleName.includes("@ts-providers")) {
+        // console.log("RESOLVED FROM DIR CACHE", moduleName, resolutionMode, containingDirectory, redirectedReference, result?.resolvedModule?.resolvedFileName);
         if (traceEnabled) {
             trace(host, Diagnostics.Resolution_for_module_0_was_found_in_cache_from_location_1, moduleName, containingDirectory);
         }
     }
     else {
+        if (moduleName.includes("@ts-providers")) {
+            console.log("* RESOLVE MODULE NAME", moduleName);
+        }
+
         let moduleResolution = compilerOptions.moduleResolution;
         if (moduleResolution === undefined) {
             moduleResolution = getEmitModuleResolutionKind(compilerOptions);
@@ -1448,6 +1457,10 @@ export function resolveModuleName(moduleName: string, containingFile: string, co
                 break;
             default:
                 return Debug.fail(`Unexpected moduleResolution: ${moduleResolution}`);
+        }
+
+        if (moduleName.includes("@ts-providers")) {
+            console.log("** RESOLVE MODULE NAME", result);
         }
 
         if (cache && !cache.isReadonly) {
@@ -1801,6 +1814,12 @@ function nodeModuleNameResolverWorker(
     redirectedReference: ResolvedProjectReference | undefined,
     conditions: readonly string[] | undefined,
 ): ResolvedModuleWithFailedLookupLocations {
+
+    if (moduleName.includes("@ts-providers")) {
+        moduleName = moduleName.split("__")[0];
+        console.log("NODE MODULE RESOLVER", moduleName);
+    }
+
     const traceEnabled = isTraceEnabled(compilerOptions, host);
 
     const failedLookupLocations: string[] = [];

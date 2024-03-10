@@ -883,8 +883,8 @@ export function getNodeKind(node: Node): ScriptElementKind {
         return isVarConst(v)
             ? ScriptElementKind.constElement
             : isLet(v)
-            ? ScriptElementKind.letElement
-            : ScriptElementKind.variableElement;
+                ? ScriptElementKind.letElement
+                : ScriptElementKind.variableElement;
     }
 }
 
@@ -1348,14 +1348,14 @@ function getAdjustedLocation(node: Node, forRename: boolean): Node {
     if (
         isModifier(node) && (forRename || node.kind !== SyntaxKind.DefaultKeyword) ? canHaveModifiers(parent) && contains(parent.modifiers, node) :
             node.kind === SyntaxKind.ClassKeyword ? isClassDeclaration(parent) || isClassExpression(node) :
-            node.kind === SyntaxKind.FunctionKeyword ? isFunctionDeclaration(parent) || isFunctionExpression(node) :
-            node.kind === SyntaxKind.InterfaceKeyword ? isInterfaceDeclaration(parent) :
-            node.kind === SyntaxKind.EnumKeyword ? isEnumDeclaration(parent) :
-            node.kind === SyntaxKind.TypeKeyword ? isTypeAliasDeclaration(parent) :
-            node.kind === SyntaxKind.NamespaceKeyword || node.kind === SyntaxKind.ModuleKeyword ? isModuleDeclaration(parent) :
-            node.kind === SyntaxKind.ImportKeyword ? isImportEqualsDeclaration(parent) :
-            node.kind === SyntaxKind.GetKeyword ? isGetAccessorDeclaration(parent) :
-            node.kind === SyntaxKind.SetKeyword && isSetAccessorDeclaration(parent)
+                node.kind === SyntaxKind.FunctionKeyword ? isFunctionDeclaration(parent) || isFunctionExpression(node) :
+                    node.kind === SyntaxKind.InterfaceKeyword ? isInterfaceDeclaration(parent) :
+                        node.kind === SyntaxKind.EnumKeyword ? isEnumDeclaration(parent) :
+                            node.kind === SyntaxKind.TypeKeyword ? isTypeAliasDeclaration(parent) :
+                                node.kind === SyntaxKind.NamespaceKeyword || node.kind === SyntaxKind.ModuleKeyword ? isModuleDeclaration(parent) :
+                                    node.kind === SyntaxKind.ImportKeyword ? isImportEqualsDeclaration(parent) :
+                                        node.kind === SyntaxKind.GetKeyword ? isGetAccessorDeclaration(parent) :
+                                            node.kind === SyntaxKind.SetKeyword && isSetAccessorDeclaration(parent)
     ) {
         const location = getAdjustedLocationForDeclaration(parent, forRename);
         if (location) {
@@ -2012,7 +2012,7 @@ export function findPrecedingMatchingToken(token: Node, matchingTokenKind: Synta
 export function removeOptionality(type: Type, isOptionalExpression: boolean, isOptionalChain: boolean) {
     return isOptionalExpression ? type.getNonNullableType() :
         isOptionalChain ? type.getNonOptionalType() :
-        type;
+            type;
 }
 
 /** @internal */
@@ -2241,7 +2241,7 @@ export function isStringAndEmptyAnonymousObjectIntersection(type: Type) {
 /** @internal */
 export function isInsideTemplateLiteral(node: TemplateLiteralToken, position: number, sourceFile: SourceFile): boolean {
     return isTemplateLiteralKind(node.kind)
-            && (node.getStart(sourceFile) < position && position < node.end) || (!!node.isUnterminated && position === node.end);
+        && (node.getStart(sourceFile) < position && position < node.end) || (!!node.isUnterminated && position === node.end);
 }
 
 /** @internal */
@@ -2537,7 +2537,7 @@ export function getQuotePreference(sourceFile: SourceFile | FutureSourceFile, pr
     else {
         // ignore synthetic import added when importHelpers: true
         const firstModuleSpecifier = isFullSourceFile(sourceFile) && sourceFile.imports &&
-            find(sourceFile.imports, n => isStringLiteral(n) && !nodeIsSynthesized(n.parent)) as StringLiteral;
+            find(sourceFile.imports, n => isStringLiteral(n.spcifier) && !nodeIsSynthesized(n.parent))?.specifier as StringLiteral;
         return firstModuleSpecifier ? quotePreferenceFromString(firstModuleSpecifier, sourceFile) : QuotePreference.Double;
     }
 }
@@ -2984,7 +2984,7 @@ export function linkPart(text: string) {
 export function buildLinkParts(link: JSDocLink | JSDocLinkCode | JSDocLinkPlain, checker?: TypeChecker): SymbolDisplayPart[] {
     const prefix = isJSDocLink(link) ? "link"
         : isJSDocLinkCode(link) ? "linkcode"
-        : "linkplain";
+            : "linkplain";
     const parts = [linkPart(`{@${prefix} `)];
     if (!link.name) {
         if (link.text) {
@@ -3195,7 +3195,7 @@ function getSynthesizedDeepCloneWorker<T extends Node>(node: T, replaceNode?: (n
         // This only happens for leaf nodes - internal nodes always see their children change.
         const clone = isStringLiteral(node) ? setOriginalNode(factory.createStringLiteralFromNode(node), node) as Node as T :
             isNumericLiteral(node) ? setOriginalNode(factory.createNumericLiteral(node.text, node.numericLiteralFlags), node) as Node as T :
-            factory.cloneNode(node);
+                factory.cloneNode(node);
         return setTextRange(clone, node);
     }
 
@@ -3914,7 +3914,7 @@ export function createPackageJsonImportFilter(fromFile: SourceFile | FutureSourc
 
 /** @internal */
 export function consumesNodeCoreModules(sourceFile: SourceFile): boolean {
-    return some(sourceFile.imports, ({ text }) => JsTyping.nodeCoreModules.has(text));
+    return some(sourceFile.imports, ({ specifier: name }) => JsTyping.nodeCoreModules.has(name.text));
 }
 
 /** @internal */
@@ -4063,14 +4063,13 @@ export function getSymbolParentOrFail(symbol: Symbol) {
     return Debug.checkDefined(
         symbol.parent,
         `Symbol parent was undefined. Flags: ${Debug.formatSymbolFlags(symbol.flags)}. ` +
-            `Declarations: ${
-                symbol.declarations?.map(d => {
-                    const kind = Debug.formatSyntaxKind(d.kind);
-                    const inJS = isInJSFile(d);
-                    const { expression } = d as any;
-                    return (inJS ? "[JS]" : "") + kind + (expression ? ` (expression: ${Debug.formatSyntaxKind(expression.kind)})` : "");
-                }).join(", ")
-            }.`,
+        `Declarations: ${symbol.declarations?.map(d => {
+            const kind = Debug.formatSyntaxKind(d.kind);
+            const inJS = isInJSFile(d);
+            const { expression } = d as any;
+            return (inJS ? "[JS]" : "") + kind + (expression ? ` (expression: ${Debug.formatSyntaxKind(expression.kind)})` : "");
+        }).join(", ")
+        }.`,
     );
 }
 
@@ -4170,8 +4169,8 @@ export function isDeprecatedDeclaration(decl: Declaration) {
 /** @internal */
 export function shouldUseUriStyleNodeCoreModules(file: SourceFile | FutureSourceFile, program: Program): boolean {
     const decisionFromFile = firstDefined(file.imports, node => {
-        if (JsTyping.nodeCoreModules.has(node.text)) {
-            return startsWith(node.text, "node:");
+        if (JsTyping.nodeCoreModules.has(node.specifier.text)) {
+            return startsWith(node.specifier.text, "node:");
         }
     });
     return decisionFromFile ?? program.usesUriStyleNodeCoreModules;
