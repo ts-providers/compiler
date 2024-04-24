@@ -1,3 +1,4 @@
+import { ModuleImport } from "../compiler/providers/types";
 import {
     __String,
     ApplicableRefactorInfo,
@@ -1042,7 +1043,7 @@ class SourceFileObject extends NodeObject implements SourceFile {
     public languageVariant!: LanguageVariant;
     public identifiers!: Map<string, string>;
     public nameTable: Map<__String, number> | undefined;
-    public imports!: readonly StringLiteralLike[];
+    public imports!: readonly ModuleImport[];
     public moduleAugmentations!: StringLiteral[];
     private namedDeclarations: Map<string, Declaration[]> | undefined;
     public ambientModuleNames!: string[];

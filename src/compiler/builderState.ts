@@ -222,8 +222,8 @@ export namespace BuilderState {
         // To avoid invernal conversion, the key of the referencedFiles map must be of type Path
         if (sourceFile.imports && sourceFile.imports.length > 0) {
             const checker: TypeChecker = program.getTypeChecker();
-            for (const importName of sourceFile.imports) {
-                const declarationSourceFilePaths = getReferencedFilesFromImportLiteral(checker, importName);
+            for (const moduleImport of sourceFile.imports) {
+                const declarationSourceFilePaths = getReferencedFilesFromImportLiteral(checker, moduleImport.specifier);
                 declarationSourceFilePaths?.forEach(addReferencedFile);
             }
         }

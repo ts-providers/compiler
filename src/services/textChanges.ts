@@ -273,7 +273,7 @@ function hasCommentsBeforeLineBreak(text: string, start: number) {
  *
  * @internal
  */
-export interface ConfigurableStartEnd extends ConfigurableStart, ConfigurableEnd {}
+export interface ConfigurableStartEnd extends ConfigurableStart, ConfigurableEnd { }
 
 const useNonAdjustedPositions: ConfigurableStartEnd = {
     leadingTriviaOption: LeadingTriviaOption.Exclude,
@@ -320,7 +320,7 @@ interface BaseChange {
 }
 
 /** @internal */
-export interface ChangeNodeOptions extends ConfigurableStartEnd, InsertNodeOptions {}
+export interface ChangeNodeOptions extends ConfigurableStartEnd, InsertNodeOptions { }
 interface ReplaceWithSingleNode extends BaseChange {
     readonly kind: ChangeKind.ReplaceWithSingleNode;
     readonly node: Node;
@@ -507,7 +507,7 @@ export class ChangeTracker {
     }
 
     /** Public for tests only. Other callers should use `ChangeTracker.with`. */
-    constructor(private readonly newLineCharacter: string, private readonly formatContext: formatting.FormatContext) {}
+    constructor(private readonly newLineCharacter: string, private readonly formatContext: formatting.FormatContext) { }
 
     public pushRaw(sourceFile: SourceFile, change: FileTextChanges) {
         Debug.assertEqual(sourceFile.fileName, change.fileName);
@@ -1274,7 +1274,7 @@ namespace changesToText {
                 const span = createTextSpanFromRange(c.range);
                 const targetSourceFile = c.kind === ChangeKind.ReplaceWithSingleNode ? getSourceFileOfNode(getOriginalNode(c.node)) ?? c.sourceFile :
                     c.kind === ChangeKind.ReplaceWithMultipleNodes ? getSourceFileOfNode(getOriginalNode(c.nodes[0])) ?? c.sourceFile :
-                    c.sourceFile;
+                        c.sourceFile;
                 const newText = computeNewText(c, targetSourceFile, sourceFile, newLineCharacter, formatContext, validate);
                 // Filter out redundant changes.
                 if (span.length === newText.length && stringContainsAt(targetSourceFile.text, newText, span.start)) {
@@ -1408,7 +1408,7 @@ function assignPositionsToNodeArray(
 }
 
 /** @internal */
-export interface TextChangesWriter extends EmitTextWriter, PrintHandlers {}
+export interface TextChangesWriter extends EmitTextWriter, PrintHandlers { }
 
 /** @internal */
 export function createWriter(newLine: string): TextChangesWriter {
@@ -1691,7 +1691,7 @@ namespace deleteDeclaration {
 
             case SyntaxKind.ImportDeclaration:
             case SyntaxKind.ImportEqualsDeclaration:
-                const isFirstImport = sourceFile.imports.length && node === first(sourceFile.imports).parent || node === find(sourceFile.statements, isAnyImportSyntax);
+                const isFirstImport = sourceFile.imports.length && node === first(sourceFile.imports).specifier.parent || node === find(sourceFile.statements, isAnyImportSyntax);
                 // For first import, leave header comment in place, otherwise only delete JSDoc comments
                 deleteNode(changes, sourceFile, node, {
                     leadingTriviaOption: isFirstImport ? LeadingTriviaOption.Exclude : hasJSDocNodes(node) ? LeadingTriviaOption.JSDoc : LeadingTriviaOption.StartLine,

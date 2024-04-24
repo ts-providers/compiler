@@ -1402,7 +1402,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         Debug.assert(!(flags & GeneratedIdentifierFlags.KindMask), "Argument out of range: flags");
         const text = !node ? "" :
             isMemberName(node) ? formatGeneratedName(/*privateName*/ false, prefix, node, suffix, idText) :
-            `generated@${getNodeId(node)}`;
+                `generated@${getNodeId(node)}`;
         if (prefix || suffix) flags |= GeneratedIdentifierFlags.Optimistic;
         const name = createBaseGeneratedIdentifier(text, GeneratedIdentifierFlags.Node | flags, prefix, suffix);
         name.original = node;
@@ -1615,7 +1615,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateQualifiedName(node: QualifiedName, left: EntityName, right: Identifier) {
         return node.left !== left
-                || node.right !== right
+            || node.right !== right
             ? update(createQualifiedName(left, right), node)
             : node;
     }
@@ -1658,9 +1658,9 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateTypeParameterDeclaration(node: TypeParameterDeclaration, modifiers: readonly Modifier[] | undefined, name: Identifier, constraint: TypeNode | undefined, defaultType: TypeNode | undefined): TypeParameterDeclaration {
         return node.modifiers !== modifiers
-                || node.name !== name
-                || node.constraint !== constraint
-                || node.default !== defaultType
+            || node.name !== name
+            || node.constraint !== constraint
+            || node.default !== defaultType
             ? update(createTypeParameterDeclaration(modifiers, name, constraint, defaultType), node)
             : node;
     }
@@ -1711,11 +1711,11 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         initializer: Expression | undefined,
     ) {
         return node.modifiers !== modifiers
-                || node.dotDotDotToken !== dotDotDotToken
-                || node.name !== name
-                || node.questionToken !== questionToken
-                || node.type !== type
-                || node.initializer !== initializer
+            || node.dotDotDotToken !== dotDotDotToken
+            || node.name !== name
+            || node.questionToken !== questionToken
+            || node.type !== type
+            || node.initializer !== initializer
             ? update(createParameterDeclaration(modifiers, dotDotDotToken, name, questionToken, type, initializer), node)
             : node;
     }
@@ -1770,9 +1770,9 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         type: TypeNode | undefined,
     ) {
         return node.modifiers !== modifiers
-                || node.name !== name
-                || node.questionToken !== questionToken
-                || node.type !== type
+            || node.name !== name
+            || node.questionToken !== questionToken
+            || node.type !== type
             ? finishUpdatePropertySignature(createPropertySignature(modifiers, name, questionToken, type), node)
             : node;
     }
@@ -1824,11 +1824,11 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         initializer: Expression | undefined,
     ) {
         return node.modifiers !== modifiers
-                || node.name !== name
-                || node.questionToken !== (questionOrExclamationToken !== undefined && isQuestionToken(questionOrExclamationToken) ? questionOrExclamationToken : undefined)
-                || node.exclamationToken !== (questionOrExclamationToken !== undefined && isExclamationToken(questionOrExclamationToken) ? questionOrExclamationToken : undefined)
-                || node.type !== type
-                || node.initializer !== initializer
+            || node.name !== name
+            || node.questionToken !== (questionOrExclamationToken !== undefined && isQuestionToken(questionOrExclamationToken) ? questionOrExclamationToken : undefined)
+            || node.exclamationToken !== (questionOrExclamationToken !== undefined && isExclamationToken(questionOrExclamationToken) ? questionOrExclamationToken : undefined)
+            || node.type !== type
+            || node.initializer !== initializer
             ? update(createPropertyDeclaration(modifiers, name, questionOrExclamationToken, type, initializer), node)
             : node;
     }
@@ -1869,11 +1869,11 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         type: TypeNode | undefined,
     ) {
         return node.modifiers !== modifiers
-                || node.name !== name
-                || node.questionToken !== questionToken
-                || node.typeParameters !== typeParameters
-                || node.parameters !== parameters
-                || node.type !== type
+            || node.name !== name
+            || node.questionToken !== questionToken
+            || node.typeParameters !== typeParameters
+            || node.parameters !== parameters
+            || node.type !== type
             ? finishUpdateBaseSignatureDeclaration(createMethodSignature(modifiers, name, questionToken, typeParameters, parameters, type), node)
             : node;
     }
@@ -1918,8 +1918,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
                 (propagateChildFlags(node.body) & ~TransformFlags.ContainsPossibleTopLevelAwait) |
                 (isAsyncGenerator ? TransformFlags.ContainsES2018 :
                     isAsync ? TransformFlags.ContainsES2017 :
-                    isGenerator ? TransformFlags.ContainsGenerator :
-                    TransformFlags.None) |
+                        isGenerator ? TransformFlags.ContainsGenerator :
+                            TransformFlags.None) |
                 (node.questionToken || node.typeParameters || node.type ? TransformFlags.ContainsTypeScript : TransformFlags.None) |
                 TransformFlags.ContainsES2015;
         }
@@ -1947,13 +1947,13 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         body: Block | undefined,
     ) {
         return node.modifiers !== modifiers
-                || node.asteriskToken !== asteriskToken
-                || node.name !== name
-                || node.questionToken !== questionToken
-                || node.typeParameters !== typeParameters
-                || node.parameters !== parameters
-                || node.type !== type
-                || node.body !== body
+            || node.asteriskToken !== asteriskToken
+            || node.name !== name
+            || node.questionToken !== questionToken
+            || node.typeParameters !== typeParameters
+            || node.parameters !== parameters
+            || node.type !== type
+            || node.body !== body
             ? finishUpdateMethodDeclaration(createMethodDeclaration(modifiers, asteriskToken, name, questionToken, typeParameters, parameters, type, body), node)
             : node;
     }
@@ -2036,8 +2036,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         body: Block | undefined,
     ) {
         return node.modifiers !== modifiers
-                || node.parameters !== parameters
-                || node.body !== body
+            || node.parameters !== parameters
+            || node.body !== body
             ? finishUpdateConstructorDeclaration(createConstructorDeclaration(modifiers, parameters, body), node)
             : node;
     }
@@ -2098,10 +2098,10 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         body: Block | undefined,
     ) {
         return node.modifiers !== modifiers
-                || node.name !== name
-                || node.parameters !== parameters
-                || node.type !== type
-                || node.body !== body
+            || node.name !== name
+            || node.parameters !== parameters
+            || node.type !== type
+            || node.body !== body
             ? finishUpdateGetAccessorDeclaration(createGetAccessorDeclaration(modifiers, name, parameters, type, body), node)
             : node;
     }
@@ -2159,9 +2159,9 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         body: Block | undefined,
     ) {
         return node.modifiers !== modifiers
-                || node.name !== name
-                || node.parameters !== parameters
-                || node.body !== body
+            || node.name !== name
+            || node.parameters !== parameters
+            || node.body !== body
             ? finishUpdateSetAccessorDeclaration(createSetAccessorDeclaration(modifiers, name, parameters, body), node)
             : node;
     }
@@ -2202,8 +2202,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         type: TypeNode | undefined,
     ) {
         return node.typeParameters !== typeParameters
-                || node.parameters !== parameters
-                || node.type !== type
+            || node.parameters !== parameters
+            || node.type !== type
             ? finishUpdateBaseSignatureDeclaration(createCallSignature(typeParameters, parameters, type), node)
             : node;
     }
@@ -2235,8 +2235,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         type: TypeNode | undefined,
     ) {
         return node.typeParameters !== typeParameters
-                || node.parameters !== parameters
-                || node.type !== type
+            || node.parameters !== parameters
+            || node.type !== type
             ? finishUpdateBaseSignatureDeclaration(createConstructSignature(typeParameters, parameters, type), node)
             : node;
     }
@@ -2268,8 +2268,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         type: TypeNode,
     ) {
         return node.parameters !== parameters
-                || node.type !== type
-                || node.modifiers !== modifiers
+            || node.type !== type
+            || node.modifiers !== modifiers
             ? finishUpdateBaseSignatureDeclaration(createIndexSignature(modifiers, parameters, type), node)
             : node;
     }
@@ -2286,7 +2286,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateTemplateLiteralTypeSpan(node: TemplateLiteralTypeSpan, type: TypeNode, literal: TemplateMiddle | TemplateTail) {
         return node.type !== type
-                || node.literal !== literal
+            || node.literal !== literal
             ? update(createTemplateLiteralTypeSpan(type, literal), node)
             : node;
     }
@@ -2313,8 +2313,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateTypePredicateNode(node: TypePredicateNode, assertsModifier: AssertsKeyword | undefined, parameterName: Identifier | ThisTypeNode, type: TypeNode | undefined) {
         return node.assertsModifier !== assertsModifier
-                || node.parameterName !== parameterName
-                || node.type !== type
+            || node.parameterName !== parameterName
+            || node.type !== type
             ? update(createTypePredicateNode(assertsModifier, parameterName, type), node)
             : node;
     }
@@ -2331,7 +2331,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateTypeReferenceNode(node: TypeReferenceNode, typeName: EntityName, typeArguments: NodeArray<TypeNode> | undefined) {
         return node.typeName !== typeName
-                || node.typeArguments !== typeArguments
+            || node.typeArguments !== typeArguments
             ? update(createTypeReferenceNode(typeName, typeArguments), node)
             : node;
     }
@@ -2364,8 +2364,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         type: TypeNode,
     ) {
         return node.typeParameters !== typeParameters
-                || node.parameters !== parameters
-                || node.type !== type
+            || node.parameters !== parameters
+            || node.type !== type
             ? finishUpdateFunctionTypeNode(createFunctionTypeNode(typeParameters, parameters, type), node)
             : node;
     }
@@ -2382,7 +2382,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     function createConstructorTypeNode(...args: Parameters<typeof createConstructorTypeNode1 | typeof createConstructorTypeNode2>) {
         return args.length === 4 ? createConstructorTypeNode1(...args) :
             args.length === 3 ? createConstructorTypeNode2(...args) :
-            Debug.fail("Incorrect number of arguments specified.");
+                Debug.fail("Incorrect number of arguments specified.");
     }
 
     function createConstructorTypeNode1(
@@ -2418,7 +2418,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     function updateConstructorTypeNode(...args: Parameters<typeof updateConstructorTypeNode1 | typeof updateConstructorTypeNode2>) {
         return args.length === 5 ? updateConstructorTypeNode1(...args) :
             args.length === 4 ? updateConstructorTypeNode2(...args) :
-            Debug.fail("Incorrect number of arguments specified.");
+                Debug.fail("Incorrect number of arguments specified.");
     }
 
     function updateConstructorTypeNode1(
@@ -2429,9 +2429,9 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         type: TypeNode,
     ) {
         return node.modifiers !== modifiers
-                || node.typeParameters !== typeParameters
-                || node.parameters !== parameters
-                || node.type !== type
+            || node.typeParameters !== typeParameters
+            || node.parameters !== parameters
+            || node.type !== type
             ? finishUpdateBaseSignatureDeclaration(createConstructorTypeNode(modifiers, typeParameters, parameters, type), node)
             : node;
     }
@@ -2458,7 +2458,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateTypeQueryNode(node: TypeQueryNode, exprName: EntityName, typeArguments?: readonly TypeNode[]) {
         return node.exprName !== exprName
-                || node.typeArguments !== typeArguments
+            || node.typeArguments !== typeArguments
             ? update(createTypeQueryNode(exprName, typeArguments), node)
             : node;
     }
@@ -2524,9 +2524,9 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateNamedTupleMember(node: NamedTupleMember, dotDotDotToken: DotDotDotToken | undefined, name: Identifier, questionToken: QuestionToken | undefined, type: TypeNode) {
         return node.dotDotDotToken !== dotDotDotToken
-                || node.name !== name
-                || node.questionToken !== questionToken
-                || node.type !== type
+            || node.name !== name
+            || node.questionToken !== questionToken
+            || node.type !== type
             ? update(createNamedTupleMember(dotDotDotToken, name, questionToken, type), node)
             : node;
     }
@@ -2611,9 +2611,9 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateConditionalTypeNode(node: ConditionalTypeNode, checkType: TypeNode, extendsType: TypeNode, trueType: TypeNode, falseType: TypeNode) {
         return node.checkType !== checkType
-                || node.extendsType !== extendsType
-                || node.trueType !== trueType
-                || node.falseType !== falseType
+            || node.extendsType !== extendsType
+            || node.trueType !== trueType
+            || node.falseType !== falseType
             ? update(createConditionalTypeNode(checkType, extendsType, trueType, falseType), node)
             : node;
     }
@@ -2645,7 +2645,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateTemplateLiteralType(node: TemplateLiteralTypeNode, head: TemplateHead, templateSpans: readonly TemplateLiteralTypeSpan[]) {
         return node.head !== head
-                || node.templateSpans !== templateSpans
+            || node.templateSpans !== templateSpans
             ? update(createTemplateLiteralType(head, templateSpans), node)
             : node;
     }
@@ -2681,10 +2681,10 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         isTypeOf: boolean = node.isTypeOf,
     ): ImportTypeNode {
         return node.argument !== argument
-                || node.attributes !== attributes
-                || node.qualifier !== qualifier
-                || node.typeArguments !== typeArguments
-                || node.isTypeOf !== isTypeOf
+            || node.attributes !== attributes
+            || node.qualifier !== qualifier
+            || node.typeArguments !== typeArguments
+            || node.isTypeOf !== isTypeOf
             ? update(createImportTypeNode(argument, attributes, qualifier, typeArguments, isTypeOf), node)
             : node;
     }
@@ -2741,7 +2741,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateIndexedAccessTypeNode(node: IndexedAccessTypeNode, objectType: TypeNode, indexType: TypeNode) {
         return node.objectType !== objectType
-                || node.indexType !== indexType
+            || node.indexType !== indexType
             ? update(createIndexedAccessTypeNode(objectType, indexType), node)
             : node;
     }
@@ -2765,11 +2765,11 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateMappedTypeNode(node: MappedTypeNode, readonlyToken: ReadonlyKeyword | PlusToken | MinusToken | undefined, typeParameter: TypeParameterDeclaration, nameType: TypeNode | undefined, questionToken: QuestionToken | PlusToken | MinusToken | undefined, type: TypeNode | undefined, members: readonly TypeElement[] | undefined): MappedTypeNode {
         return node.readonlyToken !== readonlyToken
-                || node.typeParameter !== typeParameter
-                || node.nameType !== nameType
-                || node.questionToken !== questionToken
-                || node.type !== type
-                || node.members !== members
+            || node.typeParameter !== typeParameter
+            || node.nameType !== nameType
+            || node.questionToken !== questionToken
+            || node.type !== type
+            || node.members !== members
             ? update(createMappedTypeNode(readonlyToken, typeParameter, nameType, questionToken, type, members), node)
             : node;
     }
@@ -2852,9 +2852,9 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateBindingElement(node: BindingElement, dotDotDotToken: DotDotDotToken | undefined, propertyName: PropertyName | undefined, name: BindingName, initializer: Expression | undefined) {
         return node.propertyName !== propertyName
-                || node.dotDotDotToken !== dotDotDotToken
-                || node.name !== name
-                || node.initializer !== initializer
+            || node.dotDotDotToken !== dotDotDotToken
+            || node.name !== name
+            || node.initializer !== initializer
             ? update(createBindingElement(dotDotDotToken, propertyName, name, initializer), node)
             : node;
     }
@@ -2940,7 +2940,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
             return updatePropertyAccessChain(node, expression, node.questionDotToken, cast(name, isIdentifier));
         }
         return node.expression !== expression
-                || node.name !== name
+            || node.name !== name
             ? update(createPropertyAccessExpression(expression, name), node)
             : node;
     }
@@ -2963,8 +2963,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         // Because we are updating an existing PropertyAccessChain we want to inherit its emitFlags
         // instead of using the default from createPropertyAccess
         return node.expression !== expression
-                || node.questionDotToken !== questionDotToken
-                || node.name !== name
+            || node.questionDotToken !== questionDotToken
+            || node.name !== name
             ? update(createPropertyAccessChain(expression, questionDotToken, name), node)
             : node;
     }
@@ -3005,7 +3005,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
             return updateElementAccessChain(node, expression, node.questionDotToken, argumentExpression);
         }
         return node.expression !== expression
-                || node.argumentExpression !== argumentExpression
+            || node.argumentExpression !== argumentExpression
             ? update(createElementAccessExpression(expression, argumentExpression), node)
             : node;
     }
@@ -3028,8 +3028,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         // Because we are updating an existing ElementAccessChain we want to inherit its emitFlags
         // instead of using the default from createElementAccess
         return node.expression !== expression
-                || node.questionDotToken !== questionDotToken
-                || node.argumentExpression !== argumentExpression
+            || node.questionDotToken !== questionDotToken
+            || node.argumentExpression !== argumentExpression
             ? update(createElementAccessChain(expression, questionDotToken, argumentExpression), node)
             : node;
     }
@@ -3073,8 +3073,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
             return updateCallChain(node, expression, node.questionDotToken, typeArguments, argumentsArray);
         }
         return node.expression !== expression
-                || node.typeArguments !== typeArguments
-                || node.arguments !== argumentsArray
+            || node.typeArguments !== typeArguments
+            || node.arguments !== argumentsArray
             ? update(createCallExpression(expression, typeArguments, argumentsArray), node)
             : node;
     }
@@ -3096,9 +3096,9 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     function updateCallChain(node: CallChain, expression: Expression, questionDotToken: QuestionDotToken | undefined, typeArguments: readonly TypeNode[] | undefined, argumentsArray: readonly Expression[]) {
         Debug.assert(!!(node.flags & NodeFlags.OptionalChain), "Cannot update a CallExpression using updateCallChain. Use updateCall instead.");
         return node.expression !== expression
-                || node.questionDotToken !== questionDotToken
-                || node.typeArguments !== typeArguments
-                || node.arguments !== argumentsArray
+            || node.questionDotToken !== questionDotToken
+            || node.typeArguments !== typeArguments
+            || node.arguments !== argumentsArray
             ? update(createCallChain(expression, questionDotToken, typeArguments, argumentsArray), node)
             : node;
     }
@@ -3122,8 +3122,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateNewExpression(node: NewExpression, expression: Expression, typeArguments: readonly TypeNode[] | undefined, argumentsArray: readonly Expression[] | undefined) {
         return node.expression !== expression
-                || node.typeArguments !== typeArguments
-                || node.arguments !== argumentsArray
+            || node.typeArguments !== typeArguments
+            || node.arguments !== argumentsArray
             ? update(createNewExpression(expression, typeArguments, argumentsArray), node)
             : node;
     }
@@ -3150,8 +3150,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateTaggedTemplateExpression(node: TaggedTemplateExpression, tag: Expression, typeArguments: readonly TypeNode[] | undefined, template: TemplateLiteral) {
         return node.tag !== tag
-                || node.typeArguments !== typeArguments
-                || node.template !== template
+            || node.typeArguments !== typeArguments
+            || node.template !== template
             ? update(createTaggedTemplateExpression(tag, typeArguments, template), node)
             : node;
     }
@@ -3170,7 +3170,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateTypeAssertion(node: TypeAssertion, type: TypeNode, expression: Expression) {
         return node.type !== type
-                || node.expression !== expression
+            || node.expression !== expression
             ? update(createTypeAssertion(type, expression), node)
             : node;
     }
@@ -3224,8 +3224,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
             (propagateChildFlags(node.body) & ~TransformFlags.ContainsPossibleTopLevelAwait) |
             (isAsyncGenerator ? TransformFlags.ContainsES2018 :
                 isAsync ? TransformFlags.ContainsES2017 :
-                isGenerator ? TransformFlags.ContainsGenerator :
-                TransformFlags.None) |
+                    isGenerator ? TransformFlags.ContainsGenerator :
+                        TransformFlags.None) |
             (node.typeParameters || node.type ? TransformFlags.ContainsTypeScript : TransformFlags.None) |
             TransformFlags.ContainsHoistedDeclarationOrCompletion;
 
@@ -3251,12 +3251,12 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         body: Block,
     ) {
         return node.name !== name
-                || node.modifiers !== modifiers
-                || node.asteriskToken !== asteriskToken
-                || node.typeParameters !== typeParameters
-                || node.parameters !== parameters
-                || node.type !== type
-                || node.body !== body
+            || node.modifiers !== modifiers
+            || node.asteriskToken !== asteriskToken
+            || node.typeParameters !== typeParameters
+            || node.parameters !== parameters
+            || node.type !== type
+            || node.body !== body
             ? finishUpdateBaseSignatureDeclaration(createFunctionExpression(modifiers, asteriskToken, name, typeParameters, parameters, type, body), node)
             : node;
     }
@@ -3311,11 +3311,11 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         body: ConciseBody,
     ): ArrowFunction {
         return node.modifiers !== modifiers
-                || node.typeParameters !== typeParameters
-                || node.parameters !== parameters
-                || node.type !== type
-                || node.equalsGreaterThanToken !== equalsGreaterThanToken
-                || node.body !== body
+            || node.typeParameters !== typeParameters
+            || node.parameters !== parameters
+            || node.type !== type
+            || node.equalsGreaterThanToken !== equalsGreaterThanToken
+            || node.body !== body
             ? finishUpdateBaseSignatureDeclaration(createArrowFunction(modifiers, typeParameters, parameters, type, equalsGreaterThanToken, body), node)
             : node;
     }
@@ -3482,8 +3482,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateBinaryExpression(node: BinaryExpression, left: Expression, operator: BinaryOperatorToken, right: Expression) {
         return node.left !== left
-                || node.operatorToken !== operator
-                || node.right !== right
+            || node.operatorToken !== operator
+            || node.right !== right
             ? update(createBinaryExpression(left, operator, right), node)
             : node;
     }
@@ -3514,10 +3514,10 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         whenFalse: Expression,
     ): ConditionalExpression {
         return node.condition !== condition
-                || node.questionToken !== questionToken
-                || node.whenTrue !== whenTrue
-                || node.colonToken !== colonToken
-                || node.whenFalse !== whenFalse
+            || node.questionToken !== questionToken
+            || node.whenTrue !== whenTrue
+            || node.colonToken !== colonToken
+            || node.whenFalse !== whenFalse
             ? update(createConditionalExpression(condition, questionToken, whenTrue, colonToken, whenFalse), node)
             : node;
     }
@@ -3536,7 +3536,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateTemplateExpression(node: TemplateExpression, head: TemplateHead, templateSpans: readonly TemplateSpan[]) {
         return node.head !== head
-                || node.templateSpans !== templateSpans
+            || node.templateSpans !== templateSpans
             ? update(createTemplateExpression(head, templateSpans), node)
             : node;
     }
@@ -3642,7 +3642,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateYieldExpression(node: YieldExpression, asteriskToken: AsteriskToken | undefined, expression: Expression) {
         return node.expression !== expression
-                || node.asteriskToken !== asteriskToken
+            || node.asteriskToken !== asteriskToken
             ? update(createYieldExpression(asteriskToken, expression), node)
             : node;
     }
@@ -3700,10 +3700,10 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         members: readonly ClassElement[],
     ) {
         return node.modifiers !== modifiers
-                || node.name !== name
-                || node.typeParameters !== typeParameters
-                || node.heritageClauses !== heritageClauses
-                || node.members !== members
+            || node.name !== name
+            || node.typeParameters !== typeParameters
+            || node.heritageClauses !== heritageClauses
+            || node.members !== members
             ? update(createClassExpression(modifiers, name, typeParameters, heritageClauses, members), node)
             : node;
     }
@@ -3727,7 +3727,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateExpressionWithTypeArguments(node: ExpressionWithTypeArguments, expression: Expression, typeArguments: readonly TypeNode[] | undefined) {
         return node.expression !== expression
-                || node.typeArguments !== typeArguments
+            || node.typeArguments !== typeArguments
             ? update(createExpressionWithTypeArguments(expression, typeArguments), node)
             : node;
     }
@@ -3746,7 +3746,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateAsExpression(node: AsExpression, expression: Expression, type: TypeNode) {
         return node.expression !== expression
-                || node.type !== type
+            || node.type !== type
             ? update(createAsExpression(expression, type), node)
             : node;
     }
@@ -3784,7 +3784,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateSatisfiesExpression(node: SatisfiesExpression, expression: Expression, type: TypeNode) {
         return node.expression !== expression
-                || node.type !== type
+            || node.type !== type
             ? update(createSatisfiesExpression(expression, type), node)
             : node;
     }
@@ -3853,7 +3853,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateTemplateSpan(node: TemplateSpan, expression: Expression, literal: TemplateMiddle | TemplateTail) {
         return node.expression !== expression
-                || node.literal !== literal
+            || node.literal !== literal
             ? update(createTemplateSpan(expression, literal), node)
             : node;
     }
@@ -3908,7 +3908,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateVariableStatement(node: VariableStatement, modifiers: readonly ModifierLike[] | undefined, declarationList: VariableDeclarationList) {
         return node.modifiers !== modifiers
-                || node.declarationList !== declarationList
+            || node.declarationList !== declarationList
             ? update(createVariableStatement(modifiers, declarationList), node)
             : node;
     }
@@ -3956,8 +3956,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateIfStatement(node: IfStatement, expression: Expression, thenStatement: Statement, elseStatement: Statement | undefined) {
         return node.expression !== expression
-                || node.thenStatement !== thenStatement
-                || node.elseStatement !== elseStatement
+            || node.thenStatement !== thenStatement
+            || node.elseStatement !== elseStatement
             ? update(createIfStatement(expression, thenStatement, elseStatement), node)
             : node;
     }
@@ -3978,7 +3978,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateDoStatement(node: DoStatement, statement: Statement, expression: Expression) {
         return node.statement !== statement
-                || node.expression !== expression
+            || node.expression !== expression
             ? update(createDoStatement(statement, expression), node)
             : node;
     }
@@ -3999,7 +3999,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateWhileStatement(node: WhileStatement, expression: Expression, statement: Statement) {
         return node.expression !== expression
-                || node.statement !== statement
+            || node.statement !== statement
             ? update(createWhileStatement(expression, statement), node)
             : node;
     }
@@ -4026,9 +4026,9 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateForStatement(node: ForStatement, initializer: ForInitializer | undefined, condition: Expression | undefined, incrementor: Expression | undefined, statement: Statement) {
         return node.initializer !== initializer
-                || node.condition !== condition
-                || node.incrementor !== incrementor
-                || node.statement !== statement
+            || node.condition !== condition
+            || node.incrementor !== incrementor
+            || node.statement !== statement
             ? update(createForStatement(initializer, condition, incrementor, statement), node)
             : node;
     }
@@ -4053,8 +4053,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateForInStatement(node: ForInStatement, initializer: ForInitializer, expression: Expression, statement: Statement) {
         return node.initializer !== initializer
-                || node.expression !== expression
-                || node.statement !== statement
+            || node.expression !== expression
+            || node.statement !== statement
             ? update(createForInStatement(initializer, expression, statement), node)
             : node;
     }
@@ -4083,9 +4083,9 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateForOfStatement(node: ForOfStatement, awaitModifier: AwaitKeyword | undefined, initializer: ForInitializer, expression: Expression, statement: Statement) {
         return node.awaitModifier !== awaitModifier
-                || node.initializer !== initializer
-                || node.expression !== expression
-                || node.statement !== statement
+            || node.initializer !== initializer
+            || node.expression !== expression
+            || node.statement !== statement
             ? update(createForOfStatement(awaitModifier, initializer, expression, statement), node)
             : node;
     }
@@ -4165,7 +4165,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateWithStatement(node: WithStatement, expression: Expression, statement: Statement) {
         return node.expression !== expression
-                || node.statement !== statement
+            || node.statement !== statement
             ? update(createWithStatement(expression, statement), node)
             : node;
     }
@@ -4187,7 +4187,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateSwitchStatement(node: SwitchStatement, expression: Expression, caseBlock: CaseBlock) {
         return node.expression !== expression
-                || node.caseBlock !== caseBlock
+            || node.caseBlock !== caseBlock
             ? update(createSwitchStatement(expression, caseBlock), node)
             : node;
     }
@@ -4208,7 +4208,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateLabeledStatement(node: LabeledStatement, label: Identifier, statement: Statement) {
         return node.label !== label
-                || node.statement !== statement
+            || node.statement !== statement
             ? update(createLabeledStatement(label, statement), node)
             : node;
     }
@@ -4249,8 +4249,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateTryStatement(node: TryStatement, tryBlock: Block, catchClause: CatchClause | undefined, finallyBlock: Block | undefined) {
         return node.tryBlock !== tryBlock
-                || node.catchClause !== catchClause
-                || node.finallyBlock !== finallyBlock
+            || node.catchClause !== catchClause
+            || node.finallyBlock !== finallyBlock
             ? update(createTryStatement(tryBlock, catchClause, finallyBlock), node)
             : node;
     }
@@ -4282,9 +4282,9 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateVariableDeclaration(node: VariableDeclaration, name: BindingName, exclamationToken: ExclamationToken | undefined, type: TypeNode | undefined, initializer: Expression | undefined) {
         return node.name !== name
-                || node.type !== type
-                || node.exclamationToken !== exclamationToken
-                || node.initializer !== initializer
+            || node.type !== type
+            || node.exclamationToken !== exclamationToken
+            || node.initializer !== initializer
             ? update(createVariableDeclaration(name, exclamationToken, type, initializer), node)
             : node;
     }
@@ -4349,8 +4349,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
                 (propagateChildFlags(node.body) & ~TransformFlags.ContainsPossibleTopLevelAwait) |
                 (isAsyncGenerator ? TransformFlags.ContainsES2018 :
                     isAsync ? TransformFlags.ContainsES2017 :
-                    isGenerator ? TransformFlags.ContainsGenerator :
-                    TransformFlags.None) |
+                        isGenerator ? TransformFlags.ContainsGenerator :
+                            TransformFlags.None) |
                 (node.typeParameters || node.type ? TransformFlags.ContainsTypeScript : TransformFlags.None) |
                 TransformFlags.ContainsHoistedDeclarationOrCompletion;
         }
@@ -4376,12 +4376,12 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         body: Block | undefined,
     ) {
         return node.modifiers !== modifiers
-                || node.asteriskToken !== asteriskToken
-                || node.name !== name
-                || node.typeParameters !== typeParameters
-                || node.parameters !== parameters
-                || node.type !== type
-                || node.body !== body
+            || node.asteriskToken !== asteriskToken
+            || node.name !== name
+            || node.typeParameters !== typeParameters
+            || node.parameters !== parameters
+            || node.type !== type
+            || node.body !== body
             ? finishUpdateFunctionDeclaration(createFunctionDeclaration(modifiers, asteriskToken, name, typeParameters, parameters, type, body), node)
             : node;
     }
@@ -4441,10 +4441,10 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         members: readonly ClassElement[],
     ) {
         return node.modifiers !== modifiers
-                || node.name !== name
-                || node.typeParameters !== typeParameters
-                || node.heritageClauses !== heritageClauses
-                || node.members !== members
+            || node.name !== name
+            || node.typeParameters !== typeParameters
+            || node.heritageClauses !== heritageClauses
+            || node.members !== members
             ? update(createClassDeclaration(modifiers, name, typeParameters, heritageClauses, members), node)
             : node;
     }
@@ -4479,10 +4479,10 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         members: readonly TypeElement[],
     ) {
         return node.modifiers !== modifiers
-                || node.name !== name
-                || node.typeParameters !== typeParameters
-                || node.heritageClauses !== heritageClauses
-                || node.members !== members
+            || node.name !== name
+            || node.typeParameters !== typeParameters
+            || node.heritageClauses !== heritageClauses
+            || node.members !== members
             ? update(createInterfaceDeclaration(modifiers, name, typeParameters, heritageClauses, members), node)
             : node;
     }
@@ -4516,9 +4516,9 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         type: TypeNode,
     ) {
         return node.modifiers !== modifiers
-                || node.name !== name
-                || node.typeParameters !== typeParameters
-                || node.type !== type
+            || node.name !== name
+            || node.typeParameters !== typeParameters
+            || node.type !== type
             ? update(createTypeAliasDeclaration(modifiers, name, typeParameters, type), node)
             : node;
     }
@@ -4551,8 +4551,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         members: readonly EnumMember[],
     ) {
         return node.modifiers !== modifiers
-                || node.name !== name
-                || node.members !== members
+            || node.name !== name
+            || node.members !== members
             ? update(createEnumDeclaration(modifiers, name, members), node)
             : node;
     }
@@ -4594,8 +4594,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         body: ModuleBody | undefined,
     ) {
         return node.modifiers !== modifiers
-                || node.name !== name
-                || node.body !== body
+            || node.name !== name
+            || node.body !== body
             ? update(createModuleDeclaration(modifiers, name, body, node.flags), node)
             : node;
     }
@@ -4697,9 +4697,9 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         moduleReference: ModuleReference,
     ) {
         return node.modifiers !== modifiers
-                || node.isTypeOnly !== isTypeOnly
-                || node.name !== name
-                || node.moduleReference !== moduleReference
+            || node.isTypeOnly !== isTypeOnly
+            || node.name !== name
+            || node.moduleReference !== moduleReference
             ? update(createImportEqualsDeclaration(modifiers, isTypeOnly, name, moduleReference), node)
             : node;
     }
@@ -4721,6 +4721,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         node.transformFlags &= ~TransformFlags.ContainsPossibleTopLevelAwait; // always parsed in an Await context
 
         node.jsDoc = undefined; // initialized by parser (JsDocContainer)
+
         return node;
     }
 
@@ -4733,9 +4734,9 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         attributes: ImportAttributes | undefined,
     ) {
         return node.modifiers !== modifiers
-                || node.importClause !== importClause
-                || node.moduleSpecifier !== moduleSpecifier
-                || node.attributes !== attributes
+            || node.importClause !== importClause
+            || node.moduleSpecifier !== moduleSpecifier
+            || node.attributes !== attributes
             ? update(createImportDeclaration(modifiers, importClause, moduleSpecifier, attributes), node)
             : node;
     }
@@ -4758,8 +4759,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateImportClause(node: ImportClause, isTypeOnly: boolean, name: Identifier | undefined, namedBindings: NamedImportBindings | undefined) {
         return node.isTypeOnly !== isTypeOnly
-                || node.name !== name
-                || node.namedBindings !== namedBindings
+            || node.name !== name
+            || node.namedBindings !== namedBindings
             ? update(createImportClause(isTypeOnly, name, namedBindings), node)
             : node;
     }
@@ -4777,7 +4778,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateAssertClause(node: AssertClause, elements: readonly AssertEntry[], multiLine?: boolean): AssertClause {
         return node.elements !== elements
-                || node.multiLine !== multiLine
+            || node.multiLine !== multiLine
             ? update(createAssertClause(elements, multiLine), node)
             : node;
     }
@@ -4794,7 +4795,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateAssertEntry(node: AssertEntry, name: AssertionKey, value: Expression): AssertEntry {
         return node.name !== name
-                || node.value !== value
+            || node.value !== value
             ? update(createAssertEntry(name, value), node)
             : node;
     }
@@ -4810,7 +4811,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateImportTypeAssertionContainer(node: ImportTypeAssertionContainer, clause: AssertClause, multiLine?: boolean): ImportTypeAssertionContainer {
         return node.assertClause !== clause
-                || node.multiLine !== multiLine
+            || node.multiLine !== multiLine
             ? update(createImportTypeAssertionContainer(clause, multiLine), node)
             : node;
     }
@@ -4830,7 +4831,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateImportAttributes(node: ImportAttributes, elements: readonly ImportAttribute[], multiLine?: boolean): ImportAttributes {
         return node.elements !== elements
-                || node.multiLine !== multiLine
+            || node.multiLine !== multiLine
             ? update(createImportAttributes(elements, multiLine, node.token), node)
             : node;
     }
@@ -4847,7 +4848,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateImportAttribute(node: ImportAttribute, name: ImportAttributeName, value: Expression): ImportAttribute {
         return node.name !== name
-                || node.value !== value
+            || node.value !== value
             ? update(createImportAttribute(name, value), node)
             : node;
     }
@@ -4916,8 +4917,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateImportSpecifier(node: ImportSpecifier, isTypeOnly: boolean, propertyName: Identifier | undefined, name: Identifier) {
         return node.isTypeOnly !== isTypeOnly
-                || node.propertyName !== propertyName
-                || node.name !== name
+            || node.propertyName !== propertyName
+            || node.name !== name
             ? update(createImportSpecifier(isTypeOnly, propertyName, name), node)
             : node;
     }
@@ -4948,7 +4949,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         expression: Expression,
     ) {
         return node.modifiers !== modifiers
-                || node.expression !== expression
+            || node.expression !== expression
             ? update(createExportAssignment(modifiers, node.isExportEquals, expression), node)
             : node;
     }
@@ -4986,10 +4987,10 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         attributes: ImportAttributes | undefined,
     ) {
         return node.modifiers !== modifiers
-                || node.isTypeOnly !== isTypeOnly
-                || node.exportClause !== exportClause
-                || node.moduleSpecifier !== moduleSpecifier
-                || node.attributes !== attributes
+            || node.isTypeOnly !== isTypeOnly
+            || node.exportClause !== exportClause
+            || node.moduleSpecifier !== moduleSpecifier
+            || node.attributes !== attributes
             ? finishUpdateExportDeclaration(createExportDeclaration(modifiers, isTypeOnly, exportClause, moduleSpecifier, attributes), node)
             : node;
     }
@@ -5037,8 +5038,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateExportSpecifier(node: ExportSpecifier, isTypeOnly: boolean, propertyName: Identifier | undefined, name: Identifier) {
         return node.isTypeOnly !== isTypeOnly
-                || node.propertyName !== propertyName
-                || node.name !== name
+            || node.propertyName !== propertyName
+            || node.name !== name
             ? update(createExportSpecifier(isTypeOnly, propertyName, name), node)
             : node;
     }
@@ -5141,7 +5142,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateJSDocFunctionType(node: JSDocFunctionType, parameters: readonly ParameterDeclaration[], type: TypeNode | undefined): JSDocFunctionType {
         return node.parameters !== parameters
-                || node.type !== type
+            || node.type !== type
             ? update(createJSDocFunctionType(parameters, type), node)
             : node;
     }
@@ -5157,7 +5158,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateJSDocTypeLiteral(node: JSDocTypeLiteral, propertyTags: readonly JSDocPropertyLikeTag[] | undefined, isArrayType: boolean): JSDocTypeLiteral {
         return node.jsDocPropertyTags !== propertyTags
-                || node.isArrayType !== isArrayType
+            || node.isArrayType !== isArrayType
             ? update(createJSDocTypeLiteral(propertyTags, isArrayType), node)
             : node;
     }
@@ -5192,8 +5193,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateJSDocSignature(node: JSDocSignature, typeParameters: readonly JSDocTemplateTag[] | undefined, parameters: readonly JSDocParameterTag[], type: JSDocReturnTag | undefined): JSDocSignature {
         return node.typeParameters !== typeParameters
-                || node.parameters !== parameters
-                || node.type !== type
+            || node.parameters !== parameters
+            || node.type !== type
             ? update(createJSDocSignature(typeParameters, parameters, type), node)
             : node;
     }
@@ -5231,9 +5232,9 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateJSDocTemplateTag(node: JSDocTemplateTag, tagName: Identifier = getDefaultTagName(node), constraint: JSDocTypeExpression | undefined, typeParameters: readonly TypeParameterDeclaration[], comment: string | NodeArray<JSDocComment> | undefined): JSDocTemplateTag {
         return node.tagName !== tagName
-                || node.constraint !== constraint
-                || node.typeParameters !== typeParameters
-                || node.comment !== comment
+            || node.constraint !== constraint
+            || node.typeParameters !== typeParameters
+            || node.comment !== comment
             ? update(createJSDocTemplateTag(tagName, constraint, typeParameters, comment), node)
             : node;
     }
@@ -5253,9 +5254,9 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateJSDocTypedefTag(node: JSDocTypedefTag, tagName: Identifier = getDefaultTagName(node), typeExpression: JSDocTypeExpression | undefined, fullName: Identifier | JSDocNamespaceDeclaration | undefined, comment: string | NodeArray<JSDocComment> | undefined): JSDocTypedefTag {
         return node.tagName !== tagName
-                || node.typeExpression !== typeExpression
-                || node.fullName !== fullName
-                || node.comment !== comment
+            || node.typeExpression !== typeExpression
+            || node.fullName !== fullName
+            || node.comment !== comment
             ? update(createJSDocTypedefTag(tagName, typeExpression, fullName, comment), node)
             : node;
     }
@@ -5273,11 +5274,11 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateJSDocParameterTag(node: JSDocParameterTag, tagName: Identifier = getDefaultTagName(node), name: EntityName, isBracketed: boolean, typeExpression: JSDocTypeExpression | undefined, isNameFirst: boolean, comment: string | NodeArray<JSDocComment> | undefined): JSDocParameterTag {
         return node.tagName !== tagName
-                || node.name !== name
-                || node.isBracketed !== isBracketed
-                || node.typeExpression !== typeExpression
-                || node.isNameFirst !== isNameFirst
-                || node.comment !== comment
+            || node.name !== name
+            || node.isBracketed !== isBracketed
+            || node.typeExpression !== typeExpression
+            || node.isNameFirst !== isNameFirst
+            || node.comment !== comment
             ? update(createJSDocParameterTag(tagName, name, isBracketed, typeExpression, isNameFirst, comment), node)
             : node;
     }
@@ -5295,11 +5296,11 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateJSDocPropertyTag(node: JSDocPropertyTag, tagName: Identifier = getDefaultTagName(node), name: EntityName, isBracketed: boolean, typeExpression: JSDocTypeExpression | undefined, isNameFirst: boolean, comment: string | NodeArray<JSDocComment> | undefined): JSDocPropertyTag {
         return node.tagName !== tagName
-                || node.name !== name
-                || node.isBracketed !== isBracketed
-                || node.typeExpression !== typeExpression
-                || node.isNameFirst !== isNameFirst
-                || node.comment !== comment
+            || node.name !== name
+            || node.isBracketed !== isBracketed
+            || node.typeExpression !== typeExpression
+            || node.isNameFirst !== isNameFirst
+            || node.comment !== comment
             ? update(createJSDocPropertyTag(tagName, name, isBracketed, typeExpression, isNameFirst, comment), node)
             : node;
     }
@@ -5319,9 +5320,9 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateJSDocCallbackTag(node: JSDocCallbackTag, tagName: Identifier = getDefaultTagName(node), typeExpression: JSDocSignature, fullName: Identifier | JSDocNamespaceDeclaration | undefined, comment: string | NodeArray<JSDocComment> | undefined): JSDocCallbackTag {
         return node.tagName !== tagName
-                || node.typeExpression !== typeExpression
-                || node.fullName !== fullName
-                || node.comment !== comment
+            || node.typeExpression !== typeExpression
+            || node.fullName !== fullName
+            || node.comment !== comment
             ? update(createJSDocCallbackTag(tagName, typeExpression, fullName, comment), node)
             : node;
     }
@@ -5336,8 +5337,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateJSDocOverloadTag(node: JSDocOverloadTag, tagName: Identifier = getDefaultTagName(node), typeExpression: JSDocSignature, comment: string | NodeArray<JSDocComment> | undefined): JSDocOverloadTag {
         return node.tagName !== tagName
-                || node.typeExpression !== typeExpression
-                || node.comment !== comment
+            || node.typeExpression !== typeExpression
+            || node.comment !== comment
             ? update(createJSDocOverloadTag(tagName, typeExpression, comment), node)
             : node;
     }
@@ -5352,8 +5353,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateJSDocAugmentsTag(node: JSDocAugmentsTag, tagName: Identifier = getDefaultTagName(node), className: JSDocAugmentsTag["class"], comment: string | NodeArray<JSDocComment> | undefined): JSDocAugmentsTag {
         return node.tagName !== tagName
-                || node.class !== className
-                || node.comment !== comment
+            || node.class !== className
+            || node.comment !== comment
             ? update(createJSDocAugmentsTag(tagName, className, comment), node)
             : node;
     }
@@ -5375,8 +5376,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateJSDocSeeTag(node: JSDocSeeTag, tagName: Identifier | undefined, name: JSDocNameReference | undefined, comment?: string | NodeArray<JSDocComment>): JSDocSeeTag {
         return node.tagName !== tagName
-                || node.name !== name
-                || node.comment !== comment
+            || node.name !== name
+            || node.comment !== comment
             ? update(createJSDocSeeTag(tagName, name, comment), node)
             : node;
     }
@@ -5408,7 +5409,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateJSDocMemberName(node: JSDocMemberName, left: EntityName | JSDocMemberName, right: Identifier) {
         return node.left !== left
-                || node.right !== right
+            || node.right !== right
             ? update(createJSDocMemberName(left, right), node)
             : node;
     }
@@ -5461,8 +5462,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateJSDocImplementsTag(node: JSDocImplementsTag, tagName: Identifier = getDefaultTagName(node), className: JSDocImplementsTag["class"], comment: string | NodeArray<JSDocComment> | undefined): JSDocImplementsTag {
         return node.tagName !== tagName
-                || node.class !== className
-                || node.comment !== comment
+            || node.class !== className
+            || node.comment !== comment
             ? update(createJSDocImplementsTag(tagName, className, comment), node)
             : node;
     }
@@ -5490,7 +5491,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // updateJSDocDeprecatedTag
     function updateJSDocSimpleTagWorker<T extends JSDocTag>(kind: T["kind"], node: T, tagName: Identifier = getDefaultTagName(node), comment: string | NodeArray<JSDocComment> | undefined) {
         return node.tagName !== tagName
-                || node.comment !== comment
+            || node.comment !== comment
             ? update(createJSDocSimpleTagWorker(kind, tagName, comment), node) :
             node;
     }
@@ -5515,8 +5516,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // updateJSDocSatisfiesTag
     function updateJSDocTypeLikeTagWorker<T extends JSDocTag & { typeExpression?: JSDocTypeExpression; }>(kind: T["kind"], node: T, tagName: Identifier = getDefaultTagName(node), typeExpression: JSDocTypeExpression | undefined, comment: string | NodeArray<JSDocComment> | undefined) {
         return node.tagName !== tagName
-                || node.typeExpression !== typeExpression
-                || node.comment !== comment
+            || node.typeExpression !== typeExpression
+            || node.comment !== comment
             ? update(createJSDocTypeLikeTagWorker(kind, tagName, typeExpression, comment), node)
             : node;
     }
@@ -5530,7 +5531,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateJSDocUnknownTag(node: JSDocUnknownTag, tagName: Identifier, comment: string | NodeArray<JSDocComment> | undefined): JSDocUnknownTag {
         return node.tagName !== tagName
-                || node.comment !== comment
+            || node.comment !== comment
             ? update(createJSDocUnknownTag(tagName, comment), node)
             : node;
     }
@@ -5548,8 +5549,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateJSDocEnumTag(node: JSDocEnumTag, tagName: Identifier = getDefaultTagName(node), typeExpression: JSDocTypeExpression, comment: string | NodeArray<JSDocComment> | undefined) {
         return node.tagName !== tagName
-                || node.typeExpression !== typeExpression
-                || node.comment !== comment
+            || node.typeExpression !== typeExpression
+            || node.comment !== comment
             ? update(createJSDocEnumTag(tagName, typeExpression, comment), node)
             : node;
     }
@@ -5579,7 +5580,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateJSDocComment(node: JSDoc, comment: string | NodeArray<JSDocComment> | undefined, tags: readonly JSDocTag[] | undefined) {
         return node.comment !== comment
-                || node.tags !== tags
+            || node.tags !== tags
             ? update(createJSDocComment(comment, tags), node)
             : node;
     }
@@ -5604,8 +5605,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateJsxElement(node: JsxElement, openingElement: JsxOpeningElement, children: readonly JsxChild[], closingElement: JsxClosingElement) {
         return node.openingElement !== openingElement
-                || node.children !== children
-                || node.closingElement !== closingElement
+            || node.children !== children
+            || node.closingElement !== closingElement
             ? update(createJsxElement(openingElement, children, closingElement), node)
             : node;
     }
@@ -5629,8 +5630,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateJsxSelfClosingElement(node: JsxSelfClosingElement, tagName: JsxTagNameExpression, typeArguments: readonly TypeNode[] | undefined, attributes: JsxAttributes) {
         return node.tagName !== tagName
-                || node.typeArguments !== typeArguments
-                || node.attributes !== attributes
+            || node.typeArguments !== typeArguments
+            || node.attributes !== attributes
             ? update(createJsxSelfClosingElement(tagName, typeArguments, attributes), node)
             : node;
     }
@@ -5654,8 +5655,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateJsxOpeningElement(node: JsxOpeningElement, tagName: JsxTagNameExpression, typeArguments: readonly TypeNode[] | undefined, attributes: JsxAttributes) {
         return node.tagName !== tagName
-                || node.typeArguments !== typeArguments
-                || node.attributes !== attributes
+            || node.typeArguments !== typeArguments
+            || node.attributes !== attributes
             ? update(createJsxOpeningElement(tagName, typeArguments, attributes), node)
             : node;
     }
@@ -5692,8 +5693,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateJsxFragment(node: JsxFragment, openingFragment: JsxOpeningFragment, children: readonly JsxChild[], closingFragment: JsxClosingFragment) {
         return node.openingFragment !== openingFragment
-                || node.children !== children
-                || node.closingFragment !== closingFragment
+            || node.children !== children
+            || node.closingFragment !== closingFragment
             ? update(createJsxFragment(openingFragment, children, closingFragment), node)
             : node;
     }
@@ -5710,7 +5711,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateJsxText(node: JsxText, text: string, containsOnlyTriviaWhiteSpaces?: boolean) {
         return node.text !== text
-                || node.containsOnlyTriviaWhiteSpaces !== containsOnlyTriviaWhiteSpaces
+            || node.containsOnlyTriviaWhiteSpaces !== containsOnlyTriviaWhiteSpaces
             ? update(createJsxText(text, containsOnlyTriviaWhiteSpaces), node)
             : node;
     }
@@ -5743,7 +5744,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateJsxAttribute(node: JsxAttribute, name: JsxAttributeName, initializer: JsxAttributeValue | undefined) {
         return node.name !== name
-                || node.initializer !== initializer
+            || node.initializer !== initializer
             ? update(createJsxAttribute(name, initializer), node)
             : node;
     }
@@ -5812,7 +5813,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateJsxNamespacedName(node: JsxNamespacedName, namespace: Identifier, name: Identifier) {
         return node.namespace !== namespace
-                || node.name !== name
+            || node.name !== name
             ? update(createJsxNamespacedName(namespace, name), node)
             : node;
     }
@@ -5836,7 +5837,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateCaseClause(node: CaseClause, expression: Expression, statements: readonly Statement[]) {
         return node.expression !== expression
-                || node.statements !== statements
+            || node.statements !== statements
             ? update(createCaseClause(expression, statements), node)
             : node;
     }
@@ -5900,7 +5901,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateCatchClause(node: CatchClause, variableDeclaration: VariableDeclaration | undefined, block: Block) {
         return node.variableDeclaration !== variableDeclaration
-                || node.block !== block
+            || node.block !== block
             ? update(createCatchClause(variableDeclaration, block), node)
             : node;
     }
@@ -5927,7 +5928,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updatePropertyAssignment(node: PropertyAssignment, name: PropertyName, initializer: Expression) {
         return node.name !== name
-                || node.initializer !== initializer
+            || node.initializer !== initializer
             ? finishUpdatePropertyAssignment(createPropertyAssignment(name, initializer), node)
             : node;
     }
@@ -5963,7 +5964,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateShorthandPropertyAssignment(node: ShorthandPropertyAssignment, name: Identifier, objectAssignmentInitializer: Expression | undefined) {
         return node.name !== name
-                || node.objectAssignmentInitializer !== objectAssignmentInitializer
+            || node.objectAssignmentInitializer !== objectAssignmentInitializer
             ? finishUpdateShorthandPropertyAssignment(createShorthandPropertyAssignment(name, objectAssignmentInitializer), node)
             : node;
     }
@@ -6018,7 +6019,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateEnumMember(node: EnumMember, name: PropertyName, initializer: Expression | undefined) {
         return node.name !== name
-                || node.initializer !== initializer
+            || node.initializer !== initializer
             ? update(createEnumMember(name, initializer), node)
             : node;
     }
@@ -6175,11 +6176,11 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         libReferenceDirectives = node.libReferenceDirectives,
     ) {
         return node.statements !== statements
-                || node.isDeclarationFile !== isDeclarationFile
-                || node.referencedFiles !== referencedFiles
-                || node.typeReferenceDirectives !== typeReferenceDirectives
-                || node.hasNoDefaultLib !== hasNoDefaultLib
-                || node.libReferenceDirectives !== libReferenceDirectives
+            || node.isDeclarationFile !== isDeclarationFile
+            || node.referencedFiles !== referencedFiles
+            || node.typeReferenceDirectives !== typeReferenceDirectives
+            || node.hasNoDefaultLib !== hasNoDefaultLib
+            || node.libReferenceDirectives !== libReferenceDirectives
             ? update(cloneSourceFileWithChanges(node, statements, isDeclarationFile, referencedFiles, typeReferenceDirectives, hasNoDefaultLib, libReferenceDirectives), node)
             : node;
     }
@@ -6199,7 +6200,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateBundle(node: Bundle, sourceFiles: readonly SourceFile[], prepends: readonly (UnparsedSource | InputFiles)[] = emptyArray) {
         return node.sourceFiles !== sourceFiles
-                || node.prepends !== prepends
+            || node.prepends !== prepends
             ? update(createBundle(sourceFiles, prepends), node)
             : node;
     }
@@ -6360,7 +6361,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     // @api
     function updateSyntheticReferenceExpression(node: SyntheticReferenceExpression, expression: Expression, thisArg: Expression) {
         return node.expression !== expression
-                || node.thisArg !== thisArg
+            || node.thisArg !== thisArg
             ? update(createSyntheticReferenceExpression(expression, thisArg), node)
             : node;
     }
@@ -6514,13 +6515,13 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     function createTypeCheck(value: Expression, tag: TypeOfTag) {
         return tag === "null" ? factory.createStrictEquality(value, createNull()) :
             tag === "undefined" ? factory.createStrictEquality(value, createVoidZero()) :
-            factory.createStrictEquality(createTypeOfExpression(value), createStringLiteral(tag));
+                factory.createStrictEquality(createTypeOfExpression(value), createStringLiteral(tag));
     }
 
     function createIsNotTypeCheck(value: Expression, tag: TypeOfTag) {
         return tag === "null" ? factory.createStrictInequality(value, createNull()) :
             tag === "undefined" ? factory.createStrictInequality(value, createVoidZero()) :
-            factory.createStrictInequality(createTypeOfExpression(value), createStringLiteral(tag));
+                factory.createStrictInequality(createTypeOfExpression(value), createStringLiteral(tag));
     }
 
     function createMethodCall(object: Expression, methodName: string | Identifier, argumentsList: readonly Expression[]) {
@@ -7114,42 +7115,42 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         }
         return isTypeParameterDeclaration(node) ? updateTypeParameterDeclaration(node, modifierArray, node.name, node.constraint, node.default) :
             isParameter(node) ? updateParameterDeclaration(node, modifierArray, node.dotDotDotToken, node.name, node.questionToken, node.type, node.initializer) :
-            isConstructorTypeNode(node) ? updateConstructorTypeNode1(node, modifierArray, node.typeParameters, node.parameters, node.type) :
-            isPropertySignature(node) ? updatePropertySignature(node, modifierArray, node.name, node.questionToken, node.type) :
-            isPropertyDeclaration(node) ? updatePropertyDeclaration(node, modifierArray, node.name, node.questionToken ?? node.exclamationToken, node.type, node.initializer) :
-            isMethodSignature(node) ? updateMethodSignature(node, modifierArray, node.name, node.questionToken, node.typeParameters, node.parameters, node.type) :
-            isMethodDeclaration(node) ? updateMethodDeclaration(node, modifierArray, node.asteriskToken, node.name, node.questionToken, node.typeParameters, node.parameters, node.type, node.body) :
-            isConstructorDeclaration(node) ? updateConstructorDeclaration(node, modifierArray, node.parameters, node.body) :
-            isGetAccessorDeclaration(node) ? updateGetAccessorDeclaration(node, modifierArray, node.name, node.parameters, node.type, node.body) :
-            isSetAccessorDeclaration(node) ? updateSetAccessorDeclaration(node, modifierArray, node.name, node.parameters, node.body) :
-            isIndexSignatureDeclaration(node) ? updateIndexSignature(node, modifierArray, node.parameters, node.type) :
-            isFunctionExpression(node) ? updateFunctionExpression(node, modifierArray, node.asteriskToken, node.name, node.typeParameters, node.parameters, node.type, node.body) :
-            isArrowFunction(node) ? updateArrowFunction(node, modifierArray, node.typeParameters, node.parameters, node.type, node.equalsGreaterThanToken, node.body) :
-            isClassExpression(node) ? updateClassExpression(node, modifierArray, node.name, node.typeParameters, node.heritageClauses, node.members) :
-            isVariableStatement(node) ? updateVariableStatement(node, modifierArray, node.declarationList) :
-            isFunctionDeclaration(node) ? updateFunctionDeclaration(node, modifierArray, node.asteriskToken, node.name, node.typeParameters, node.parameters, node.type, node.body) :
-            isClassDeclaration(node) ? updateClassDeclaration(node, modifierArray, node.name, node.typeParameters, node.heritageClauses, node.members) :
-            isInterfaceDeclaration(node) ? updateInterfaceDeclaration(node, modifierArray, node.name, node.typeParameters, node.heritageClauses, node.members) :
-            isTypeAliasDeclaration(node) ? updateTypeAliasDeclaration(node, modifierArray, node.name, node.typeParameters, node.type) :
-            isEnumDeclaration(node) ? updateEnumDeclaration(node, modifierArray, node.name, node.members) :
-            isModuleDeclaration(node) ? updateModuleDeclaration(node, modifierArray, node.name, node.body) :
-            isImportEqualsDeclaration(node) ? updateImportEqualsDeclaration(node, modifierArray, node.isTypeOnly, node.name, node.moduleReference) :
-            isImportDeclaration(node) ? updateImportDeclaration(node, modifierArray, node.importClause, node.moduleSpecifier, node.attributes) :
-            isExportAssignment(node) ? updateExportAssignment(node, modifierArray, node.expression) :
-            isExportDeclaration(node) ? updateExportDeclaration(node, modifierArray, node.isTypeOnly, node.exportClause, node.moduleSpecifier, node.attributes) :
-            Debug.assertNever(node);
+                isConstructorTypeNode(node) ? updateConstructorTypeNode1(node, modifierArray, node.typeParameters, node.parameters, node.type) :
+                    isPropertySignature(node) ? updatePropertySignature(node, modifierArray, node.name, node.questionToken, node.type) :
+                        isPropertyDeclaration(node) ? updatePropertyDeclaration(node, modifierArray, node.name, node.questionToken ?? node.exclamationToken, node.type, node.initializer) :
+                            isMethodSignature(node) ? updateMethodSignature(node, modifierArray, node.name, node.questionToken, node.typeParameters, node.parameters, node.type) :
+                                isMethodDeclaration(node) ? updateMethodDeclaration(node, modifierArray, node.asteriskToken, node.name, node.questionToken, node.typeParameters, node.parameters, node.type, node.body) :
+                                    isConstructorDeclaration(node) ? updateConstructorDeclaration(node, modifierArray, node.parameters, node.body) :
+                                        isGetAccessorDeclaration(node) ? updateGetAccessorDeclaration(node, modifierArray, node.name, node.parameters, node.type, node.body) :
+                                            isSetAccessorDeclaration(node) ? updateSetAccessorDeclaration(node, modifierArray, node.name, node.parameters, node.body) :
+                                                isIndexSignatureDeclaration(node) ? updateIndexSignature(node, modifierArray, node.parameters, node.type) :
+                                                    isFunctionExpression(node) ? updateFunctionExpression(node, modifierArray, node.asteriskToken, node.name, node.typeParameters, node.parameters, node.type, node.body) :
+                                                        isArrowFunction(node) ? updateArrowFunction(node, modifierArray, node.typeParameters, node.parameters, node.type, node.equalsGreaterThanToken, node.body) :
+                                                            isClassExpression(node) ? updateClassExpression(node, modifierArray, node.name, node.typeParameters, node.heritageClauses, node.members) :
+                                                                isVariableStatement(node) ? updateVariableStatement(node, modifierArray, node.declarationList) :
+                                                                    isFunctionDeclaration(node) ? updateFunctionDeclaration(node, modifierArray, node.asteriskToken, node.name, node.typeParameters, node.parameters, node.type, node.body) :
+                                                                        isClassDeclaration(node) ? updateClassDeclaration(node, modifierArray, node.name, node.typeParameters, node.heritageClauses, node.members) :
+                                                                            isInterfaceDeclaration(node) ? updateInterfaceDeclaration(node, modifierArray, node.name, node.typeParameters, node.heritageClauses, node.members) :
+                                                                                isTypeAliasDeclaration(node) ? updateTypeAliasDeclaration(node, modifierArray, node.name, node.typeParameters, node.type) :
+                                                                                    isEnumDeclaration(node) ? updateEnumDeclaration(node, modifierArray, node.name, node.members) :
+                                                                                        isModuleDeclaration(node) ? updateModuleDeclaration(node, modifierArray, node.name, node.body) :
+                                                                                            isImportEqualsDeclaration(node) ? updateImportEqualsDeclaration(node, modifierArray, node.isTypeOnly, node.name, node.moduleReference) :
+                                                                                                isImportDeclaration(node) ? updateImportDeclaration(node, modifierArray, node.importClause, node.moduleSpecifier, node.attributes) :
+                                                                                                    isExportAssignment(node) ? updateExportAssignment(node, modifierArray, node.expression) :
+                                                                                                        isExportDeclaration(node) ? updateExportDeclaration(node, modifierArray, node.isTypeOnly, node.exportClause, node.moduleSpecifier, node.attributes) :
+                                                                                                            Debug.assertNever(node);
     }
 
     function replaceDecoratorsAndModifiers<T extends HasModifiers & HasDecorators>(node: T, modifiers: readonly ModifierLike[]): T;
     function replaceDecoratorsAndModifiers(node: HasModifiers & HasDecorators, modifierArray: readonly ModifierLike[]) {
         return isParameter(node) ? updateParameterDeclaration(node, modifierArray, node.dotDotDotToken, node.name, node.questionToken, node.type, node.initializer) :
             isPropertyDeclaration(node) ? updatePropertyDeclaration(node, modifierArray, node.name, node.questionToken ?? node.exclamationToken, node.type, node.initializer) :
-            isMethodDeclaration(node) ? updateMethodDeclaration(node, modifierArray, node.asteriskToken, node.name, node.questionToken, node.typeParameters, node.parameters, node.type, node.body) :
-            isGetAccessorDeclaration(node) ? updateGetAccessorDeclaration(node, modifierArray, node.name, node.parameters, node.type, node.body) :
-            isSetAccessorDeclaration(node) ? updateSetAccessorDeclaration(node, modifierArray, node.name, node.parameters, node.body) :
-            isClassExpression(node) ? updateClassExpression(node, modifierArray, node.name, node.typeParameters, node.heritageClauses, node.members) :
-            isClassDeclaration(node) ? updateClassDeclaration(node, modifierArray, node.name, node.typeParameters, node.heritageClauses, node.members) :
-            Debug.assertNever(node);
+                isMethodDeclaration(node) ? updateMethodDeclaration(node, modifierArray, node.asteriskToken, node.name, node.questionToken, node.typeParameters, node.parameters, node.type, node.body) :
+                    isGetAccessorDeclaration(node) ? updateGetAccessorDeclaration(node, modifierArray, node.name, node.parameters, node.type, node.body) :
+                        isSetAccessorDeclaration(node) ? updateSetAccessorDeclaration(node, modifierArray, node.name, node.parameters, node.body) :
+                            isClassExpression(node) ? updateClassExpression(node, modifierArray, node.name, node.typeParameters, node.heritageClauses, node.members) :
+                                isClassDeclaration(node) ? updateClassDeclaration(node, modifierArray, node.name, node.typeParameters, node.heritageClauses, node.members) :
+                                    Debug.assertNever(node);
     }
 
     function replacePropertyName<T extends AccessorDeclaration | MethodDeclaration | MethodSignature | PropertyDeclaration | PropertySignature | PropertyAssignment>(node: T, name: T["name"]): T;
@@ -7186,8 +7187,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     function asExpression<T extends Expression | undefined>(value: string | number | boolean | T): T | StringLiteral | NumericLiteral | BooleanLiteral {
         return typeof value === "string" ? createStringLiteral(value) :
             typeof value === "number" ? createNumericLiteral(value) :
-            typeof value === "boolean" ? value ? createTrue() : createFalse() :
-            value;
+                typeof value === "boolean" ? value ? createTrue() : createFalse() :
+                    value;
     }
 
     function asInitializer(node: Expression | undefined) {
@@ -7555,7 +7556,7 @@ function parseUnparsedSourceFile(bundleFileInfo: BundleFileInfo | undefined, str
                     if (!texts) texts = [];
                     break;
                 }
-                // falls through
+            // falls through
 
             case BundleFileSectionKind.Text:
                 texts = append(texts, setTextRange(factory.createUnparsedTextLike(section.data, section.kind === BundleFileSectionKind.Internal), section));

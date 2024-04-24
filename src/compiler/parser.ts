@@ -396,7 +396,7 @@ import {
     YieldExpression,
 } from "./_namespaces/ts";
 import * as performance from "./_namespaces/ts.performance";
-import { createMagicDeclarationFile } from "./providers/codegen";
+import { getImportAttributeProperties, logIfProviderFile, providerPackagePrefix } from "./providers/debugging";
 
 const enum SignatureFlags {
     None = 0,
@@ -1327,7 +1327,7 @@ function setExternalModuleIndicator(sourceFile: SourceFile) {
     sourceFile.externalModuleIndicator = isFileProbablyExternalModule(sourceFile);
 }
 
-export function createSourceFile(fileName: string, sourceText: string, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, setParentNodes = false, scriptKind?: ScriptKind): SourceFile {
+export function createSourceFile(fileName: string, sourceText: string, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, setParentNodes = false, scriptKind?: ScriptKind, importAttributes?: ImportAttributes): SourceFile {
     tracing?.push(tracing.Phase.Parse, "createSourceFile", { path: fileName }, /*separateBeginAndEnd*/ true);
     performance.mark("beforeParse");
     let result: SourceFile;
@@ -1339,6 +1339,9 @@ export function createSourceFile(fileName: string, sourceText: string, languageV
         impliedNodeFormat: format,
         jsDocParsingMode,
     } = typeof languageVersionOrOptions === "object" ? languageVersionOrOptions : ({ languageVersion: languageVersionOrOptions } as CreateSourceFileOptions);
+
+    //// logIfProviderFile(fileName, "CREATE");
+
     if (languageVersion === ScriptTarget.JSON) {
         result = Parser.parseSourceFile(fileName, sourceText, languageVersion, /*syntaxCursor*/ undefined, setParentNodes, ScriptKind.JSON, noop, jsDocParsingMode);
     }
@@ -1347,7 +1350,7 @@ export function createSourceFile(fileName: string, sourceText: string, languageV
             file.impliedNodeFormat = format;
             return (overrideSetExternalModuleIndicator || setExternalModuleIndicator)(file);
         };
-        result = Parser.parseSourceFile(fileName, sourceText, languageVersion, /*syntaxCursor*/ undefined, setParentNodes, scriptKind, setIndicator, jsDocParsingMode);
+        result = Parser.parseSourceFile(fileName, sourceText, languageVersion, /*syntaxCursor*/ undefined, setParentNodes, scriptKind, setIndicator, jsDocParsingMode, importAttributes);
     }
     perfLogger?.logStopParseSourceFile();
 
@@ -1588,6 +1591,7 @@ namespace Parser {
         scriptKind?: ScriptKind,
         setExternalModuleIndicatorOverride?: (file: SourceFile) => void,
         jsDocParsingMode = JSDocParsingMode.ParseAll,
+        importAttributes?: ImportAttributes
     ): SourceFile {
         scriptKind = ensureScriptKind(fileName, scriptKind);
         if (scriptKind === ScriptKind.JSON) {
@@ -1601,18 +1605,20 @@ namespace Parser {
             result.pragmas = emptyMap as ReadonlyPragmaMap;
             return result;
         }
-        // else if (scriptKind === ScriptKind.Provided) {
-        else if (fileName.includes("providers/csv")) {
-            console.log("parseSourceFile", fileName);
-
-            const result = createMagicDeclarationFile(fileName, "CsvMagicType", ["abraka", "dabra"]);
-
-            if (setParentNodes) {
-                fixupParentReferences(result);
-            }
-
-            return result;
+        else if (fileName.includes(providerPackagePrefix)) {
+            logIfProviderFile(fileName, "PARSE", getImportAttributeProperties(importAttributes));
         }
+        // else if (fileName.includes("providers/csv") || fileName.includes("providers\\csv")) {
+        //     console.log("parseSourceFile MAGIC", fileName);
+
+        //     const result = createMagicDeclarationFile(fileName, "CsvMagicType", ["abraka", "dabra"]);
+
+        //     if (setParentNodes) {
+        //         fixupParentReferences(result);
+        //     }
+
+        //     return result;
+        // }
 
         initializeState(fileName, sourceText, languageVersion, syntaxCursor, scriptKind, jsDocParsingMode);
 
@@ -4557,6 +4563,7 @@ namespace Parser {
         parseExpected(SyntaxKind.CloseParenToken);
         const qualifier = parseOptional(SyntaxKind.DotToken) ? parseEntityNameOfTypeReference() : undefined;
         const typeArguments = parseTypeArgumentsOfTypeReference();
+
         return finishNode(factory.createImportTypeNode(type, attributes, qualifier, typeArguments, isTypeOf), pos);
     }
 
@@ -8408,6 +8415,7 @@ namespace Parser {
                     );
                 }
             }
+
             return finishNode(factory.createImportAttributes(elements, multiLine, token), pos);
         }
         else {
@@ -9825,6 +9833,8 @@ namespace IncrementalParser {
             // if the text didn't change, then we can just return our current source file as-is.
             return sourceFile;
         }
+
+        logIfProviderFile(sourceFile.fileName, "UPDATE");
 
         if (sourceFile.statements.length === 0) {
             // If we don't have any statements in the current source file, then there's no real

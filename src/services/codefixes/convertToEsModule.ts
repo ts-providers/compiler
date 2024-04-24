@@ -105,7 +105,8 @@ function fixImportOfModuleExports(
     changes: textChanges.ChangeTracker,
     quotePreference: QuotePreference,
 ) {
-    for (const moduleSpecifier of importingFile.imports) {
+    for (const moduleImport of importingFile.imports) {
+        const moduleSpecifier = moduleImport.specifier;
         const imported = program.getResolvedModuleFromModuleSpecifier(moduleSpecifier)?.resolvedModule;
         if (!imported || imported.resolvedFileName !== exportingFile.fileName) {
             continue;
@@ -324,7 +325,7 @@ function convertAssignment(
         else {
             const replacement = isObjectLiteralExpression(right) ? tryChangeModuleExportsObject(right, useSitesToUnqualify)
                 : isRequireCall(right, /*requireStringLiteralLikeArgument*/ true) ? convertReExportAll(right.arguments[0], checker)
-                : undefined;
+                    : undefined;
             if (replacement) {
                 changes.replaceNodeWithNodes(sourceFile, assignment.parent, replacement[0]);
                 return replacement[1];
@@ -399,8 +400,8 @@ function convertReExportAll(reExported: StringLiteralLike, checker: TypeChecker)
     const exports = moduleSymbol ? moduleSymbol.exports! : emptyMap as ReadonlyCollection<__String>;
     return exports.has(InternalSymbolName.ExportEquals) ? [[reExportDefault(moduleSpecifier)], true] :
         !exports.has(InternalSymbolName.Default) ? [[reExportStar(moduleSpecifier)], false] :
-        // If there's some non-default export, must include both `export *` and `export default`.
-        exports.size > 1 ? [[reExportStar(moduleSpecifier), reExportDefault(moduleSpecifier)], true] : [[reExportDefault(moduleSpecifier)], true];
+            // If there's some non-default export, must include both `export *` and `export default`.
+            exports.size > 1 ? [[reExportStar(moduleSpecifier), reExportDefault(moduleSpecifier)], true] : [[reExportDefault(moduleSpecifier)], true];
 }
 function reExportStar(moduleSpecifier: string): ExportDeclaration {
     return makeExportDeclaration(/*exportSpecifiers*/ undefined, moduleSpecifier);

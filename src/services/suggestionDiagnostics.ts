@@ -83,7 +83,8 @@ export function computeSuggestionDiagnostics(sourceFile: SourceFile, program: Pr
     check(sourceFile);
 
     if (getAllowSyntheticDefaultImports(program.getCompilerOptions())) {
-        for (const moduleSpecifier of sourceFile.imports) {
+        for (const moduleImport of sourceFile.imports) {
+            const moduleSpecifier = moduleImport.specifier;
             const importNode = importFromModuleSpecifier(moduleSpecifier);
             const name = importNameForConvertToDefaultImport(importNode);
             if (!name) continue;
@@ -260,10 +261,10 @@ function isFixablePromiseArgument(arg: Expression, checker: TypeChecker): boolea
             if (functionFlags & FunctionFlags.Generator) {
                 return false;
             }
-            // falls through
+        // falls through
         case SyntaxKind.ArrowFunction:
             visitedNestedConvertibleFunctions.set(getKeyFromNode(arg as FunctionLikeDeclaration), true);
-            // falls through
+        // falls through
         case SyntaxKind.NullKeyword:
             return true;
         case SyntaxKind.Identifier:

@@ -804,7 +804,8 @@ function tryAddToExistingImport(existingImports: readonly FixAddToExistingImport
 
 function createExistingImportMap(checker: TypeChecker, importingFile: SourceFile, compilerOptions: CompilerOptions) {
     let importMap: MultiMap<SymbolId, AnyImportOrRequire> | undefined;
-    for (const moduleSpecifier of importingFile.imports) {
+    for (const moduleImport of importingFile.imports) {
+        const moduleSpecifier = moduleImport.specifier;
         const i = importFromModuleSpecifier(moduleSpecifier);
         if (isVariableDeclarationInitializedToRequire(i.parent)) {
             const moduleSymbol = checker.resolveExternalModuleName(moduleSpecifier);
@@ -1019,13 +1020,13 @@ function getBestFix(fixes: readonly ImportFixWithModuleSpecifier[], sourceFile: 
     return fixes.reduce((best, fix) =>
         // Takes true branch of conditional if `fix` is better than `best`
         compareModuleSpecifiers(
-                fix,
-                best,
-                sourceFile,
-                program,
-                packageJsonImportFilter.allowsImportingSpecifier,
-                fileName => toPath(fileName, host.getCurrentDirectory(), hostGetCanonicalFileName(host)),
-            ) === Comparison.LessThan ? fix : best
+            fix,
+            best,
+            sourceFile,
+            program,
+            packageJsonImportFilter.allowsImportingSpecifier,
+            fileName => toPath(fileName, host.getCurrentDirectory(), hostGetCanonicalFileName(host)),
+        ) === Comparison.LessThan ? fix : best
     );
 }
 
@@ -1634,8 +1635,8 @@ function getNewImports(
         // even though it's not an error, it would add unnecessary runtime emit.
         const topLevelTypeOnly = (!defaultImport || needsTypeOnly(defaultImport)) && every(namedImports, needsTypeOnly) ||
             (compilerOptions.verbatimModuleSyntax || preferences.preferTypeOnlyAutoImports) &&
-                defaultImport?.addAsTypeOnly !== AddAsTypeOnly.NotAllowed &&
-                !some(namedImports, i => i.addAsTypeOnly === AddAsTypeOnly.NotAllowed);
+            defaultImport?.addAsTypeOnly !== AddAsTypeOnly.NotAllowed &&
+            !some(namedImports, i => i.addAsTypeOnly === AddAsTypeOnly.NotAllowed);
         statements = combine(
             statements,
             makeImport(

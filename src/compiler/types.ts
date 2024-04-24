@@ -17,6 +17,7 @@ import {
     SymlinkCache,
     ThisContainer,
 } from "./_namespaces/ts";
+import { ModuleImport } from "./providers/types";
 
 // branded string type used to store absolute, normalized and canonicalized paths
 // arbitrary file name can be converted to Path via toPath function
@@ -4321,7 +4322,7 @@ export interface SourceFile extends Declaration, LocalsContainer {
     /** @internal */ classifiableNames?: ReadonlySet<__String>;
     // Comments containing @ts-* directives, in order.
     /** @internal */ commentDirectives?: CommentDirective[];
-    /** @internal */ imports: readonly StringLiteralLike[];
+    /** @internal */ imports: readonly ModuleImport[];
     // Identifier only if `declare global`
     /** @internal */ moduleAugmentations: readonly (StringLiteral | Identifier)[];
     /** @internal */ patternAmbientModules?: PatternAmbientModule[];
@@ -5566,6 +5567,9 @@ export type AnyImportOrRequireStatement = AnyImportSyntax | RequireVariableState
 
 /** @internal */
 export type AnyImportOrReExport = AnyImportSyntax | ExportDeclaration;
+
+/** @internal */
+export type StatementWithImportAttributes = ImportDeclaration | ExportDeclaration;
 
 /** @internal */
 export interface ValidImportTypeNode extends ImportTypeNode {
@@ -7809,7 +7813,7 @@ export type HasInvalidatedLibResolutions = (libFileName: string) => boolean;
 export type HasChangedAutomaticTypeDirectiveNames = () => boolean;
 
 export interface CompilerHost extends ModuleResolutionHost {
-    getSourceFile(fileName: string, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, onError?: (message: string) => void, shouldCreateNewSourceFile?: boolean): SourceFile | undefined;
+    getSourceFile(fileName: string, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, onError?: (message: string) => void, shouldCreateNewSourceFile?: boolean, importAttributes?: ImportAttributes): SourceFile | undefined;
     getSourceFileByPath?(fileName: string, path: Path, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, onError?: (message: string) => void, shouldCreateNewSourceFile?: boolean): SourceFile | undefined;
     getCancellationToken?(): CancellationToken;
     getDefaultLibFileName(options: CompilerOptions): string;

@@ -513,7 +513,7 @@ function createRequireCall(moduleSpecifier: StringLiteralLike): CallExpression {
 export function moduleSpecifierFromImport(i: SupportedImport): StringLiteralLike {
     return (i.kind === SyntaxKind.ImportDeclaration ? i.moduleSpecifier
         : i.kind === SyntaxKind.ImportEqualsDeclaration ? i.moduleReference.expression
-        : i.initializer.arguments[0]);
+            : i.initializer.arguments[0]);
 }
 
 /** @internal */
@@ -1091,7 +1091,7 @@ export function getUsageInfo(oldFile: SourceFile, toMove: readonly Statement[], 
 
 function makeUniqueFilename(proposedFilename: string, extension: string, inDirectory: string, host: LanguageServiceHost): string {
     let newFilename = proposedFilename;
-    for (let i = 1;; i++) {
+    for (let i = 1; ; i++) {
         const name = combinePaths(inDirectory, newFilename + extension);
         if (!host.fileExists(name)) return newFilename;
         newFilename = `${proposedFilename}.${i}`;
@@ -1259,8 +1259,8 @@ function getOverloadRangeToMove(sourceFile: SourceFile, statement: Statement) {
 
 function getExistingLocals(sourceFile: SourceFile, statements: readonly Statement[], checker: TypeChecker) {
     const existingLocals = new Set<Symbol>();
-    for (const moduleSpecifier of sourceFile.imports) {
-        const declaration = importFromModuleSpecifier(moduleSpecifier);
+    for (const moduleImport of sourceFile.imports) {
+        const declaration = importFromModuleSpecifier(moduleImport.specifier);
         if (
             isImportDeclaration(declaration) && declaration.importClause &&
             declaration.importClause.namedBindings && isNamedImports(declaration.importClause.namedBindings)

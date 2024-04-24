@@ -1091,6 +1091,7 @@ import {
 } from "./_namespaces/ts";
 import * as moduleSpecifiers from "./_namespaces/ts.moduleSpecifiers";
 import * as performance from "./_namespaces/ts.performance";
+import { getImportAttributeProperties, logIfProviderFile, providerPackagePrefix } from "./providers/debugging";
 
 const ambientModuleSymbolRegex = /^".+"$/;
 const anon = "(anonymous)" as __String & string;
@@ -5583,8 +5584,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         if (containingFile && containingFile.imports) {
             // Try to make an import using an import already in the enclosing file, if possible
             for (const importRef of containingFile.imports) {
-                if (nodeIsSynthesized(importRef)) continue; // Synthetic names can't be resolved by `resolveExternalModuleName` - they'll cause a debug assert if they error
-                const resolvedModule = resolveExternalModuleName(enclosingDeclaration, importRef, /*ignoreErrors*/ true);
+                if (nodeIsSynthesized(importRef.specifier)) continue; // Synthetic names can't be resolved by `resolveExternalModuleName` - they'll cause a debug assert if they error
+                const resolvedModule = resolveExternalModuleName(enclosingDeclaration, importRef.specifier, /*ignoreErrors*/ true);
                 if (!resolvedModule) continue;
                 const ref = getAliasForSymbolInContainer(resolvedModule, symbol);
                 if (!ref) continue;
@@ -32103,7 +32104,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
             : Diagnostics.Cannot_find_module_0_or_its_corresponding_type_declarations;
         // Synthesized JSX import is either first or after tslib
         const jsxImportIndex = compilerOptions.importHelpers ? 1 : 0;
-        const specifier = file?.imports[jsxImportIndex];
+        const specifier = file?.imports[jsxImportIndex]?.specifier;
         if (specifier) {
             Debug.assert(nodeIsSynthesized(specifier) && specifier.text === runtimeImportSpecifier, `Expected sourceFile.imports[${jsxImportIndex}] to be the synthesized JSX runtime import`);
         }
@@ -48822,10 +48823,16 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
     function initializeTypeChecker() {
         // Bind all source files and propagate errors
-        for (const file of host.getSourceFiles()) {
-            if (file.fileName.includes("magic")) {
-                console.log(`Binding ${file.fileName}`);
-            }
+        const files = host.getSourceFiles();
+
+        console.log("FILES TO BIND");
+        console.log(
+            files
+                .map(f => f.fileName)
+                .filter(n => n.includes(providerPackagePrefix)));
+
+        for (const file of files) {
+            //// logIfProviderFile(file.fileName, "BINDING");
 
             bindSourceFile(file, compilerOptions);
         }
