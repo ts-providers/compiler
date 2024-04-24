@@ -1,7 +1,0 @@
-//// [tests/cases/compiler/001_magic_magic.d.ts] ////
-
-=== 001_magic_magic.d.ts ===
-export interface MagicType {
-    someMagicProp: string
->someMagicProp : string
-}

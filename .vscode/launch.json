@@ -20,6 +20,33 @@
         {
             "type": "node",
             "request": "launch",
+            "name": "Debug source",
+            "runtimeArgs": [
+                "--nolazy"
+            ],
+            "preLaunchTask": "npm: build:compiler",
+            "program": "${workspaceRoot}/built/local/tsc.js",
+            "args": [
+                "--skipDefaultLibCheck",
+                "${workspaceRoot}/experiments/002_csv_poc.ts"
+            ],
+            "sourceMaps": true,
+            "pauseForSourceMap": true,
+            "smartStep": true,
+            "console": "integratedTerminal",
+            "env": {
+                "NODE_ENV": "development"
+            },
+            "outFiles": [
+                "${workspaceRoot}/built/**/*.js",
+                "${workspaceRoot}/built/**/*.mjs",
+                "${workspaceRoot}/built/**/*.cjs",
+                "!**/node_modules/**"
+            ],
+        },
+        {
+            "type": "node",
+            "request": "launch",
             "name": "Mocha Tests (currently opened test)",
             "runtimeArgs": [
                 "--nolazy"

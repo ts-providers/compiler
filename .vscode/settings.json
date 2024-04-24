@@ -36,5 +36,8 @@
     "jake.autoDetect": "off",
     "gulp.autoDetect": "off",
     // "typescript.tsdk": "node_modules\\typescript\\lib"
-    "typescript.tsdk": "built\\local"
+    "typescript.tsdk": "built\\local",
+    "[json]": {
+        "editor.defaultFormatter": "vscode.json-language-features"
+    }
 }

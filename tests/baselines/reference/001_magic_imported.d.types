@@ -1,7 +1,0 @@
-//// [tests/cases/compiler/001_magic_imported.d.ts] ////
-
-=== 001_magic_imported.d.ts ===
-export interface ImportedType {
-    someNumProp: number
->someNumProp : number
-}
