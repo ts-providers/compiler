@@ -397,6 +397,7 @@ import {
 } from "./_namespaces/ts";
 import * as performance from "./_namespaces/ts.performance";
 import { getImportAttributeProperties, logIfProviderFile, providerPackagePrefix } from "./providers/debugging";
+import { getProviderSamplePath } from "./providers/parser";
 
 const enum SignatureFlags {
     None = 0,
@@ -1606,7 +1607,7 @@ namespace Parser {
             return result;
         }
         else if (fileName.includes(providerPackagePrefix)) {
-            logIfProviderFile(fileName, "PARSE", getImportAttributeProperties(importAttributes));
+            logIfProviderFile(fileName, "PARSE", "Sample path:", getProviderSamplePath(importAttributes));
         }
         // else if (fileName.includes("providers/csv") || fileName.includes("providers\\csv")) {
         //     console.log("parseSourceFile MAGIC", fileName);
