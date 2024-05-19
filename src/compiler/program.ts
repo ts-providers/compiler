@@ -330,7 +330,8 @@ import {
     writeFileEnsuringDirectories,
 } from "./_namespaces/ts";
 import * as performance from "./_namespaces/ts.performance";
-import { getImportAttributeProperties, logIfProviderFile } from "./providers/debugging";
+import { logIfProviderFile } from "./providers/debugging";
+import { getImportAttributeProperties, getProviderSamplePath } from "./providers/parser";
 import { ModuleImport as ModuleImport } from "./providers/types";
 
 export function findConfigFile(searchPath: string, fileExists: (fileName: string) => boolean, configName = "tsconfig.json"): string | undefined {
@@ -403,7 +404,7 @@ export function createGetSourceFile(
     setParentNodes: boolean | undefined,
 ): CompilerHost["getSourceFile"] {
     return (fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile, importAttributes) => {
-        logIfProviderFile(fileName, "getSourceFile");
+        logIfProviderFile(fileName, "getSourceFile", "SAMPLE", getProviderSamplePath(importAttributes));
         let text: string | undefined;
         try {
             performance.mark("beforeIORead");
@@ -554,15 +555,15 @@ export function changeCompilerHostLikeToUseCache(
         return setReadFileCache(key, fileName);
     };
 
-    const getSourceFileWithCache: CompilerHost["getSourceFile"] | undefined = getSourceFile ? (fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile) => {
-        logIfProviderFile(fileName, "getSourceFileWithCache");
+    const getSourceFileWithCache: CompilerHost["getSourceFile"] | undefined = getSourceFile ? (fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile, importAttributes) => {
+        logIfProviderFile(fileName, "INSIDE getSourceFileWithCache", "SAMPLE", getProviderSamplePath(importAttributes));
         const key = toPath(fileName);
         const impliedNodeFormat: ResolutionMode = typeof languageVersionOrOptions === "object" ? languageVersionOrOptions.impliedNodeFormat : undefined;
         const forImpliedNodeFormat = sourceFileCache.get(impliedNodeFormat);
         const value = forImpliedNodeFormat?.get(key);
         if (value) return value;
 
-        const sourceFile = getSourceFile(fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile);
+        const sourceFile = getSourceFile(fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile, importAttributes);
         if (sourceFile && (isDeclarationFileName(fileName) || fileExtensionIs(fileName, Extension.Json))) {
             sourceFileCache.set(impliedNodeFormat, (forImpliedNodeFormat || new Map()).set(key, sourceFile));
         }
@@ -3737,7 +3738,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
 
         // We haven't looked for this file, do so now and cache result
 
-        //// logIfProviderFile(fileName, "FIND NEW");
+        logIfProviderFile(fileName, "FIND NEW", "SAMPLE", getProviderSamplePath(importAttributes));
 
         const sourceFileOptions = getCreateSourceFileOptions(fileName, moduleResolutionCache, host, options);
         const file = host.getSourceFile(
@@ -4150,6 +4151,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
                     modulesWithElidedImports.set(file.path, true);
                 }
                 else if (shouldAddFile) {
+                    logIfProviderFile(resolvedFileName, "BEFORE findSourceFile", "SAMPLE", getProviderSamplePath(modulesToResolve[index].attributes));
                     findSourceFile(
                         resolvedFileName,
                         /*isDefaultLib*/ false,

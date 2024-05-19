@@ -132,6 +132,7 @@ import {
     identity,
     idText,
     ImplementationLocation,
+    ImportAttributes,
     ImportDeclaration,
     IndexKind,
     IndexType,
@@ -319,7 +320,7 @@ import {
     UnionType,
     updateSourceFile,
     UserPreferences,
-    VariableDeclaration,
+    VariableDeclaration
 } from "./_namespaces/ts";
 import * as NavigateTo from "./_namespaces/ts.NavigateTo";
 import * as NavigationBar from "./_namespaces/ts.NavigationBar";
@@ -1395,8 +1396,9 @@ export function createLanguageServiceSourceFile(
     version: string,
     setNodeParents: boolean,
     scriptKind?: ScriptKind,
+    importAttributes?: ImportAttributes
 ): SourceFile {
-    const sourceFile = createSourceFile(fileName, getSnapshotText(scriptSnapshot), scriptTargetOrOptions, setNodeParents, scriptKind);
+    const sourceFile = createSourceFile(fileName, getSnapshotText(scriptSnapshot), scriptTargetOrOptions, setNodeParents, scriptKind, importAttributes);
     setSourceFileFields(sourceFile, scriptSnapshot, version);
     return sourceFile;
 }
@@ -1820,11 +1822,11 @@ export function createLanguageService(
             documentRegistry.releaseDocumentWithKey(oldSourceFile.resolvedPath, oldSettingsKey, oldSourceFile.scriptKind, oldSourceFile.impliedNodeFormat);
         }
 
-        function getOrCreateSourceFile(fileName: string, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, onError?: (message: string) => void, shouldCreateNewSourceFile?: boolean): SourceFile | undefined {
-            return getOrCreateSourceFileByPath(fileName, toPath(fileName, currentDirectory, getCanonicalFileName), languageVersionOrOptions, onError, shouldCreateNewSourceFile);
+        function getOrCreateSourceFile(fileName: string, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, onError?: (message: string) => void, shouldCreateNewSourceFile?: boolean, importAttributes?: ImportAttributes): SourceFile | undefined {
+            return getOrCreateSourceFileByPath(fileName, toPath(fileName, currentDirectory, getCanonicalFileName), languageVersionOrOptions, onError, shouldCreateNewSourceFile, importAttributes);
         }
 
-        function getOrCreateSourceFileByPath(fileName: string, path: Path, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, _onError?: (message: string) => void, shouldCreateNewSourceFile?: boolean): SourceFile | undefined {
+        function getOrCreateSourceFileByPath(fileName: string, path: Path, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, _onError?: (message: string) => void, shouldCreateNewSourceFile?: boolean, importAttributes?: ImportAttributes): SourceFile | undefined {
             Debug.assert(compilerHost, "getOrCreateSourceFileByPath called after typical CompilerHost lifetime, check the callstack something with a reference to an old host.");
             // The program is asking for this file, check first if the host can locate it.
             // If the host can not locate the file, then it does not exist. return undefined
@@ -1883,7 +1885,7 @@ export function createLanguageService(
             }
 
             // Could not find this file in the old program, create a new SourceFile for it.
-            return documentRegistry.acquireDocumentWithKey(fileName, path, host, documentRegistryBucketKey, scriptSnapshot, scriptVersion, scriptKind, languageVersionOrOptions);
+            return documentRegistry.acquireDocumentWithKey(fileName, path, host, documentRegistryBucketKey, scriptSnapshot, scriptVersion, scriptKind, languageVersionOrOptions, importAttributes);
         }
     }
 

@@ -1,3 +1,5 @@
+import { dirname } from "path";
+
 import {
     AccessorDeclaration,
     addRange,
@@ -396,8 +398,9 @@ import {
     YieldExpression,
 } from "./_namespaces/ts";
 import * as performance from "./_namespaces/ts.performance";
-import { getImportAttributeProperties, logIfProviderFile, providerPackagePrefix } from "./providers/debugging";
-import { getProviderSamplePath } from "./providers/parser";
+import { createProvidedSourceFile } from "./providers/codegen";
+import { logIfProviderFile, providerPackagePrefix } from "./providers/debugging";
+import { getImportAttributeProperties, getProviderOptionsFromImportAttributes, getProviderSamplePath } from "./providers/parser";
 
 const enum SignatureFlags {
     None = 0,
@@ -1344,7 +1347,7 @@ export function createSourceFile(fileName: string, sourceText: string, languageV
     //// logIfProviderFile(fileName, "CREATE");
 
     if (languageVersion === ScriptTarget.JSON) {
-        result = Parser.parseSourceFile(fileName, sourceText, languageVersion, /*syntaxCursor*/ undefined, setParentNodes, ScriptKind.JSON, noop, jsDocParsingMode);
+        result = Parser.parseSourceFile(fileName, sourceText, languageVersion, /*syntaxCursor*/ undefined, setParentNodes, ScriptKind.JSON, noop, jsDocParsingMode, importAttributes);
     }
     else {
         const setIndicator = format === undefined ? overrideSetExternalModuleIndicator : (file: SourceFile) => {
@@ -1607,27 +1610,37 @@ namespace Parser {
             return result;
         }
         else if (fileName.includes(providerPackagePrefix)) {
-            logIfProviderFile(fileName, "PARSE", "Sample path:", getProviderSamplePath(importAttributes));
+            const providerOptions = getProviderOptionsFromImportAttributes(importAttributes);
+            logIfProviderFile(fileName, "PROVIDER in parseSourceFile", `SAMPLE: '${providerOptions.sample}'`);
+
+            let statements: Statement[] = [];
+            if (providerOptions.sample) {
+                const providerPackagePath = dirname(fileName);
+                const providerPackage = require(providerPackagePath);
+                const providerGenerator = providerPackage.CsvProviderGenerator;
+                statements = providerGenerator.provideDeclarations({
+                    sample: providerOptions.sample,
+                    separator: providerOptions.separator ?? ";",
+                    hasHeader: providerOptions.hasHeader ?? true
+                });
+            }
+
+            const declFile = createProvidedSourceFile(fileName, statements);
+
+            if (setParentNodes) {
+                fixupParentReferences(declFile);
+            }
+
+            return declFile;
+        } else {
+            initializeState(fileName, sourceText, languageVersion, syntaxCursor, scriptKind, jsDocParsingMode);
+
+            const result = parseSourceFileWorker(languageVersion, setParentNodes, scriptKind, setExternalModuleIndicatorOverride || setExternalModuleIndicator, jsDocParsingMode);
+
+            clearState();
+
+            return result;
         }
-        // else if (fileName.includes("providers/csv") || fileName.includes("providers\\csv")) {
-        //     console.log("parseSourceFile MAGIC", fileName);
-
-        //     const result = createMagicDeclarationFile(fileName, "CsvMagicType", ["abraka", "dabra"]);
-
-        //     if (setParentNodes) {
-        //         fixupParentReferences(result);
-        //     }
-
-        //     return result;
-        // }
-
-        initializeState(fileName, sourceText, languageVersion, syntaxCursor, scriptKind, jsDocParsingMode);
-
-        const result = parseSourceFileWorker(languageVersion, setParentNodes, scriptKind, setExternalModuleIndicatorOverride || setExternalModuleIndicator, jsDocParsingMode);
-
-        clearState();
-
-        return result;
     }
 
     export function parseIsolatedEntityName(content: string, languageVersion: ScriptTarget): EntityName | undefined {

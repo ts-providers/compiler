@@ -1,4 +1,5 @@
 import { Identifier, ImportAttributes, StringLiteral } from "../types";
+import { ProviderOptions } from "./types";
 
 export function getProviderSamplePath(importAttributes?: ImportAttributes): string | undefined {
     if (!importAttributes) {
@@ -7,4 +8,21 @@ export function getProviderSamplePath(importAttributes?: ImportAttributes): stri
 
     const attribute = importAttributes.elements.find(a => (a.name as Identifier).escapedText === "sample");
     return attribute ? (attribute.value as StringLiteral).text : undefined;
+}
+
+export function getImportAttributeProperties(attributes?: ImportAttributes) {
+    return attributes?.elements.map(e => ({ key: (e.name as Identifier).escapedText, value: (e.value as StringLiteral).text }));
+}
+
+export function getProviderOptionsFromImportAttributes(attributes?: ImportAttributes): ProviderOptions {
+    const result: Record<string, string> = {};
+
+    if (attributes) {
+        const keyValuePairs = getImportAttributeProperties(attributes) ?? [];
+        for (const kv of keyValuePairs) {
+            result[kv.key as string] = kv.value;
+        }
+    }
+
+    return result as ProviderOptions;
 }

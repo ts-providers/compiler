@@ -1,5 +1,52 @@
 import { createNodeFactory, createPrinter, emptyArray, emptyMap, forEachChildRecursively, getLanguageVariant, Mutable, Node, NodeFactoryFlags, NodeFlags, noop, parseBaseNodeFactory, ReadonlyPragmaMap, ScriptKind, ScriptTarget, SourceFile, Statement, SyntaxKind } from "../_namespaces/ts";
 
+export function createProvidedSourceFile(fileName: string, statements: Statement[]): SourceFile {
+    const factory = createNodeFactory(NodeFactoryFlags.NoOriginalNode | NodeFactoryFlags.NoNodeConverters, parseBaseNodeFactory);
+    const eofToken = factory.createToken(SyntaxKind.EndOfFileToken);
+
+    const result = factory.createSourceFile(statements, eofToken, NodeFlags.Ambient);
+
+    result.referencedFiles = emptyArray;
+    result.typeReferenceDirectives = emptyArray;
+    result.libReferenceDirectives = emptyArray;
+    result.amdDependencies = emptyArray;
+    result.hasNoDefaultLib = false;
+    result.pragmas = emptyMap as ReadonlyPragmaMap;
+    result.parseDiagnostics = [];
+    result.isDeclarationFile = true;
+    result.fileName = `${fileName}.d.ts`;
+    result.bindDiagnostics = [];
+    result.bindSuggestionDiagnostics = undefined;
+    result.languageVersion = ScriptTarget.Latest;
+    result.languageVariant = getLanguageVariant(ScriptKind.TS);
+    result.scriptKind = ScriptKind.Provided;
+    result.externalModuleIndicator = result.statements[0];
+    result.text = "";
+
+    // Immediately printing the synthetic file declaration text allows us to generate concrete positions
+    // for all the nodes we've synthesized, and essentially un-synthesize them (making them appear, by all
+    // rights, to be veritable parse tree nodes)
+    result.text = createPrinter({}, {
+        onEmitNode(hint, node, cb, getTextPos) {
+            const start = getTextPos();
+            cb(hint, node);
+            if (node) {
+                (node as Mutable<typeof node>).pos = start;
+                (node as Mutable<typeof node>).end = getTextPos();
+            }
+        },
+
+    }).printFile(result);
+    (eofToken as Mutable<typeof eofToken>).pos = result.text.length;
+    (eofToken as Mutable<typeof eofToken>).end = result.text.length;
+
+    // The above sets all node positions, but node _arrays_ still have `-1` for their pos and end.
+    // We fix those up to use their constituent start and end positions here.
+    fixupNodeArrays(result);
+
+    return result;
+}
+
 // Based on: https://github.com/microsoft/TypeScript/pull/39784/commits/977c2b6e9cc9daa74212e8ee159d553628361047
 export function createMagicDeclarationFile(fileName: string, typeName: string, propNames: string[]): SourceFile {
     const factory = createNodeFactory(NodeFactoryFlags.NoOriginalNode | NodeFactoryFlags.NoNodeConverters, parseBaseNodeFactory);

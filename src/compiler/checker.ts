@@ -1091,7 +1091,7 @@ import {
 } from "./_namespaces/ts";
 import * as moduleSpecifiers from "./_namespaces/ts.moduleSpecifiers";
 import * as performance from "./_namespaces/ts.performance";
-import { getImportAttributeProperties, logIfProviderFile, providerPackagePrefix } from "./providers/debugging";
+import { providerPackagePrefix } from "./providers/debugging";
 
 const ambientModuleSymbolRegex = /^".+"$/;
 const anon = "(anonymous)" as __String & string;

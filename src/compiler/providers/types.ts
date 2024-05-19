@@ -1,7 +1,10 @@
 import { ImportAttributes, StringLiteralLike } from "../types";
 
 export interface ProviderOptions {
-    sample: string
+    sample?: string;
+    separator?: string;
+    encoding?: string;
+    hasHeader?: boolean;
 }
 
 export interface ModuleImport {
