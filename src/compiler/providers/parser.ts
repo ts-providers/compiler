@@ -26,3 +26,9 @@ export function getProviderOptionsFromImportAttributes(attributes?: ImportAttrib
 
     return result as ProviderOptions;
 }
+
+export function getFileNameWithSample(fileName: string, samplePath: string): string {
+    const sanitizedSamplePath = samplePath.replace(":", "_").replace("/", "_");
+    const result = fileName + "____" + sanitizedSamplePath + ".d.ts";
+    return result;
+}

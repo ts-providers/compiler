@@ -331,7 +331,7 @@ import {
 } from "./_namespaces/ts";
 import * as performance from "./_namespaces/ts.performance";
 import { logIfProviderFile } from "./providers/debugging";
-import { getImportAttributeProperties, getProviderSamplePath } from "./providers/parser";
+import { getFileNameWithSample, getImportAttributeProperties, getProviderSamplePath } from "./providers/parser";
 import { ModuleImport as ModuleImport } from "./providers/types";
 
 export function findConfigFile(searchPath: string, fileExists: (fileName: string) => boolean, configName = "tsconfig.json"): string | undefined {
@@ -405,19 +405,26 @@ export function createGetSourceFile(
 ): CompilerHost["getSourceFile"] {
     return (fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile, importAttributes) => {
         logIfProviderFile(fileName, "getSourceFile", "SAMPLE", getProviderSamplePath(importAttributes));
+        const isProvidedImport = getProviderSamplePath(importAttributes) !== undefined;
         let text: string | undefined;
-        try {
-            performance.mark("beforeIORead");
-            text = readFile(fileName, getCompilerOptions().charset);
-            performance.mark("afterIORead");
-            performance.measure("I/O Read", "beforeIORead", "afterIORead");
-        }
-        catch (e) {
-            if (onError) {
-                onError(e.message);
-            }
+
+        if (isProvidedImport) {
             text = "";
+        } else {
+            try {
+                performance.mark("beforeIORead");
+                text = readFile(fileName, getCompilerOptions().charset);
+                performance.mark("afterIORead");
+                performance.measure("I/O Read", "beforeIORead", "afterIORead");
+            }
+            catch (e) {
+                if (onError) {
+                    onError(e.message);
+                }
+                text = "";
+            }
         }
+
         return text !== undefined ? createSourceFile(fileName, text, languageVersionOrOptions, setParentNodes, /*scriptKind*/ undefined, importAttributes) : undefined;
     };
 }
@@ -3647,7 +3654,16 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
 
     function findSourceFileWorker(fileName: string, isDefaultLib: boolean, ignoreNoDefaultLib: boolean, reason: FileIncludeReason, packageId: PackageId | undefined, importAttributes?: ImportAttributes): SourceFile | undefined {
         const path = toPath(fileName);
-        if (useSourceOfProjectReferenceRedirect) {
+
+        const samplePath = getProviderSamplePath(importAttributes);
+        const isProvidedImport = samplePath !== undefined;
+
+        if (isProvidedImport) {
+            fileName = getFileNameWithSample(fileName, samplePath);
+            console.log("PROVIDED IMPORT", fileName);
+        }
+
+        if (!isProvidedImport && useSourceOfProjectReferenceRedirect) {
             let source = getSourceOfProjectReferenceRedirect(path);
             // If preserveSymlinks is true, module resolution wont jump the symlink
             // but the resolved real path may be the .d.ts from project reference
@@ -3672,7 +3688,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
             }
         }
         const originalFileName = fileName;
-        if (filesByName.has(path)) {
+        if (!isProvidedImport && filesByName.has(path)) {
             const file = filesByName.get(path);
             addFileIncludeReason(file || undefined, reason);
             // try to check if we've already seen this file but with a different casing in path
@@ -3718,7 +3734,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
         }
 
         let redirectedPath: Path | undefined;
-        if (isReferencedFile(reason) && !useSourceOfProjectReferenceRedirect) {
+        if (!isProvidedImport && isReferencedFile(reason) && !useSourceOfProjectReferenceRedirect) {
             const redirectProject = getProjectReferenceRedirectProject(fileName);
             if (redirectProject) {
                 if (outFile(redirectProject.commandLine.options)) {

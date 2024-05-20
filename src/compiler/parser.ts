@@ -55,6 +55,7 @@ import {
     convertToJson,
     createDetachedDiagnostic,
     createNodeFactory,
+    createPrinter,
     createScanner,
     createTextChangeRange,
     createTextSpanFromBounds,
@@ -268,6 +269,7 @@ import {
     NamespaceExportDeclaration,
     NamespaceImport,
     NewExpression,
+    NewLineKind,
     Node,
     NodeArray,
     NodeFactory,
@@ -400,7 +402,7 @@ import {
 import * as performance from "./_namespaces/ts.performance";
 import { createProvidedSourceFile } from "./providers/codegen";
 import { logIfProviderFile, providerPackagePrefix } from "./providers/debugging";
-import { getImportAttributeProperties, getProviderOptionsFromImportAttributes, getProviderSamplePath } from "./providers/parser";
+import { getProviderOptionsFromImportAttributes, getProviderSamplePath } from "./providers/parser";
 
 const enum SignatureFlags {
     None = 0,
@@ -1344,7 +1346,7 @@ export function createSourceFile(fileName: string, sourceText: string, languageV
         jsDocParsingMode,
     } = typeof languageVersionOrOptions === "object" ? languageVersionOrOptions : ({ languageVersion: languageVersionOrOptions } as CreateSourceFileOptions);
 
-    //// logIfProviderFile(fileName, "CREATE");
+    logIfProviderFile(fileName, "CREATE", "SAMPLE", getProviderSamplePath(importAttributes));
 
     if (languageVersion === ScriptTarget.JSON) {
         result = Parser.parseSourceFile(fileName, sourceText, languageVersion, /*syntaxCursor*/ undefined, setParentNodes, ScriptKind.JSON, noop, jsDocParsingMode, importAttributes);
@@ -1613,9 +1615,10 @@ namespace Parser {
             const providerOptions = getProviderOptionsFromImportAttributes(importAttributes);
             logIfProviderFile(fileName, "PROVIDER in parseSourceFile", `SAMPLE: '${providerOptions.sample}'`);
 
+            const originalFileName = fileName.split("____")[0];
             let statements: Statement[] = [];
             if (providerOptions.sample) {
-                const providerPackagePath = dirname(fileName);
+                const providerPackagePath = dirname(originalFileName);
                 const providerPackage = require(providerPackagePath);
                 const providerGenerator = providerPackage.CsvProviderGenerator;
                 statements = providerGenerator.provideDeclarations({
@@ -1630,6 +1633,15 @@ namespace Parser {
             if (setParentNodes) {
                 fixupParentReferences(declFile);
             }
+
+            const printer = createPrinter({
+                newLine: NewLineKind.LineFeed,
+                removeComments: false,
+                omitTrailingSemicolon: true
+            });
+
+            console.log("PROVIDED FILE:", fileName);
+            console.log(printer.printFile(declFile));
 
             return declFile;
         } else {
