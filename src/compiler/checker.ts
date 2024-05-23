@@ -32962,7 +32962,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
                     return anyType;
                 }
             }
-
+            console.log("CHECK PROPERTY ACCESS getPrivateIdentifierPropertyOfType");
             prop = lexicallyScopedSymbol && getPrivateIdentifierPropertyOfType(leftType, lexicallyScopedSymbol);
             if (prop === undefined) {
                 // Check for private-identifier-specific shadowing and lexical-scoping errors.
@@ -32988,6 +32988,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
                 }
                 return isErrorType(apparentType) ? errorType : apparentType;
             }
+            console.log("CHECK PROPERTY ACCESS getPropertyOfType");
             prop = getPropertyOfType(apparentType, right.escapedText, /*skipObjectFunctionPropertyAugment*/ isConstEnumObjectType(apparentType), /*includeTypeOnlyMembers*/ node.kind === SyntaxKind.QualifiedName);
         }
         // In `Foo.Bar.Baz`, 'Foo' is not referenced if 'Bar' is a const enum or a module containing only const enums.
@@ -33026,6 +33027,9 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
                     return anyType;
                 }
                 if (right.escapedText && !checkAndReportErrorForExtendingInterface(node)) {
+                    // console.log("CHECK PROPERTY ACCESS ERROR", right.escapedText, "PROP", prop, "LEFT", leftType, "APPARENT", apparentType);
+                    console.log("CHECK PROPERTY ACCESS ERROR", right.escapedText, "PROP", prop);
+                    console.trace();
                     reportNonexistentProperty(right, isThisTypeParameter(leftType) ? apparentType : leftType, isUncheckedJS);
                 }
                 return errorType;
@@ -39239,6 +39243,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     }
 
     function instantiateTypeWithSingleGenericCallSignature(node: Expression | MethodDeclaration | QualifiedName, type: Type, checkMode?: CheckMode) {
+        console.log("INSTANTIATE TYPE", type);
         if (checkMode && checkMode & (CheckMode.Inferential | CheckMode.SkipGenericFunctions)) {
             const callSignature = getSingleSignature(type, SignatureKind.Call, /*allowMembers*/ true);
             const constructSignature = getSingleSignature(type, SignatureKind.Construct, /*allowMembers*/ true);
@@ -39468,6 +39473,10 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         currentNode = node;
         instantiationCount = 0;
         const uninstantiatedType = checkExpressionWorker(node, checkMode, forceTuple);
+        const name = uninstantiatedType?.symbol?.escapedName ?? "no name" as string;
+        if (name.includes("Csv") || name.includes("RowType")) {
+            console.log("CHECKEXPRESSION", name);
+        }
         const type = instantiateTypeWithSingleGenericCallSignature(node, uninstantiatedType, checkMode);
         if (isConstEnumObjectType(type)) {
             checkConstEnumAccess(node, type);
