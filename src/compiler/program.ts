@@ -330,8 +330,8 @@ import {
     writeFileEnsuringDirectories,
 } from "./_namespaces/ts";
 import * as performance from "./_namespaces/ts.performance";
-import { logIfProviderFile } from "./providers/debugging";
-import { getFileNameWithSample, getImportAttributeProperties, getProviderSamplePath } from "./providers/parser";
+import { logIfProviderFile, providerPackagePrefix } from "./providers/debugging";
+import { getFileNameWithSample, getImportAttributeProperties, getModuleNameWithSample, getProviderSamplePath } from "./providers/parser";
 import { ModuleImport as ModuleImport } from "./providers/types";
 
 export function findConfigFile(searchPath: string, fileExists: (fileName: string) => boolean, configName = "tsconfig.json"): string | undefined {
@@ -1980,7 +1980,9 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     return program;
 
     function getResolvedModule(file: SourceFile, moduleName: string, mode: ResolutionMode) {
-        return resolvedModules?.get(file.path)?.get(moduleName, mode);
+        const resolved = resolvedModules?.get(file.path)?.get(moduleName, mode);
+        console.log("GET RESOLVED MODULE", file.fileName, moduleName, mode, resolved?.resolvedModule?.resolvedFileName);
+        return resolved;
     }
 
     function getResolvedModuleFromModuleSpecifier(moduleSpecifier: StringLiteralLike): ResolvedModuleWithFailedLookupLocations | undefined {
@@ -3837,7 +3839,13 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     }
 
     function addFileToFilesByName(file: SourceFile | undefined, path: Path, fileName: string, redirectedPath: Path | undefined) {
-        if (redirectedPath) {
+        if (file?.fileName.includes(providerPackagePrefix))
+            console.log("ADD FILE", "file.fileName", file?.fileName, "path", path, "fileName", fileName, "toPath", toPath(fileName), "RedirectedPath", redirectedPath);
+
+        if (file?.scriptKind === ScriptKind.Provided) {
+            updateFilesByNameMap(fileName, toPath(fileName), file);
+        }
+        else if (redirectedPath) {
             updateFilesByNameMap(fileName, redirectedPath, file);
             updateFilesByNameMap(fileName, path, file || false);
         }
@@ -4123,13 +4131,25 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
             const moduleSpecifiers = modulesToResolve.map(m => m.specifier);
             const resolutions = resolvedModulesProcessing?.get(file.path) ||
                 resolveModuleNamesReusingOldState(moduleSpecifiers, file);
+
             Debug.assert(resolutions.length === modulesToResolve.length);
             const optionsForFile = getRedirectReferenceForResolution(file)?.commandLine.options || options;
             const resolutionsInFile = createModeAwareCache<ResolutionWithFailedLookupLocations>();
             (resolvedModules ??= new Map()).set(file.path, resolutionsInFile);
             for (let index = 0; index < modulesToResolve.length; index++) {
                 const resolution = resolutions[index].resolvedModule;
-                const moduleName = moduleSpecifiers[index].text;
+                let moduleName = moduleSpecifiers[index].text;
+
+                const importAttributes = modulesToResolve[index].attributes;
+                const samplePath = getProviderSamplePath(importAttributes);
+                const isProvidedImport = samplePath !== undefined;
+
+                if (isProvidedImport) {
+                    moduleName = getModuleNameWithSample(moduleName, samplePath);
+                    resolutions[index].resolvedModule!.resolvedFileName = getFileNameWithSample(resolutions[index].resolvedModule!.resolvedFileName, samplePath);
+                    console.log("PROVIDED MODULE", moduleName);
+                }
+
                 const mode = getModeForUsageLocationWorker(file, moduleSpecifiers[index], optionsForFile);
                 resolutionsInFile.set(moduleName, mode, resolutions[index]);
                 addResolutionDiagnosticsFromResolutionOrCache(file, moduleName, resolutions[index], mode);

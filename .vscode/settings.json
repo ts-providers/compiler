@@ -8,7 +8,7 @@
     // user's settings.json so take precedence.
     "[typescript][typescriptreact][javascript][javascriptreact][json][jsonc][yaml][github-actions-workflow]": {
         "editor.defaultFormatter": "dprint.dprint",
-        "editor.formatOnSave": true
+        "editor.formatOnSave": false
     },
     // To ignore commits listed in .git-blame-ignore-revs in GitLens:
     "gitlens.advanced.blame.customArguments": [
@@ -39,5 +39,6 @@
     "typescript.tsdk": "built\\local",
     "[json]": {
         "editor.defaultFormatter": "vscode.json-language-features"
-    }
+    },
+    "eslint.enable": false
 }

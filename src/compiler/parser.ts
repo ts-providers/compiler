@@ -1613,7 +1613,7 @@ namespace Parser {
         }
         else if (fileName.includes(providerPackagePrefix)) {
             const providerOptions = getProviderOptionsFromImportAttributes(importAttributes);
-            logIfProviderFile(fileName, "PROVIDER in parseSourceFile", `SAMPLE: '${providerOptions.sample}'`);
+            logIfProviderFile(fileName, "PROVIDER in parseSourceFile", `OPTIONS: '${JSON.stringify(providerOptions)}'`);
 
             const originalFileName = fileName.split("____")[0];
             let statements: Statement[] = [];
@@ -1621,11 +1621,7 @@ namespace Parser {
                 const providerPackagePath = dirname(originalFileName);
                 const providerPackage = require(providerPackagePath);
                 const providerGenerator = providerPackage.CsvProviderGenerator;
-                statements = providerGenerator.provideDeclarations({
-                    sample: providerOptions.sample,
-                    separator: providerOptions.separator ?? ";",
-                    hasHeader: providerOptions.hasHeader ?? true
-                });
+                statements = providerGenerator.provideDeclarations(providerOptions);
             }
 
             const declFile = createProvidedSourceFile(fileName, statements);

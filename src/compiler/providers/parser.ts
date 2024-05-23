@@ -1,3 +1,4 @@
+import { toPath } from "../_namespaces/ts";
 import { Identifier, ImportAttributes, StringLiteral } from "../types";
 import { ProviderOptions } from "./types";
 
@@ -30,5 +31,11 @@ export function getProviderOptionsFromImportAttributes(attributes?: ImportAttrib
 export function getFileNameWithSample(fileName: string, samplePath: string): string {
     const sanitizedSamplePath = samplePath.replace(":", "_").replace("/", "_");
     const result = fileName + "____" + sanitizedSamplePath + ".d.ts";
+    return result.toLowerCase();
+}
+
+export function getModuleNameWithSample(moduleName: string, samplePath: string): string {
+    const sanitizedSamplePath = samplePath.replace(":", "_").replace("/", "_");
+    const result = moduleName + "____" + sanitizedSamplePath;
     return result;
 }
