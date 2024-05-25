@@ -76,7 +76,9 @@ import {
     trace,
     updateResolutionField,
     WatchDirectoryFlags,
+    moduleLiteralResolutionNameAndModeGetter,
 } from "./_namespaces/ts";
+import { ModuleImport } from "./providers/types";
 
 /** @internal */
 export interface HasInvalidatedFromResolutionCache {
@@ -461,9 +463,32 @@ export function createModuleResolutionLoaderUsingGlobalCache(
     options: CompilerOptions,
     resolutionHost: ResolutionCacheHost,
     moduleResolutionCache: ModuleResolutionCache,
-): ResolutionLoader<StringLiteralLike, ResolvedModuleWithFailedLookupLocations, SourceFile> {
+): ResolutionLoader<ModuleImport, ResolvedModuleWithFailedLookupLocations, SourceFile> {
     return {
         nameAndMode: moduleResolutionNameAndModeGetter,
+        resolve: (moduleName, resoluionMode) =>
+            resolveModuleNameUsingGlobalCache(
+                resolutionHost,
+                moduleResolutionCache,
+                moduleName,
+                containingFile,
+                options,
+                redirectedReference,
+                resoluionMode,
+            ),
+    };
+}
+
+/** @internal */
+export function createModuleLiteralResolutionLoaderUsingGlobalCache(
+    containingFile: string,
+    redirectedReference: ResolvedProjectReference | undefined,
+    options: CompilerOptions,
+    resolutionHost: ResolutionCacheHost,
+    moduleResolutionCache: ModuleResolutionCache,
+): ResolutionLoader<StringLiteralLike, ResolvedModuleWithFailedLookupLocations, SourceFile> {
+    return {
+        nameAndMode: moduleLiteralResolutionNameAndModeGetter,
         resolve: (moduleName, resoluionMode) =>
             resolveModuleNameUsingGlobalCache(
                 resolutionHost,
@@ -960,7 +985,7 @@ export function createResolutionCache(resolutionHost: ResolutionCacheHost, rootD
             options,
             reusedNames,
             perFileCache: resolvedModuleNames,
-            loader: createModuleResolutionLoaderUsingGlobalCache(
+            loader: createModuleLiteralResolutionLoaderUsingGlobalCache(
                 containingFile,
                 redirectedReference,
                 options,

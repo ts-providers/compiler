@@ -130,6 +130,7 @@ import {
     WildcardDirectoryWatcher,
     writeFile,
     WriteFileCallback,
+    createModuleLiteralResolutionLoader,
 } from "./_namespaces/ts";
 import * as performance from "./_namespaces/ts.performance";
 
@@ -452,7 +453,7 @@ function createSolutionBuilderState<T extends BuilderProgram>(watch: boolean, ho
                 containingSourceFile,
                 host,
                 moduleResolutionCache,
-                createModuleResolutionLoader,
+                createModuleLiteralResolutionLoader,
             );
         compilerHost.getModuleResolutionCache = () => moduleResolutionCache;
     }

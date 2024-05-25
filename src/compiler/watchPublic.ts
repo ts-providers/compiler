@@ -96,6 +96,7 @@ import {
     WatchTypeRegistry,
     WildcardDirectoryWatcher,
 } from "./_namespaces/ts";
+import { ModuleImport } from "./providers/types";
 
 export interface ReadBuildProgramHost {
     useCaseSensitiveFileNames(): boolean;
