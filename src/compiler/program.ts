@@ -331,7 +331,8 @@ import {
 } from "./_namespaces/ts";
 import * as performance from "./_namespaces/ts.performance";
 import { logIfProviderFile, providerPackagePrefix } from "./providers/debugging";
-import { getFileNameWithSample, getImportAttributeProperties, getModuleNameWithSample, getProviderSamplePath } from "./providers/parser";
+import { createTypeProviderHost, TypeProviderHost } from "./providers/host";
+import { getFileNameWithSample, getImportAttributeProperties, getModuleNameWithSample, getProviderSamplePath } from "./providers/utils";
 import { ModuleImport as ModuleImport } from "./providers/types";
 
 export function findConfigFile(searchPath: string, fileExists: (fileName: string) => boolean, configName = "tsconfig.json"): string | undefined {
@@ -1082,12 +1083,16 @@ export function loadWithModeAwareCache<Entry, SourceFile, ResolutionCache, Resol
     const cache = new Map<ModeAwareCacheKey, Resolution>();
     const loader = createLoader(containingFile, redirectedReference, options, host, resolutionCache);
     for (const entry of entries) {
+        // TODO: Provider aware cache
         const name = loader.nameAndMode.getName(entry);
         const mode = loader.nameAndMode.getMode(entry, containingSourceFile, redirectedReference?.commandLine.options || options);
         const key = createModeAwareCacheKey(name, mode);
         let result = cache.get(key);
+        if (containingFile.includes("src"))
+            console.log("LOAD WITH CACHE", containingFile, key, result);
         if (!result) {
-            cache.set(key, result = loader.resolve(name, mode));
+            const loaderResult = loader.resolve(name, mode);
+            console.trace("LOADER RESULT", result = loaderResult);
         }
         resolutions.push(result);
     }
@@ -1557,6 +1562,8 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
 
     let packageMap: Map<string, boolean> | undefined;
 
+    let typeProviderHost: TypeProviderHost;
+
     // The below settings are to track if a .js file should be add to the program if loaded via searching under node_modules.
     // This works as imported modules are discovered recursively in a depth first manner, specifically:
     // - For each root file, findSourceFile is called.
@@ -1631,6 +1638,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
         moduleResolutionCache = host.getModuleResolutionCache?.();
     }
     else {
+        // TODO(OR): Provider aware resolution cache
         moduleResolutionCache = createModuleResolutionCache(currentDirectory, getCanonicalFileName, options);
         actualResolveModuleNamesWorker = (moduleNames, containingFile, redirectedReference, options, containingSourceFile) =>
             loadWithModeAwareCache(
@@ -1899,6 +1907,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
         getBindAndCheckDiagnostics,
         getProgramDiagnostics,
         getTypeChecker,
+        getTypeProviderHost,
         getClassifiableNames,
         getCommonSourceDirectory,
         emit,
@@ -2064,6 +2073,9 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
 
     function resolveModuleNamesWorker(moduleNames: readonly StringLiteralLike[], containingFile: SourceFile, reusedNames: readonly StringLiteralLike[] | undefined): readonly ResolvedModuleWithFailedLookupLocations[] {
         if (!moduleNames.length) return emptyArray;
+        if (containingFile.fileName.includes("src")) {
+            console.log("** RESOLVE MODULE NAMES", moduleNames);
+        }
         const containingFileName = getNormalizedAbsolutePath(containingFile.originalFileName, currentDirectory);
         const redirectedReference = getRedirectReferenceForResolution(containingFile);
         tracing?.push(tracing.Phase.Program, "resolveModuleNamesWorker", { containingFileName });
@@ -2760,6 +2772,10 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
 
     function getTypeChecker() {
         return typeChecker || (typeChecker = createTypeChecker(program));
+    }
+
+    function getTypeProviderHost() {
+        return typeProviderHost || (typeProviderHost = createTypeProviderHost());
     }
 
     function emit(sourceFile?: SourceFile, writeFileCallback?: WriteFileCallback, cancellationToken?: CancellationToken, emitOnly?: boolean | EmitOnly, transformers?: CustomTransformers, forceDtsEmit?: boolean): EmitResult {
@@ -3661,7 +3677,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
         const isProvidedImport = samplePath !== undefined;
 
         if (isProvidedImport) {
-            fileName = getFileNameWithSample(fileName, samplePath);
+            // fileName = getFileNameWithSample(fileName, samplePath);
             console.log("PROVIDED IMPORT", fileName);
         }
 
@@ -3768,13 +3784,18 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
         );
 
         if (packageId) {
-            const packageIdKey = packageIdToString(packageId);
+            // console.log("PACKAGE ID", packageId);
+            let packageIdKey = packageIdToString(packageId);
+            if (isProvidedImport) {
+                // packageIdKey = getModuleNameWithSample(packageIdKey, samplePath);
+            }
             const fileFromPackageId = packageIdToSourceFile.get(packageIdKey);
             if (fileFromPackageId) {
                 // Some other SourceFile already exists with this package name and version.
                 // Instead of creating a duplicate, just redirect to the existing one.
                 const dupFile = createRedirectedSourceFile(fileFromPackageId, file!, fileName, path, toPath(fileName), originalFileName, sourceFileOptions);
                 redirectTargetsMap.add(fileFromPackageId.path, fileName);
+                console.log("DUPLICATE PACKAGE", packageIdKey);
                 addFileToFilesByName(dupFile, path, fileName, redirectedPath);
                 addFileIncludeReason(dupFile, reason);
                 sourceFileToPackageName.set(path, packageIdToPackageName(packageId));
@@ -3840,7 +3861,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
 
     function addFileToFilesByName(file: SourceFile | undefined, path: Path, fileName: string, redirectedPath: Path | undefined) {
         if (file?.fileName.includes(providerPackagePrefix))
-            console.log("ADD FILE", "file.fileName", file?.fileName, "path", path, "fileName", fileName, "toPath", toPath(fileName), "RedirectedPath", redirectedPath);
+            console.trace("ADD FILE", "file.fileName", file?.fileName, "path", path, "fileName", fileName, "toPath", toPath(fileName), "RedirectedPath", redirectedPath);
 
         if (file?.scriptKind === ScriptKind.Provided) {
             updateFilesByNameMap(fileName, toPath(fileName), file);
@@ -4133,6 +4154,10 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
                 resolveModuleNamesReusingOldState(moduleSpecifiers, file);
 
             Debug.assert(resolutions.length === modulesToResolve.length);
+
+            if (file.fileName.includes("src"))
+                console.log(file.fileName, "RESOLUTIONS", resolutions.map(r => r.resolvedModule));
+
             const optionsForFile = getRedirectReferenceForResolution(file)?.commandLine.options || options;
             const resolutionsInFile = createModeAwareCache<ResolutionWithFailedLookupLocations>();
             (resolvedModules ??= new Map()).set(file.path, resolutionsInFile);
@@ -4146,7 +4171,11 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
 
                 if (isProvidedImport) {
                     moduleName = getModuleNameWithSample(moduleName, samplePath);
-                    resolutions[index].resolvedModule!.resolvedFileName = getFileNameWithSample(resolutions[index].resolvedModule!.resolvedFileName, samplePath);
+                    const prevResolvedFileName = resolution!.resolvedFileName;
+                    const prevPackageId = resolution!.packageId;
+                    Debug.assert(!prevResolvedFileName.endsWith(".csv.d.ts"));
+                    resolution!.resolvedFileName = getFileNameWithSample(prevResolvedFileName, samplePath);
+                    resolution!.packageId = { ...prevPackageId!, name: getModuleNameWithSample(prevPackageId!.name, samplePath) };
                     console.log("PROVIDED MODULE", moduleName);
                 }
 

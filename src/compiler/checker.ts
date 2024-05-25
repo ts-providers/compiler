@@ -1092,7 +1092,7 @@ import {
 import * as moduleSpecifiers from "./_namespaces/ts.moduleSpecifiers";
 import * as performance from "./_namespaces/ts.performance";
 import { providerPackagePrefix } from "./providers/debugging";
-import { getModuleNameWithSample, getProviderSamplePath } from "./providers/parser";
+import { getModuleNameWithSample, getProviderSamplePath } from "./providers/utils";
 
 const ambientModuleSymbolRegex = /^".+"$/;
 const anon = "(anonymous)" as __String & string;

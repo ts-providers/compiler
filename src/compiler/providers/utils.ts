@@ -36,6 +36,6 @@ export function getFileNameWithSample(fileName: string, samplePath: string): str
 
 export function getModuleNameWithSample(moduleName: string, samplePath: string): string {
     const sanitizedSamplePath = samplePath.replace(":", "_").replace("/", "_");
-    const result = moduleName + "____" + sanitizedSamplePath;
+    const result = moduleName + "__" + sanitizedSamplePath;
     return result;
 }

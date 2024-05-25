@@ -6374,6 +6374,7 @@ export function getSourceFilesToEmit(host: EmitHost, targetSourceFile?: SourceFi
  * @internal
  */
 export function sourceFileMayBeEmitted(sourceFile: SourceFile, host: SourceFileMayBeEmittedHost, forceDtsEmit?: boolean) {
+    // TODO(OR): Add provided runtime code files?
     const options = host.getCompilerOptions();
     // Js files are emitted only if option is enabled
     if (options.noEmitForJsFiles && isSourceFileJS(sourceFile)) return false;

@@ -402,7 +402,7 @@ import {
 import * as performance from "./_namespaces/ts.performance";
 import { createProvidedSourceFile } from "./providers/codegen";
 import { logIfProviderFile, providerPackagePrefix } from "./providers/debugging";
-import { getProviderOptionsFromImportAttributes, getProviderSamplePath } from "./providers/parser";
+import { getProviderOptionsFromImportAttributes, getProviderSamplePath } from "./providers/utils";
 
 const enum SignatureFlags {
     None = 0,

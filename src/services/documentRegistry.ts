@@ -1,5 +1,5 @@
 import { logIfProviderFile } from "../compiler/providers/debugging";
-import { getProviderOptionsFromImportAttributes, getProviderSamplePath } from "../compiler/providers/parser";
+import { getProviderOptionsFromImportAttributes, getProviderSamplePath } from "../compiler/providers/utils";
 import {
     arrayFrom,
     CompilerOptions,
