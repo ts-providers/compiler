@@ -400,7 +400,7 @@ import {
     YieldExpression,
 } from "./_namespaces/ts";
 import * as performance from "./_namespaces/ts.performance";
-import { createProvidedSourceFile } from "./providers/codegen";
+import { createProvidedSourceFile, createVirtualSourceFile } from "./providers/codegen";
 import { logIfProviderFile, providerPackagePrefix } from "./providers/debugging";
 import { getProviderOptionsFromImportAttributes, getProviderSamplePath } from "./providers/utils";
 
@@ -1612,34 +1612,7 @@ namespace Parser {
             return result;
         }
         else if (fileName.includes(providerPackagePrefix)) {
-            const providerOptions = getProviderOptionsFromImportAttributes(importAttributes);
-            logIfProviderFile(fileName, "PROVIDER in parseSourceFile", `OPTIONS: '${JSON.stringify(providerOptions)}'`);
-
-            const originalFileName = fileName.split("____")[0];
-            let statements: Statement[] = [];
-            if (providerOptions.sample) {
-                const providerPackagePath = dirname(originalFileName);
-                const providerPackage = require(providerPackagePath);
-                const providerGenerator = providerPackage.CsvProviderGenerator;
-                statements = providerGenerator.provideDeclarations(providerOptions);
-            }
-
-            const declFile = createProvidedSourceFile(fileName, statements);
-
-            if (setParentNodes) {
-                fixupParentReferences(declFile);
-            }
-
-            const printer = createPrinter({
-                newLine: NewLineKind.LineFeed,
-                removeComments: false,
-                omitTrailingSemicolon: true
-            });
-
-            console.log("PROVIDED FILE:", fileName);
-            console.log(printer.printFile(declFile));
-
-            return declFile;
+            return createProvidedSourceFile(fileName, importAttributes!, setParentNodes);
         } else {
             initializeState(fileName, sourceText, languageVersion, syntaxCursor, scriptKind, jsDocParsingMode);
 

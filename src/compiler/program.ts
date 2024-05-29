@@ -334,6 +334,7 @@ import { logIfProviderFile, providerPackagePrefix } from "./providers/debugging"
 import { createTypeProviderHost, TypeProviderHost } from "./providers/host";
 import { getFileNameWithSample, getImportAttributeProperties, getModuleNameWithSample, getProviderSamplePath } from "./providers/utils";
 import { ModuleImport as ModuleImport } from "./providers/types";
+import { createProvidedSourceFile } from "./providers/codegen";
 
 export function findConfigFile(searchPath: string, fileExists: (fileName: string) => boolean, configName = "tsconfig.json"): string | undefined {
     return forEachAncestorDirectory(searchPath, ancestor => {
@@ -564,14 +565,23 @@ export function changeCompilerHostLikeToUseCache(
     };
 
     const getSourceFileWithCache: CompilerHost["getSourceFile"] | undefined = getSourceFile ? (fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile, importAttributes) => {
-        logIfProviderFile(fileName, "INSIDE getSourceFileWithCache", "SAMPLE", getProviderSamplePath(importAttributes));
+        logIfProviderFile(fileName, "CACHE 1", "SAMPLE", getProviderSamplePath(importAttributes));
         const key = toPath(fileName);
         const impliedNodeFormat: ResolutionMode = typeof languageVersionOrOptions === "object" ? languageVersionOrOptions.impliedNodeFormat : undefined;
         const forImpliedNodeFormat = sourceFileCache.get(impliedNodeFormat);
         const value = forImpliedNodeFormat?.get(key);
+        logIfProviderFile(fileName, "CACHE 2", key, impliedNodeFormat, value);
         if (value) return value;
 
-        const sourceFile = getSourceFile(fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile, importAttributes);
+        let sourceFile = getSourceFile(fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile, importAttributes);
+
+        if (fileName && fileName.includes(providerPackagePrefix)) {
+            sourceFile = createProvidedSourceFile(fileName, importAttributes!, true);
+            console.log("CACHE 2.5", sourceFile.fileName);
+        }
+
+        logIfProviderFile(fileName, "CACHE 3", sourceFile?.fileName, sourceFile);
+
         if (sourceFile && (isDeclarationFileName(fileName) || fileExtensionIs(fileName, Extension.Json))) {
             sourceFileCache.set(impliedNodeFormat, (forImpliedNodeFormat || new Map()).set(key, sourceFile));
         }
@@ -1585,6 +1595,8 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     const { rootNames, options, configFileParsingDiagnostics, projectReferences, typeScriptVersion } = createProgramOptions;
     let { oldProgram } = createProgramOptions;
 
+    console.log("CREATE PROGRAM", JSON.stringify(createProgramOptions));
+
     const reportInvalidIgnoreDeprecations = memoize(() => createOptionValueDiagnostic("ignoreDeprecations", Diagnostics.Invalid_value_for_ignoreDeprecations));
 
     let processingDefaultLibFiles: SourceFile[] | undefined;
@@ -2043,7 +2055,9 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
 
     function getResolvedModule(file: SourceFile, moduleName: string, mode: ResolutionMode) {
         const resolved = resolvedModules?.get(file.path)?.get(moduleName, mode);
-        console.log("GET RESOLVED MODULE", file.fileName, moduleName, mode, resolved?.resolvedModule?.resolvedFileName);
+        if (file.fileName.includes("@ts-providers")) {
+            console.log("GET RESOLVED MODULE", file.fileName, moduleName, mode, resolved?.resolvedModule?.resolvedFileName);
+        }
         return resolved;
     }
 
@@ -3392,6 +3406,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     }
 
     function processRootFile(fileName: string, isDefaultLib: boolean, ignoreNoDefaultLib: boolean, reason: FileIncludeReason) {
+        logIfProviderFile(fileName, "processRootFile", FileIncludeKind[reason.kind]);
         processSourceFile(normalizePath(fileName), isDefaultLib, ignoreNoDefaultLib, /*packageId*/ undefined, reason);
     }
 
@@ -3655,10 +3670,10 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     }
 
     /** This has side effects through `findSourceFile`. */
-    function processSourceFile(fileName: string, isDefaultLib: boolean, ignoreNoDefaultLib: boolean, packageId: PackageId | undefined, reason: FileIncludeReason): void {
+    function processSourceFile(fileName: string, isDefaultLib: boolean, ignoreNoDefaultLib: boolean, packageId: PackageId | undefined, reason: FileIncludeReason, importAttributes?: ImportAttributes): void {
         getSourceFileFromReferenceWorker(
             fileName,
-            fileName => findSourceFile(fileName, isDefaultLib, ignoreNoDefaultLib, reason, packageId), // TODO: GH#18217
+            fileName => findSourceFile(fileName, isDefaultLib, ignoreNoDefaultLib, reason, packageId, importAttributes), // TODO: GH#18217
             (diagnostic, ...args) => addFilePreprocessingFileExplainingDiagnostic(/*file*/ undefined, reason, diagnostic, args),
             reason,
         );
@@ -3698,7 +3713,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
             fileIncludeKind: (FileIncludeKind as any)[reason.kind],
         });
 
-        //// logIfProviderFile(fileName, "FIND", "reason:", reason);
+        logIfProviderFile(fileName, "FIND", "reason:", reason, "sample", getProviderSamplePath(importAttributes));
 
         const result = findSourceFileWorker(fileName, isDefaultLib, ignoreNoDefaultLib, reason, packageId, importAttributes);
         tracing?.pop();
@@ -4223,7 +4238,8 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
                     moduleName = getModuleNameWithSample(moduleName, samplePath);
                     const prevResolvedFileName = resolution.resolvedFileName;
                     const prevPackageId = resolution.packageId;
-                    Debug.assert(!prevResolvedFileName.endsWith(".csv.d.ts"));
+                    // TODO(OR): Handle this properly
+                    // Debug.assert(!prevResolvedFileName.endsWith(".csv.d.ts"));
                     resolution.resolvedFileName = getFileNameWithSample(prevResolvedFileName, samplePath);
                     resolution.packageId = { ...prevPackageId!, name: getModuleNameWithSample(prevPackageId!.name, samplePath) };
                     console.log("PROVIDED MODULE", moduleName);

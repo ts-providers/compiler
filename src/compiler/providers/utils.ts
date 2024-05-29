@@ -39,3 +39,11 @@ export function getModuleNameWithSample(moduleName: string, samplePath: string):
     const result = moduleName + "__" + sanitizedSamplePath;
     return result;
 }
+
+// export function getFileNameWithSample(fileName: string, samplePath: string): string {
+//     return fileName;
+// }
+
+// export function getModuleNameWithSample(moduleName: string, samplePath: string): string {
+//     return moduleName;
+// }

@@ -4124,6 +4124,11 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         const moduleSymbol = isProvidedImport && isStringLiteralLike(node.parent.moduleSpecifier)
             ? resolveExternalModule(node, getModuleNameWithSample(node.parent.moduleSpecifier.text, samplePath), undefined, node, undefined)
             : resolveExternalModuleName(node, node.parent.moduleSpecifier);
+
+        if (isStringLiteralLike(node.parent.moduleSpecifier) && node.parent.moduleSpecifier.text.includes("@ts-providers")) {
+            console.trace("getTargetOfImportClause", "symbol name", moduleSymbol?.escapedName, "sample path", samplePath);
+        }
+
         if (moduleSymbol) {
             return getTargetofModuleDefault(moduleSymbol, node, dontResolveAlias);
         }
@@ -5273,7 +5278,9 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         if (moduleSymbol?.escapedName && (moduleSymbol?.escapedName as string).includes("rovider")) {
             const tmp = Error.stackTraceLimit;
             Error.stackTraceLimit = Infinity;
-            console.log("RESOLVE EXTERNAL MODULE SYMBOL", moduleSymbol?.escapedName);
+            if (moduleSymbol?.escapedName.includes("@ts-providers")) {
+                console.log("RESOLVE EXTERNAL MODULE SYMBOL", moduleSymbol?.escapedName);
+            }
             Error.stackTraceLimit = tmp;
         }
 

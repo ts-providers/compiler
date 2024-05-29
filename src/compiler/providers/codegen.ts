@@ -1,6 +1,40 @@
-import { createNodeFactory, createPrinter, emptyArray, emptyMap, forEachChildRecursively, getLanguageVariant, Mutable, Node, NodeFactoryFlags, NodeFlags, noop, parseBaseNodeFactory, ReadonlyPragmaMap, ScriptKind, ScriptTarget, SourceFile, Statement, SyntaxKind } from "../_namespaces/ts";
+import { dirname } from "path";
+import { createNodeFactory, createPrinter, emptyArray, emptyMap, forEachChildRecursively, getLanguageVariant, ImportAttributes, Mutable, NewLineKind, Node, NodeFactoryFlags, NodeFlags, noop, parseBaseNodeFactory, ReadonlyPragmaMap, ScriptKind, ScriptTarget, setParentRecursive, SourceFile, Statement, SyntaxKind } from "../_namespaces/ts";
+import { logIfProviderFile } from "./debugging";
+import { getProviderOptionsFromImportAttributes } from "./utils";
 
-export function createProvidedSourceFile(fileName: string, statements: Statement[]): SourceFile {
+export function createProvidedSourceFile(fileName: string, importAttributes: ImportAttributes, setParentNodes: boolean) {
+    const providerOptions = getProviderOptionsFromImportAttributes(importAttributes);
+    logIfProviderFile(fileName, "CREATING PROVIDED SOURCE FILE", `OPTIONS: '${JSON.stringify(providerOptions)}'`);
+
+    const originalFileName = fileName.split("____")[0];
+    let statements: Statement[] = [];
+    if (providerOptions.sample) {
+        const providerPackagePath = dirname(originalFileName);
+        const providerPackage = require(providerPackagePath);
+        const providerGenerator = providerPackage.CsvProviderGenerator;
+        statements = providerGenerator.provideDeclarations(providerOptions);
+    }
+
+    const declFile = createVirtualSourceFile(fileName, statements);
+
+    if (setParentNodes) {
+        setParentRecursive(declFile, true);
+    }
+
+    const printer = createPrinter({
+        newLine: NewLineKind.LineFeed,
+        removeComments: false,
+        omitTrailingSemicolon: true
+    });
+
+    console.log("PROVIDED FILE:", fileName);
+    console.log(printer.printFile(declFile));
+
+    return declFile;
+}
+
+export function createVirtualSourceFile(fileName: string, statements: Statement[]): SourceFile {
     const factory = createNodeFactory(NodeFactoryFlags.NoOriginalNode | NodeFactoryFlags.NoNodeConverters, parseBaseNodeFactory);
     const eofToken = factory.createToken(SyntaxKind.EndOfFileToken);
 

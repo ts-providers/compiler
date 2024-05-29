@@ -1659,6 +1659,9 @@ export function createLanguageService(
         // like every program always has the host's current list of root files.
         const rootFileNames = host.getScriptFileNames().slice();
 
+        log("SYNCHRONIZE ROOT FILE NAMES");
+        log(JSON.stringify(rootFileNames));
+
         // Get a fresh cache of the host information
         const newSettings = host.getCompilationSettings() || getDefaultCompilerOptions();
         const hasInvalidatedResolutions: HasInvalidatedResolutions = host.hasInvalidatedResolutions || returnFalse;

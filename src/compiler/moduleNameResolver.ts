@@ -1409,12 +1409,16 @@ export function resolveModuleName(moduleName: string, containingFile: string, co
     let result = cache?.getFromDirectoryCache(moduleName, resolutionMode, containingDirectory, redirectedReference);
 
     if (result && !moduleName.includes("@ts-providers")) {
-        console.log("RESOLVED FROM DIR CACHE", moduleName, resolutionMode, containingDirectory, redirectedReference, result?.resolvedModule?.resolvedFileName);
+        // console.log("RESOLVED FROM DIR CACHE", moduleName, resolutionMode, containingDirectory, redirectedReference, result?.resolvedModule?.resolvedFileName);
         if (traceEnabled) {
             trace(host, Diagnostics.Resolution_for_module_0_was_found_in_cache_from_location_1, moduleName, containingDirectory);
         }
     }
     else {
+        if (moduleName.includes("@ts-providers")) {
+            console.log("RESOLVE MODULE NAME", moduleName);
+        }
+
         let moduleResolution = compilerOptions.moduleResolution;
         if (moduleResolution === undefined) {
             moduleResolution = getEmitModuleResolutionKind(compilerOptions);
