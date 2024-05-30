@@ -1350,7 +1350,7 @@ class SyntaxTreeCache {
         const version = this.host.getScriptVersion(fileName);
         let sourceFile: SourceFile | undefined;
 
-        if (this.currentFileName !== fileName || scriptKind === ScriptKind.Provided) {
+        if (this.currentFileName !== fileName || scriptKind === ScriptKind.Provided || fileName.includes("@ts-providers")) {
             // This is a new file, just parse it
             const options: CreateSourceFileOptions = {
                 languageVersion: ScriptTarget.Latest,
@@ -1406,7 +1406,7 @@ export function createLanguageServiceSourceFile(
 export function updateLanguageServiceSourceFile(sourceFile: SourceFile, scriptSnapshot: IScriptSnapshot, version: string, textChangeRange: TextChangeRange | undefined, aggressiveChecks?: boolean): SourceFile {
     // If we were given a text change range, and our version or open-ness changed, then
     // incrementally parse this file.
-    if (textChangeRange) {
+    if (textChangeRange && !sourceFile.fileName.includes("@ts-providers")) {
         if (version !== sourceFile.version) {
             let newText: string;
 
@@ -1845,7 +1845,7 @@ export function createLanguageService(
             // Check if the language version has changed since we last created a program; if they are the same,
             // it is safe to reuse the sourceFiles; if not, then the shape of the AST can change, and the oldSourceFile
             // can not be reused. we have to dump all syntax trees and create new ones.
-            if (!shouldCreateNewSourceFile) {
+            if (!shouldCreateNewSourceFile && !fileName.includes("@ts-providers")) {
                 // Check if the old program had this file already
                 const oldSourceFile = program && program.getSourceFileByPath(path);
                 if (oldSourceFile) {

@@ -282,7 +282,7 @@ export function createDocumentRegistryInternal(useCaseSensitiveFileNames?: boole
         Debug.assertEqual(jsDocParsingMode, sourceFileOptions.jsDocParsingMode);
         const oldBucketCount = buckets.size;
         const keyWithMode = getDocumentRegistryBucketKeyWithMode(key, sourceFileOptions.impliedNodeFormat);
-        // const samplePath = getProviderSamplePath(importAttributes);
+        const samplePath = getProviderSamplePath(importAttributes);
         // keyWithMode = (samplePath ? `${keyWithMode}|${samplePath}` : keyWithMode) as DocumentRegistryBucketKeyWithMode;
         const bucket = getOrUpdate(buckets, keyWithMode, () => new Map());
         if (tracing) {
@@ -321,7 +321,7 @@ export function createDocumentRegistryInternal(useCaseSensitiveFileNames?: boole
             }
         }
 
-        if (!entry) {
+        if (!entry || samplePath !== undefined) {
             // Have never seen this file with these settings.  Create a new source file for it.
             const sourceFile = createLanguageServiceSourceFile(fileName, scriptSnapshot, sourceFileOptions, version, /*setNodeParents*/ false, scriptKind, importAttributes);
             if (externalCache) {

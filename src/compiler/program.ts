@@ -2141,7 +2141,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     function resolveModuleNamesWorker(moduleImports: readonly ModuleImport[], containingFile: SourceFile, reusedNames: readonly StringLiteralLike[] | undefined): readonly ResolvedModuleWithFailedLookupLocations[] {
         if (!moduleImports.length) return emptyArray;
         if (containingFile.fileName.includes("src")) {
-            console.log("** RESOLVE MODULE NAMES", moduleImports);
+            console.log("** RESOLVE MODULE NAMES", moduleImports?.length);
         }
         const containingFileName = getNormalizedAbsolutePath(containingFile.originalFileName, currentDirectory);
         const redirectedReference = getRedirectReferenceForResolution(containingFile);
@@ -4221,7 +4221,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
             Debug.assert(resolutions.length === moduleImports.length);
 
             if (file.fileName.includes("src"))
-                console.log(file.fileName, "RESOLUTIONS", resolutions.map(r => r.resolvedModule));
+                console.log("PROCESS IMPORTED MODULES", file.fileName, "RESOLUTIONS", [...resolutions?.map(r => r.resolvedModule) ?? []]);
 
             const optionsForFile = getRedirectReferenceForResolution(file)?.commandLine.options || options;
             const resolutionsInFile = createModeAwareCache<ResolutionWithFailedLookupLocations>();

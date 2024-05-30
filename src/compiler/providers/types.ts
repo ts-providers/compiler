@@ -1,5 +1,7 @@
 import { ImportAttributes, StringLiteralLike } from "../types";
 
+export const providerOrg = "@ts-providers";
+
 export interface ProviderOptions {
     sample?: string;
     separator?: string;
