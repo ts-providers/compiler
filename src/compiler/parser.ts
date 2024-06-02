@@ -401,7 +401,7 @@ import {
 } from "./_namespaces/ts";
 import * as performance from "./_namespaces/ts.performance";
 import { createProvidedSourceFile, createVirtualSourceFile } from "./providers/codegen";
-import { logIfProviderFile, providerPackagePrefix } from "./providers/debugging";
+import { logIfProviderFile, providerPackageIndex } from "./providers/debugging";
 import { getProviderOptionsFromImportAttributes, getProviderSamplePath } from "./providers/utils";
 
 const enum SignatureFlags {
@@ -1611,7 +1611,7 @@ namespace Parser {
             result.pragmas = emptyMap as ReadonlyPragmaMap;
             return result;
         }
-        else if (fileName.includes(providerPackagePrefix)) {
+        else if (fileName.includes(providerPackageIndex)) {
             return createProvidedSourceFile(fileName, importAttributes!, setParentNodes);
         } else {
             initializeState(fileName, sourceText, languageVersion, syntaxCursor, scriptKind, jsDocParsingMode);

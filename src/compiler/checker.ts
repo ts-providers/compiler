@@ -1091,7 +1091,7 @@ import {
 } from "./_namespaces/ts";
 import * as moduleSpecifiers from "./_namespaces/ts.moduleSpecifiers";
 import * as performance from "./_namespaces/ts.performance";
-import { providerPackagePrefix } from "./providers/debugging";
+import { providerPackageIndex, providerPackagePrefix } from "./providers/debugging";
 import { getModuleNameWithSample, getProviderSamplePath } from "./providers/utils";
 
 const ambientModuleSymbolRegex = /^".+"$/;
@@ -5053,13 +5053,42 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
             findAncestor(location, isImportDeclaration)?.moduleSpecifier ||
             findAncestor(location, isExternalModuleImportEqualsDeclaration)?.moduleReference.expression ||
             findAncestor(location, isExportDeclaration)?.moduleSpecifier;
+
+        let importAttributes: ImportAttributes | undefined = findAncestor(location, isImportDeclaration)?.attributes;
+
+        if (moduleReference.includes(providerPackagePrefix)) {
+            const sample = getProviderSamplePath(importAttributes);
+
+            if (sample) {
+                moduleReference = getModuleNameWithSample(moduleReference, sample);
+            }
+
+            console.log("RESOLVE 1", "SAMPLE", sample);
+            if (contextSpecifier?.kind === SyntaxKind.StringLiteral) {
+                console.log((contextSpecifier as StringLiteral).text);
+            }
+
+
+            // moduleReference = getModuleNameWithSample(moduleReference, )
+        }
+
         const mode = contextSpecifier && isStringLiteralLike(contextSpecifier) ? host.getModeForUsageLocation(currentSourceFile, contextSpecifier) : currentSourceFile.impliedNodeFormat;
         const moduleResolutionKind = getEmitModuleResolutionKind(compilerOptions);
         const resolvedModule = host.getResolvedModule(currentSourceFile, moduleReference, mode)?.resolvedModule;
+
+        if (moduleReference.includes(providerPackagePrefix)) {
+            console.log("RESOLVE 2", resolvedModule?.resolvedFileName, resolvedModule?.packageId?.name);
+        }
+
         const resolutionDiagnostic = resolvedModule && getResolutionDiagnostic(compilerOptions, resolvedModule, currentSourceFile);
         const sourceFile = resolvedModule
             && (!resolutionDiagnostic || resolutionDiagnostic === Diagnostics.Module_0_was_resolved_to_1_but_jsx_is_not_set)
             && host.getSourceFile(resolvedModule.resolvedFileName);
+
+        if (moduleReference.includes(providerPackagePrefix)) {
+            console.log("RESOLVE 3", sourceFile);
+        }
+
         if (sourceFile) {
             // If there's a resolutionDiagnostic we need to report it even if a sourceFile is found.
             if (resolutionDiagnostic) {
@@ -48889,7 +48918,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         console.log(
             files
                 .map(f => f.fileName)
-                .filter(n => n.includes(providerPackagePrefix)));
+                .filter(n => n.includes(providerPackageIndex)));
 
         for (const file of files) {
             //// logIfProviderFile(file.fileName, "BINDING");

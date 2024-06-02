@@ -330,7 +330,7 @@ import {
     writeFileEnsuringDirectories,
 } from "./_namespaces/ts";
 import * as performance from "./_namespaces/ts.performance";
-import { logIfProviderFile, providerPackagePrefix } from "./providers/debugging";
+import { logIfProviderFile, providerPackageIndex, providerPackagePrefix } from "./providers/debugging";
 import { createTypeProviderHost, TypeProviderHost } from "./providers/host";
 import { getFileNameWithSample, getImportAttributeProperties, getModuleNameWithSample, getProviderSamplePath } from "./providers/utils";
 import { ModuleImport as ModuleImport } from "./providers/types";
@@ -575,7 +575,7 @@ export function changeCompilerHostLikeToUseCache(
 
         let sourceFile = getSourceFile(fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile, importAttributes);
 
-        if (fileName && fileName.includes(providerPackagePrefix)) {
+        if (fileName && fileName.includes(providerPackageIndex)) {
             sourceFile = createProvidedSourceFile(fileName, importAttributes!, true);
             console.log("CACHE 2.5", sourceFile.fileName);
         }
@@ -2055,8 +2055,13 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
 
     function getResolvedModule(file: SourceFile, moduleName: string, mode: ResolutionMode) {
         const resolved = resolvedModules?.get(file.path)?.get(moduleName, mode);
-        if (file.fileName.includes("@ts-providers")) {
-            console.log("GET RESOLVED MODULE", file.fileName, moduleName, mode, resolved?.resolvedModule?.resolvedFileName);
+        if (moduleName.includes(providerPackagePrefix)) {
+            console.log("GET RESOLVED MODULE", file.path, moduleName, mode, resolved?.resolvedModule?.resolvedFileName);
+            console.log("\n== FILE NAMES ==");
+            resolvedModules?.get(file.path)?.forEach((item, key) => console.log(key, item.resolvedModule?.resolvedFileName));
+            console.log("== /FILE NAMES ==\n");
+            // const keys = [...resolvedModules?.keys() ?? []].filter(m => !m.includes("types"));
+            // console.log(keys);
         }
         return resolved;
     }
@@ -2891,6 +2896,9 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     }
 
     function getSourceFile(fileName: string): SourceFile | undefined {
+        if (fileName.includes(providerPackagePrefix)) {
+            console.trace("GET SOURCE FILE", fileName);
+        }
         return getSourceFileByPath(toPath(fileName));
     }
 
@@ -3922,7 +3930,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     }
 
     function addFileToFilesByName(file: SourceFile | undefined, path: Path, fileName: string, redirectedPath: Path | undefined) {
-        if (file?.fileName.includes(providerPackagePrefix))
+        if (file?.fileName.includes(providerPackageIndex))
             console.trace("ADD FILE", "file.fileName", file?.fileName, "path", path, "fileName", fileName, "toPath", toPath(fileName), "RedirectedPath", redirectedPath);
 
         if (file?.scriptKind === ScriptKind.Provided) {
@@ -4240,9 +4248,13 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
                     const prevPackageId = resolution.packageId;
                     // TODO(OR): Handle this properly
                     // Debug.assert(!prevResolvedFileName.endsWith(".csv.d.ts"));
-                    resolution.resolvedFileName = getFileNameWithSample(prevResolvedFileName, samplePath);
-                    resolution.packageId = { ...prevPackageId!, name: getModuleNameWithSample(prevPackageId!.name, samplePath) };
-                    console.log("PROVIDED MODULE", moduleName);
+                    if (prevResolvedFileName.endsWith(".csv.d.ts")) {
+                        console.trace("CACHED PROVIDED MODULE", moduleName, prevResolvedFileName, prevPackageId);
+                    } else {
+                        resolution.resolvedFileName = getFileNameWithSample(prevResolvedFileName, samplePath);
+                        resolution.packageId = { ...prevPackageId!, name: getModuleNameWithSample(prevPackageId!.name, samplePath) };
+                        console.log("NEW PROVIDED MODULE", moduleName);
+                    }
                 }
 
                 const mode = getModeForUsageLocationWorker(file, moduleNames[index], optionsForFile);

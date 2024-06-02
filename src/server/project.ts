@@ -1,4 +1,4 @@
-import { providerPackagePrefix } from "../compiler/providers/debugging";
+import { providerPackageIndex } from "../compiler/providers/debugging";
 import * as ts from "./_namespaces/ts";
 import {
     addRange,

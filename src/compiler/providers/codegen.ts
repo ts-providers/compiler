@@ -1,5 +1,5 @@
 import { dirname } from "path";
-import { createNodeFactory, createPrinter, emptyArray, emptyMap, forEachChildRecursively, getLanguageVariant, ImportAttributes, Mutable, NewLineKind, Node, NodeFactoryFlags, NodeFlags, noop, parseBaseNodeFactory, ReadonlyPragmaMap, ScriptKind, ScriptTarget, setParentRecursive, SourceFile, Statement, SyntaxKind } from "../_namespaces/ts";
+import { createNodeFactory, createPrinter, emptyArray, emptyMap, factory, forEachChildRecursively, getLanguageVariant, ImportAttributes, Mutable, NewLineKind, Node, NodeFactoryFlags, NodeFlags, noop, parseBaseNodeFactory, ReadonlyPragmaMap, ScriptKind, ScriptTarget, setParentRecursive, SourceFile, Statement, SyntaxKind } from "../_namespaces/ts";
 import { logIfProviderFile } from "./debugging";
 import { getProviderOptionsFromImportAttributes } from "./utils";
 
@@ -8,15 +8,32 @@ export function createProvidedSourceFile(fileName: string, importAttributes: Imp
     logIfProviderFile(fileName, "CREATING PROVIDED SOURCE FILE", `OPTIONS: '${JSON.stringify(providerOptions)}'`);
 
     const originalFileName = fileName.split("____")[0];
-    let statements: Statement[] = [];
+    let providedStatements: Statement[] = [];
     if (providerOptions.sample) {
         const providerPackagePath = dirname(originalFileName);
         const providerPackage = require(providerPackagePath);
         const providerGenerator = providerPackage.CsvProviderGenerator;
-        statements = providerGenerator.provideDeclarations(providerOptions);
+        providedStatements = providerGenerator.provideDeclarations(providerOptions);
     }
 
-    const declFile = createVirtualSourceFile(fileName, statements);
+    // const namespaceName = "CsvProvider_" + ((Math.random() + 1).toString(36).substring(7));
+
+    // const namespaceDeclaration = factory.createModuleDeclaration(
+    //     [factory.createToken(SyntaxKind.ExportKeyword)],
+    //     factory.createIdentifier(namespaceName),
+    //     factory.createModuleBlock(providedStatements),
+    //     NodeFlags.Namespace
+    // );
+
+    // const exportNode = factory.createExportAssignment(
+    //     undefined,
+    //     undefined,
+    //     factory.createIdentifier(namespaceName)
+    // );
+
+    // const statements = [namespaceDeclaration, exportNode];
+
+    const declFile = createVirtualSourceFile(fileName, providedStatements);
 
     if (setParentNodes) {
         setParentRecursive(declFile, true);

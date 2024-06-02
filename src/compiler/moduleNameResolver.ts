@@ -109,6 +109,7 @@ import {
     versionMajorMinor,
     VersionRange,
 } from "./_namespaces/ts";
+import { providerPackagePrefix } from "./providers/debugging";
 
 /** @internal */
 export function trace(host: ModuleResolutionHost, message: DiagnosticMessage, ...args: any[]): void {
@@ -1104,6 +1105,9 @@ function createPerDirectoryResolutionCache<T>(
 export type ModeAwareCacheKey = string & { __modeAwareCacheKey: any; };
 /** @internal */
 export function createModeAwareCacheKey(specifier: string, mode: ResolutionMode) {
+    if (specifier.includes(providerPackagePrefix)) {
+        console.log("CACHE KEY", specifier, mode?.toString());
+    }
     return (mode === undefined ? specifier : `${mode}|${specifier}`) as ModeAwareCacheKey;
 }
 /** @internal */
