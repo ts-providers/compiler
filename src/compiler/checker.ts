@@ -5059,7 +5059,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         if (moduleReference.includes(providerPackagePrefix)) {
             const sample = getProviderSamplePath(importAttributes);
 
-            if (sample) {
+            if (sample && !moduleReference.endsWith(".csv")) {
                 moduleReference = getModuleNameWithSample(moduleReference, sample);
             }
 

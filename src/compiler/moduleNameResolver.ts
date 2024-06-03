@@ -1106,7 +1106,7 @@ export type ModeAwareCacheKey = string & { __modeAwareCacheKey: any; };
 /** @internal */
 export function createModeAwareCacheKey(specifier: string, mode: ResolutionMode) {
     if (specifier.includes(providerPackagePrefix)) {
-        console.log("CACHE KEY", specifier, mode?.toString());
+        console.trace("CACHE KEY", specifier, mode?.toString());
     }
     return (mode === undefined ? specifier : `${mode}|${specifier}`) as ModeAwareCacheKey;
 }
@@ -1420,7 +1420,7 @@ export function resolveModuleName(moduleName: string, containingFile: string, co
     }
     else {
         if (moduleName.includes("@ts-providers")) {
-            console.log("RESOLVE MODULE NAME", moduleName);
+            console.log("* RESOLVE MODULE NAME", moduleName);
         }
 
         let moduleResolution = compilerOptions.moduleResolution;
@@ -1458,6 +1458,10 @@ export function resolveModuleName(moduleName: string, containingFile: string, co
         }
         if (result && result.resolvedModule) perfLogger?.logInfoEvent(`Module "${moduleName}" resolved to "${result.resolvedModule.resolvedFileName}"`);
         perfLogger?.logStopResolveModule((result && result.resolvedModule) ? "" + result.resolvedModule.resolvedFileName : "null");
+
+        if (moduleName.includes("@ts-providers")) {
+            console.log("** RESOLVE MODULE NAME", result);
+        }
 
         if (cache && !cache.isReadonly) {
             cache.getOrCreateCacheForDirectory(containingDirectory, redirectedReference).set(moduleName, resolutionMode, result);
@@ -1810,6 +1814,12 @@ function nodeModuleNameResolverWorker(
     redirectedReference: ResolvedProjectReference | undefined,
     conditions: readonly string[] | undefined,
 ): ResolvedModuleWithFailedLookupLocations {
+
+    if (moduleName.includes("@ts-providers")) {
+        moduleName = moduleName.split("__")[0];
+        console.log("NODE MODULE RESOLVER", moduleName);
+    }
+
     const traceEnabled = isTraceEnabled(compilerOptions, host);
 
     const failedLookupLocations: string[] = [];

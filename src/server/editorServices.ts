@@ -726,10 +726,10 @@ export function forEachResolvedProjectReferenceProject<T>(
             loadKind === ProjectReferenceProjectLoadKind.Find ?
                 undefined :
                 loadKind === ProjectReferenceProjectLoadKind.FindCreate ?
-                project.projectService.createConfiguredProject(configFileName) :
-                loadKind === ProjectReferenceProjectLoadKind.FindCreateLoad ?
-                project.projectService.createAndLoadConfiguredProject(configFileName, reason!) :
-                Debug.assertNever(loadKind)
+                    project.projectService.createConfiguredProject(configFileName) :
+                    loadKind === ProjectReferenceProjectLoadKind.FindCreateLoad ?
+                        project.projectService.createAndLoadConfiguredProject(configFileName, reason!) :
+                        Debug.assertNever(loadKind)
         );
 
         return child && cb(child);
@@ -781,8 +781,8 @@ function forEachAnyProjectReferenceKind<T>(
     return project.getCurrentProgram() ?
         project.forEachResolvedProjectReference(cb) :
         project.isInitialLoadPending() ?
-        forEachPotentialProjectReference(project, cbPotentialProjectRef) :
-        forEach(project.getProjectReferences(), cbProjectRef);
+            forEachPotentialProjectReference(project, cbPotentialProjectRef) :
+            forEach(project.getProjectReferences(), cbProjectRef);
 }
 
 function callbackRefProject<T, P extends string>(
@@ -980,8 +980,8 @@ function createWatchFactoryHostUsingWatchEvents(service: ProjectService, canUseW
             const eventKind = eventType === "create" ?
                 FileWatcherEventKind.Created :
                 eventType === "delete" ?
-                FileWatcherEventKind.Deleted :
-                FileWatcherEventKind.Changed;
+                    FileWatcherEventKind.Deleted :
+                    FileWatcherEventKind.Changed;
             callback(eventPath, eventKind);
         });
     }
@@ -1821,23 +1821,22 @@ export class ProjectService {
                     !info.isAttached(project),
                     "Found script Info still attached to project",
                     () =>
-                        `${project.projectName}: ScriptInfos still attached: ${
-                            JSON.stringify(
-                                arrayFrom(
-                                    mapDefinedIterator(
-                                        this.filenameToScriptInfo.values(),
-                                        info =>
-                                            info.isAttached(project) ?
-                                                {
-                                                    fileName: info.fileName,
-                                                    projects: info.containingProjects.map(p => p.projectName),
-                                                    hasMixedContent: info.hasMixedContent,
-                                                } : undefined,
-                                    ),
+                        `${project.projectName}: ScriptInfos still attached: ${JSON.stringify(
+                            arrayFrom(
+                                mapDefinedIterator(
+                                    this.filenameToScriptInfo.values(),
+                                    info =>
+                                        info.isAttached(project) ?
+                                            {
+                                                fileName: info.fileName,
+                                                projects: info.containingProjects.map(p => p.projectName),
+                                                hasMixedContent: info.hasMixedContent,
+                                            } : undefined,
                                 ),
+                            ),
                                 /*replacer*/ undefined,
-                                " ",
-                            )
+                            " ",
+                        )
                         }`,
                 )
             );
@@ -2584,7 +2583,7 @@ export class ProjectService {
             getDirectoryPath(configFilename),
             /*existingOptions*/ {},
             configFilename,
-            /*resolutionStack*/ [],
+            /*resolutionStack*/[],
             this.hostConfiguration.extraFileExtensions,
             this.extendedConfigCache,
         );
@@ -2593,18 +2592,17 @@ export class ProjectService {
             configFileErrors.push(...parsedCommandLine.errors);
         }
 
-        this.logger.info(`Config: ${configFilename} : ${
-            JSON.stringify(
-                {
-                    rootNames: parsedCommandLine.fileNames,
-                    options: parsedCommandLine.options,
-                    watchOptions: parsedCommandLine.watchOptions,
-                    projectReferences: parsedCommandLine.projectReferences,
-                },
+        this.logger.info(`Config: ${configFilename} : ${JSON.stringify(
+            {
+                rootNames: parsedCommandLine.fileNames,
+                options: parsedCommandLine.options,
+                watchOptions: parsedCommandLine.watchOptions,
+                projectReferences: parsedCommandLine.projectReferences,
+            },
                 /*replacer*/ undefined,
-                " ",
-            )
-        }`);
+            " ",
+        )
+            }`);
 
         const oldCommandLine = configFileExistenceInfo.config?.parsedCommandLine;
         if (!configFileExistenceInfo.config) {
@@ -3206,7 +3204,8 @@ export class ProjectService {
         let info = this.getScriptInfoForPath(path);
 
         if (fileName && fileName.includes("@ts-providers")) {
-            console.trace("CREATE SCRIPT INFO", fileName, info ?? "NIL:info", scriptKind ?? "NIL:scriptKind", hasMixedContent ?? "NIL:hasMixedContext");
+            console.log("CREATE SCRIPT INFO", fileName);
+            // console.trace("CREATE SCRIPT INFO", fileName, info ?? "NIL:info", scriptKind ?? "NIL:scriptKind", hasMixedContent ?? "NIL:hasMixedContext");
         }
 
         if (!info) {
@@ -3217,7 +3216,8 @@ export class ProjectService {
             Debug.assert(!isDynamic || this.currentDirectory === currentDirectory || this.useInferredProjectPerProjectRoot, "", () => `${JSON.stringify({ fileName, currentDirectory, hostCurrentDirectory: this.currentDirectory, openKeys: arrayFrom(this.openFilesWithNonRootedDiskPath.keys()) })}\nDynamic files must always be opened with service's current directory or service should support inferred project per projectRootPath.`);
             // If the file is not opened by client and the file doesnot exist on the disk, return
             if (!openedByClient && !isDynamic && !(hostToQueryFileExistsOn || this.host).fileExists(fileName)) {
-            console.trace("CREATE SCRIPT INFO 2", fileName, openedByClient, isDynamic);
+                console.log("CREATE SCRIPT INFO 2", fileName);
+                // console.trace("CREATE SCRIPT INFO 2", fileName, openedByClient, isDynamic);
                 return;
             }
             if (isProvided) {

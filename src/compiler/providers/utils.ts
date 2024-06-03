@@ -35,6 +35,7 @@ export function getFileNameWithSample(fileName: string, samplePath: string): str
 }
 
 export function getModuleNameWithSample(moduleName: string, samplePath: string): string {
+    console.trace("ADDING SUFFIX TO MODULE NAME", moduleName, samplePath);
     const sanitizedSamplePath = samplePath.replace(":", "_").replace("/", "_");
     const result = moduleName + "__" + sanitizedSamplePath;
     return result;

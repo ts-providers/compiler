@@ -2057,9 +2057,9 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
         const resolved = resolvedModules?.get(file.path)?.get(moduleName, mode);
         if (moduleName.includes(providerPackagePrefix)) {
             console.log("GET RESOLVED MODULE", file.path, moduleName, mode, resolved?.resolvedModule?.resolvedFileName);
-            console.log("\n== FILE NAMES ==");
+            console.log("\n== FILE NAMES ==\n");
             resolvedModules?.get(file.path)?.forEach((item, key) => console.log(key, item.resolvedModule?.resolvedFileName));
-            console.log("== /FILE NAMES ==\n");
+            console.log("==\n /FILE NAMES ==\n");
             // const keys = [...resolvedModules?.keys() ?? []].filter(m => !m.includes("types"));
             // console.log(keys);
         }
@@ -2150,12 +2150,20 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
         }
         const containingFileName = getNormalizedAbsolutePath(containingFile.originalFileName, currentDirectory);
         const redirectedReference = getRedirectReferenceForResolution(containingFile);
+
+        if (containingFile.fileName.includes("src")) {
+            console.log("*** RESOLVE MODULE NAMES", containingFileName, redirectedReference);
+        }
         tracing?.push(tracing.Phase.Program, "resolveModuleNamesWorker", { containingFileName });
         performance.mark("beforeResolveModule");
         const result = actualResolveModuleNamesWorker(moduleImports, containingFileName, redirectedReference, options, containingFile, reusedNames);
         performance.mark("afterResolveModule");
         performance.measure("ResolveModule", "beforeResolveModule", "afterResolveModule");
         tracing?.pop();
+
+        if (containingFile.fileName.includes("src")) {
+            console.log("**** RESOLVE MODULE NAMES", result.map(a => a.resolvedModule?.resolvedFileName));
+        }
         return result;
     }
 
@@ -2251,9 +2259,11 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     }
 
     function resolveModuleNamesReusingOldState(moduleImports: readonly ModuleImport[], file: SourceFile): readonly ResolvedModuleWithFailedLookupLocations[] {
+        console.log("RESUING OLD STATE", file.ambientModuleNames.length);
         if (structureIsReused === StructureIsReused.Not && !file.ambientModuleNames.length) {
             // If the old program state does not permit reusing resolutions and `file` does not contain locally defined ambient modules,
             // the best we can do is fallback to the default logic.
+            console.log("RESUING OLD STATE TRUE", file.fileName, moduleImports.length);
             return resolveModuleNamesWorker(moduleImports, file, /*reusedNames*/ undefined);
         }
 
@@ -3483,30 +3493,6 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
             collectModuleReferences(node, /*inAmbientModule*/ false);
         }
 
-        // if (file.fileName.includes("001_magic.ts")) {
-        //     console.log("Adding magic to compilation");
-
-        //     const decl = factory.createImportDeclaration(
-        //         /*modifiers*/ undefined,
-        //         factory.createImportClause(
-        //             /*isTypeOnly*/ false,
-        //             /*name*/ undefined,
-        //             factory.createNamedImports([factory.createImportSpecifier(
-        //                 /*isTypeOnly*/ true,
-        //                 /*propertyName*/ undefined,
-        //                 factory.createIdentifier("MagicType")
-        //             )])
-        //         ),
-        //         factory.createStringLiteral("./virtual_magic"),
-        //         /*attributes*/ undefined
-        //     );
-
-        //     // decl.parent = file;
-        //     file.statements = factory.createNodeArray([decl, ...file.statements]);
-
-        //     collectModuleReferences(decl, /*inAmbientModule*/ false);
-        // }
-
         if ((file.flags & NodeFlags.PossiblyContainsDynamicImport) || isJavaScriptFile) {
             collectDynamicImportOrRequireCalls(file);
         }
@@ -3519,7 +3505,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
 
         function collectModuleReferences(node: Statement, inAmbientModule: boolean): void {
             if (isAnyImportOrReExport(node)) {
-                const moduleNameExpr = getExternalModuleName(node);
+                let moduleNameExpr = getExternalModuleName(node);
 
                 // TypeScript 1.0 spec (April 2014): 12.1.6
                 // An ExternalImportDeclaration in an AmbientExternalModuleDeclaration may reference other external modules
@@ -3529,6 +3515,12 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
                     const attributes = isStatementWithImportAttributes(node)
                         ? node.attributes
                         : undefined;
+                    const samplePath = getProviderSamplePath(attributes);
+
+                    if (samplePath && !moduleNameExpr.text.endsWith(".csv")) {
+                        moduleNameExpr.text = getModuleNameWithSample(moduleNameExpr.text, samplePath);
+                    }
+
                     const moduleImport: ModuleImport = { specifier: moduleNameExpr, attributes };
                     imports = append(imports, moduleImport);
                     if (!usesUriStyleNodeCoreModules && currentNodeModulesDepth === 0 && !file.isDeclarationFile) {
@@ -4215,10 +4207,18 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     }
 
     function processImportedModules(file: SourceFile) {
-        if (file.fileName.includes("src"))
+        if (file.fileName.includes("src")) {
             console.log("\nSTART IMPORTS", file.fileName, "\n");
+        }
 
         collectExternalModuleReferences(file);
+
+        if (file.fileName.includes("src")) {
+            console.log("== IMPORTS BEGIN ==");
+            file.imports.map(i => `${i.specifier.text} -- ${getProviderSamplePath(i.attributes)}`).forEach(s => console.log(s));
+            console.log("== IMPORTS END ==");
+        }
+
         if (file.imports.length || file.moduleAugmentations.length) {
             // Because global augmentation doesn't have string literal name, we can check for global augmentation as such.
             const moduleImports = getModulesToResolve(file);
@@ -4243,7 +4243,10 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
                 const isProvidedImport = samplePath !== undefined;
 
                 if (resolution && isProvidedImport) {
-                    moduleName = getModuleNameWithSample(moduleName, samplePath);
+                    // TODO(OR): Handle this properly
+                    if (!moduleName.endsWith(".csv")) {
+                        moduleName = getModuleNameWithSample(moduleName, samplePath);
+                    }
                     const prevResolvedFileName = resolution.resolvedFileName;
                     const prevPackageId = resolution.packageId;
                     // TODO(OR): Handle this properly
