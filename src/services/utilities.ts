@@ -2506,6 +2506,7 @@ export function makeImport(defaultImport: Identifier | undefined, namedImports: 
             ? factory.createImportClause(!!isTypeOnly, defaultImport, namedImports && namedImports.length ? factory.createNamedImports(namedImports) : undefined)
             : undefined,
         typeof moduleSpecifier === "string" ? makeStringLiteral(moduleSpecifier, quotePreference) : moduleSpecifier,
+        /*isProvided*/ false,
         /*attributes*/ undefined,
     );
 }

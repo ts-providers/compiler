@@ -347,6 +347,7 @@ describe("unittests:: TransformAPI", () => {
                         ts.factory.createNamespaceImport(ts.factory.createIdentifier("i0")),
                     ),
                     /*moduleSpecifier*/ ts.factory.createStringLiteral("./comp1"),
+                    /*isProvided*/ false,
                     /*attributes*/ undefined,
                 );
                 return ts.factory.updateSourceFile(sf, [importStar]);

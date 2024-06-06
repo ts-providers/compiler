@@ -2284,6 +2284,7 @@ export function transformTypeScript(context: TransformationContext) {
                 /*modifiers*/ undefined,
                 importClause,
                 node.moduleSpecifier,
+                node.isProvided,
                 node.attributes,
             )
             : undefined;
@@ -2450,6 +2451,7 @@ export function transformTypeScript(context: TransformationContext) {
                             /*modifiers*/ undefined,
                             /*importClause*/ undefined,
                             node.moduleReference.expression,
+                            /*isProvided*/ false,
                             /*attributes*/ undefined,
                         ),
                         node,

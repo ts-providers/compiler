@@ -948,6 +948,7 @@ export function transformDeclarations(context: TransformationContext) {
                 decl.modifiers,
                 decl.importClause,
                 rewriteModuleSpecifier(decl, decl.moduleSpecifier),
+                decl.isProvided,
                 tryGetResolutionModeOverride(decl.attributes),
             );
         }
@@ -965,6 +966,7 @@ export function transformDeclarations(context: TransformationContext) {
                     /*namedBindings*/ undefined,
                 ),
                 rewriteModuleSpecifier(decl, decl.moduleSpecifier),
+                decl.isProvided,
                 tryGetResolutionModeOverride(decl.attributes),
             );
         }
@@ -981,6 +983,7 @@ export function transformDeclarations(context: TransformationContext) {
                     namedBindings,
                 ),
                 rewriteModuleSpecifier(decl, decl.moduleSpecifier),
+                decl.isProvided,
                 tryGetResolutionModeOverride(decl.attributes),
             ) : undefined;
         }
@@ -997,6 +1000,7 @@ export function transformDeclarations(context: TransformationContext) {
                     bindingList && bindingList.length ? factory.updateNamedImports(decl.importClause.namedBindings, bindingList) : undefined,
                 ),
                 rewriteModuleSpecifier(decl, decl.moduleSpecifier),
+                decl.isProvided,
                 tryGetResolutionModeOverride(decl.attributes),
             );
         }
@@ -1007,6 +1011,7 @@ export function transformDeclarations(context: TransformationContext) {
                 decl.modifiers,
                 /*importClause*/ undefined,
                 rewriteModuleSpecifier(decl, decl.moduleSpecifier),
+                decl.isProvided,
                 tryGetResolutionModeOverride(decl.attributes),
             );
         }

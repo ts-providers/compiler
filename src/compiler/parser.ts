@@ -7512,6 +7512,11 @@ namespace Parser {
         return nextToken() === SyntaxKind.StringLiteral;
     }
 
+    function nextTokenIsFromKeyword() {
+        nextToken();
+        return token() === SyntaxKind.FromKeyword;
+    }
+
     function nextTokenIsFromKeywordOrEqualsToken() {
         nextToken();
         return token() === SyntaxKind.FromKeyword || token() === SyntaxKind.EqualsToken;
@@ -8347,7 +8352,10 @@ namespace Parser {
             identifier = parseIdentifier();
         }
 
+
+        let isProvided = false;
         let isTypeOnly = false;
+
         if (
             identifier?.escapedText === "type" &&
             (token() !== SyntaxKind.FromKeyword || isIdentifier() && lookAhead(nextTokenIsFromKeywordOrEqualsToken)) &&
@@ -8355,9 +8363,16 @@ namespace Parser {
         ) {
             isTypeOnly = true;
             identifier = isIdentifier() ? parseIdentifier() : undefined;
+        } else if (
+            identifier?.escapedText === "provided" &&
+            (token() !== SyntaxKind.FromKeyword || isIdentifier() && lookAhead(nextTokenIsFromKeyword)) &&
+            (isIdentifier() || tokenAfterImportDefinitelyProducesImportDeclaration())
+        ) {
+            isProvided = true;
+            identifier = isIdentifier() ? parseIdentifier() : undefined;
         }
 
-        if (identifier && !tokenAfterImportedIdentifierDefinitelyProducesImportDeclaration()) {
+        if (identifier && !isProvided && !tokenAfterImportedIdentifierDefinitelyProducesImportDeclaration()) {
             return parseImportEqualsDeclaration(pos, hasJSDoc, modifiers, identifier, isTypeOnly);
         }
 
@@ -8380,7 +8395,7 @@ namespace Parser {
             attributes = parseImportAttributes(currentToken);
         }
         parseSemicolon();
-        const node = factory.createImportDeclaration(modifiers, importClause, moduleSpecifier, attributes);
+        const node = factory.createImportDeclaration(modifiers, importClause, moduleSpecifier, isProvided, attributes);
         return withJSDoc(finishNode(node, pos), hasJSDoc);
     }
 

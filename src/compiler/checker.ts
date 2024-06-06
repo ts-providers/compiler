@@ -4125,10 +4125,6 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
             ? resolveExternalModule(node, getModuleNameWithSample(node.parent.moduleSpecifier.text, samplePath), undefined, node, undefined)
             : resolveExternalModuleName(node, node.parent.moduleSpecifier);
 
-        if (isStringLiteralLike(node.parent.moduleSpecifier) && node.parent.moduleSpecifier.text.includes("@ts-providers")) {
-            console.trace("getTargetOfImportClause", "symbol name", moduleSymbol?.escapedName, "sample path", samplePath);
-        }
-
         if (moduleSymbol) {
             return getTargetofModuleDefault(moduleSymbol, node, dontResolveAlias);
         }
@@ -5304,15 +5300,6 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     function resolveExternalModuleSymbol(moduleSymbol: Symbol, dontResolveAlias?: boolean): Symbol;
     function resolveExternalModuleSymbol(moduleSymbol: Symbol | undefined, dontResolveAlias?: boolean): Symbol | undefined;
     function resolveExternalModuleSymbol(moduleSymbol: Symbol | undefined, dontResolveAlias?: boolean): Symbol | undefined {
-        if (moduleSymbol?.escapedName && (moduleSymbol?.escapedName as string).includes("rovider")) {
-            const tmp = Error.stackTraceLimit;
-            Error.stackTraceLimit = Infinity;
-            if (moduleSymbol?.escapedName.includes("@ts-providers")) {
-                console.log("RESOLVE EXTERNAL MODULE SYMBOL", moduleSymbol?.escapedName);
-            }
-            Error.stackTraceLimit = tmp;
-        }
-
         if (moduleSymbol?.exports) {
             const exportEquals = resolveSymbol(moduleSymbol.exports.get(InternalSymbolName.ExportEquals), dontResolveAlias);
             const exported = getCommonJsExportEquals(getMergedSymbol(exportEquals), getMergedSymbol(moduleSymbol));
@@ -9721,6 +9708,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
                                         )]),
                                     ),
                                     factory.createStringLiteral(specifier),
+                                    /*isProvided*/ false,
                                     /*attributes*/ undefined,
                                 ),
                                 ModifierFlags.None,
@@ -9805,6 +9793,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
                                 /*modifiers*/ undefined,
                                 factory.createImportClause(/*isTypeOnly*/ false, factory.createIdentifier(localName), /*namedBindings*/ undefined),
                                 specifier,
+                                (node as ImportClause).parent.isProvided,
                                 (node as ImportClause).parent.attributes,
                             ),
                             ModifierFlags.None,
@@ -9819,6 +9808,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
                                 /*modifiers*/ undefined,
                                 factory.createImportClause(/*isTypeOnly*/ false, /*name*/ undefined, factory.createNamespaceImport(factory.createIdentifier(localName))),
                                 specifier,
+                                (node as ImportClause).parent.isProvided,
                                 (node as ImportClause).parent.attributes,
                             ),
                             ModifierFlags.None,
@@ -9854,6 +9844,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
                                     ]),
                                 ),
                                 specifier,
+                                (node as ImportSpecifier).parent.parent.parent.isProvided,
                                 (node as ImportSpecifier).parent.parent.parent.attributes,
                             ),
                             ModifierFlags.None,

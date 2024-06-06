@@ -1,4 +1,4 @@
-import { providerPackageIndex } from "../compiler/providers/debugging";
+import { providerPackageIndex, providerPackagePrefix } from "../compiler/providers/debugging";
 import * as ts from "./_namespaces/ts";
 import {
     addRange,
@@ -2442,7 +2442,7 @@ export class AutoImportProviderProject extends Project {
             const symlinkCache = hostProject.getSymlinkCache();
             for (const name of arrayFrom(dependencyNames.keys())) {
                 // TODO(OR): Handle this properly
-                if (name.includes("@ts-providers")) {
+                if (name.includes(providerPackagePrefix)) {
                     continue;
                 }
 

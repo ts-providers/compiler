@@ -4709,12 +4709,14 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         modifiers: readonly ModifierLike[] | undefined,
         importClause: ImportClause | undefined,
         moduleSpecifier: Expression,
+        isProvided: boolean,
         attributes: ImportAttributes | undefined,
     ): ImportDeclaration {
         const node = createBaseNode<ImportDeclaration>(SyntaxKind.ImportDeclaration);
         node.modifiers = asNodeArray(modifiers);
         node.importClause = importClause;
         node.moduleSpecifier = moduleSpecifier;
+        node.isProvided = isProvided;
         node.attributes = node.assertClause = attributes;
         node.transformFlags |= propagateChildFlags(node.importClause) |
             propagateChildFlags(node.moduleSpecifier);
@@ -4731,13 +4733,15 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         modifiers: readonly ModifierLike[] | undefined,
         importClause: ImportClause | undefined,
         moduleSpecifier: Expression,
+        isProvided: boolean,
         attributes: ImportAttributes | undefined,
     ) {
         return node.modifiers !== modifiers
             || node.importClause !== importClause
             || node.moduleSpecifier !== moduleSpecifier
+            || node.isProvided !== isProvided
             || node.attributes !== attributes
-            ? update(createImportDeclaration(modifiers, importClause, moduleSpecifier, attributes), node)
+            ? update(createImportDeclaration(modifiers, importClause, moduleSpecifier, isProvided, attributes), node)
             : node;
     }
 
@@ -7135,7 +7139,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
                                                                                     isEnumDeclaration(node) ? updateEnumDeclaration(node, modifierArray, node.name, node.members) :
                                                                                         isModuleDeclaration(node) ? updateModuleDeclaration(node, modifierArray, node.name, node.body) :
                                                                                             isImportEqualsDeclaration(node) ? updateImportEqualsDeclaration(node, modifierArray, node.isTypeOnly, node.name, node.moduleReference) :
-                                                                                                isImportDeclaration(node) ? updateImportDeclaration(node, modifierArray, node.importClause, node.moduleSpecifier, node.attributes) :
+                                                                                                isImportDeclaration(node) ? updateImportDeclaration(node, modifierArray, node.importClause, node.moduleSpecifier, node.isProvided, node.attributes) :
                                                                                                     isExportAssignment(node) ? updateExportAssignment(node, modifierArray, node.expression) :
                                                                                                         isExportDeclaration(node) ? updateExportDeclaration(node, modifierArray, node.isTypeOnly, node.exportClause, node.moduleSpecifier, node.attributes) :
                                                                                                             Debug.assertNever(node);

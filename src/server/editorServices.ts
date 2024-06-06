@@ -1,4 +1,4 @@
-import { providerOrg } from "../compiler/providers/types";
+import { providerPackagePrefix } from "../compiler/providers/debugging";
 import {
     addToSeen,
     arrayFrom,
@@ -3203,13 +3203,9 @@ export class ProjectService {
         const path = normalizedPathToPath(fileName, currentDirectory, this.toCanonicalFileName);
         let info = this.getScriptInfoForPath(path);
 
-        if (fileName && fileName.includes("@ts-providers")) {
-            console.log("CREATE SCRIPT INFO", fileName);
-            // console.trace("CREATE SCRIPT INFO", fileName, info ?? "NIL:info", scriptKind ?? "NIL:scriptKind", hasMixedContent ?? "NIL:hasMixedContext");
-        }
-
         if (!info) {
-            const isProvided = fileName.includes(providerOrg);
+            // TODO(OR): Handle this properly
+            const isProvided = fileName.includes(providerPackagePrefix);
             const isDynamic = isDynamicFileName(fileName) || isProvided;
             Debug.assert(isRootedDiskPath(fileName) || isDynamic || openedByClient, "", () => `${JSON.stringify({ fileName, currentDirectory, hostCurrentDirectory: this.currentDirectory, openKeys: arrayFrom(this.openFilesWithNonRootedDiskPath.keys()) })}\nScript info with non-dynamic relative file name can only be open script info or in context of host currentDirectory`);
             Debug.assert(!isRootedDiskPath(fileName) || this.currentDirectory === currentDirectory || !this.openFilesWithNonRootedDiskPath.has(this.toCanonicalFileName(fileName)), "", () => `${JSON.stringify({ fileName, currentDirectory, hostCurrentDirectory: this.currentDirectory, openKeys: arrayFrom(this.openFilesWithNonRootedDiskPath.keys()) })}\nOpen script files with non rooted disk path opened with current directory context cannot have same canonical names`);

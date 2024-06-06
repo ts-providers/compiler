@@ -187,6 +187,7 @@ describe("unittests:: customTransforms", () => {
                             node.modifiers,
                             node.importClause,
                             factory.createStringLiteral(node.moduleSpecifier.text),
+                            node.isProvided,
                             node.attributes,
                         );
                     }

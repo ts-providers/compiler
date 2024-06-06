@@ -1412,17 +1412,12 @@ export function resolveModuleName(moduleName: string, containingFile: string, co
     const containingDirectory = getDirectoryPath(containingFile);
     let result = cache?.getFromDirectoryCache(moduleName, resolutionMode, containingDirectory, redirectedReference);
 
-    if (result && !moduleName.includes("@ts-providers")) {
-        // console.log("RESOLVED FROM DIR CACHE", moduleName, resolutionMode, containingDirectory, redirectedReference, result?.resolvedModule?.resolvedFileName);
+    if (result) {
         if (traceEnabled) {
             trace(host, Diagnostics.Resolution_for_module_0_was_found_in_cache_from_location_1, moduleName, containingDirectory);
         }
     }
     else {
-        if (moduleName.includes("@ts-providers")) {
-            console.log("* RESOLVE MODULE NAME", moduleName);
-        }
-
         let moduleResolution = compilerOptions.moduleResolution;
         if (moduleResolution === undefined) {
             moduleResolution = getEmitModuleResolutionKind(compilerOptions);
@@ -1458,10 +1453,6 @@ export function resolveModuleName(moduleName: string, containingFile: string, co
         }
         if (result && result.resolvedModule) perfLogger?.logInfoEvent(`Module "${moduleName}" resolved to "${result.resolvedModule.resolvedFileName}"`);
         perfLogger?.logStopResolveModule((result && result.resolvedModule) ? "" + result.resolvedModule.resolvedFileName : "null");
-
-        if (moduleName.includes("@ts-providers")) {
-            console.log("** RESOLVE MODULE NAME", result);
-        }
 
         if (cache && !cache.isReadonly) {
             cache.getOrCreateCacheForDirectory(containingDirectory, redirectedReference).set(moduleName, resolutionMode, result);
@@ -1815,7 +1806,7 @@ function nodeModuleNameResolverWorker(
     conditions: readonly string[] | undefined,
 ): ResolvedModuleWithFailedLookupLocations {
 
-    if (moduleName.includes("@ts-providers")) {
+    if (moduleName.includes(providerPackagePrefix)) {
         moduleName = moduleName.split("__")[0];
         console.log("NODE MODULE RESOLVER", moduleName);
     }
