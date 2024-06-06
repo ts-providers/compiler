@@ -1,3 +1,4 @@
+import { isProvidedModuleName } from "../compiler/providers/utils";
 import {
     arrayFrom,
     arrayReverseIterator,
@@ -182,6 +183,9 @@ import {
     updateProjectIfDirty,
 } from "./_namespaces/ts.server.js";
 import * as protocol from "./protocol.js";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 interface StackTraceError extends Error {
     stack?: string;
@@ -1570,6 +1574,7 @@ export class Session<TMessage = string> implements EventSender {
                 containerName: info.containerName,
                 kind: info.kind,
                 name: info.name,
+                file: info.file,
                 failedAliasResolution: info.failedAliasResolution,
                 ...info.unverified && { unverified: info.unverified },
             };
@@ -1583,6 +1588,8 @@ export class Session<TMessage = string> implements EventSender {
 
         const unmappedDefinitionAndBoundSpan = project.getLanguageService().getDefinitionAndBoundSpan(file, position);
 
+        console.log("RETURN DEFS", unmappedDefinitionAndBoundSpan?.definitions?.map(d => `${d.file?.scriptKind} -- ${d.fileName} -- ${d.file?.fileName}`));
+
         if (!unmappedDefinitionAndBoundSpan || !unmappedDefinitionAndBoundSpan.definitions) {
             return {
                 definitions: emptyArray,
@@ -1593,11 +1600,22 @@ export class Session<TMessage = string> implements EventSender {
         const definitions = this.mapDefinitionInfoLocations(unmappedDefinitionAndBoundSpan.definitions, project);
         const { textSpan } = unmappedDefinitionAndBoundSpan;
 
+        for (const definition of definitions) {
+            if (definition && definition.file && definition.file.scriptKind === ScriptKind.Provided) {
+                const tempDir = os.tmpdir();
+                const tempFileName = path.join(tempDir, definition.fileName.split("|")[2] + ".ts");
+                fs.writeFileSync(tempFileName, definition.file.text);
+                definition.fileName = tempFileName;
+            }
+        }
+
         if (simplifiedResult) {
-            return {
+            const result = {
                 definitions: this.mapDefinitionInfo(definitions, project),
                 textSpan: toProtocolTextSpan(textSpan, scriptInfo),
             };
+
+            return result;
         }
 
         return {
@@ -3111,6 +3129,9 @@ export class Session<TMessage = string> implements EventSender {
             }
             else {
                 const info = this.projectService.getScriptInfo(fileNameInProject)!; // TODO: GH#18217
+                if (isProvidedModuleName(fileNameInProject)) {
+                    console.log("GET DIAGNOSTICS FROM INFO", fileNameInProject, info?.fileName ?? "nil:info");
+                }
                 if (!info.isScriptOpen()) {
                     if (isDeclarationFileName(fileNameInProject)) {
                         veryLowPriorityFiles.push(fileNameInProject);
@@ -3385,9 +3406,11 @@ export class Session<TMessage = string> implements EventSender {
             return this.requiredResponse(this.getDefinition(request.arguments, /*simplifiedResult*/ false));
         },
         [protocol.CommandTypes.DefinitionAndBoundSpan]: (request: protocol.DefinitionAndBoundSpanRequest) => {
+            console.log("DefinitionAndBoundSpan simple");
             return this.requiredResponse(this.getDefinitionAndBoundSpan(request.arguments, /*simplifiedResult*/ true));
         },
         [protocol.CommandTypes.DefinitionAndBoundSpanFull]: (request: protocol.DefinitionAndBoundSpanRequest) => {
+            console.log("DefinitionAndBoundSpan full");
             return this.requiredResponse(this.getDefinitionAndBoundSpan(request.arguments, /*simplifiedResult*/ false));
         },
         [protocol.CommandTypes.FindSourceDefinition]: (request: protocol.FindSourceDefinitionRequest) => {

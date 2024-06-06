@@ -17,6 +17,7 @@ import {
     some,
     startsWith,
 } from "./_namespaces/ts.js";
+import { isProvidedModuleName, providedNamePrefix, providedNameSeparator } from "./providers/utils.js";
 
 /**
  * Internally, we represent paths as strings with '/' as the directory separator.
@@ -310,6 +311,10 @@ export function getDirectoryPath(path: Path): Path;
 export function getDirectoryPath(path: string): string;
 /** @internal */
 export function getDirectoryPath(path: string): string {
+    if (isProvidedModuleName(path)) {
+        path = path.split(providedNameSeparator)[1];
+    }
+
     path = normalizeSlashes(path);
 
     // If the path provided is itself the root, then return it.
@@ -625,7 +630,10 @@ export function getNormalizedPathComponents(path: string, currentDirectory: stri
 
 /** @internal */
 export function getNormalizedAbsolutePath(fileName: string, currentDirectory: string | undefined) {
-    return getPathFromPathComponents(getNormalizedPathComponents(fileName, currentDirectory));
+    // TODO(OR): Name mangling
+    return isProvidedModuleName(fileName)
+        ? fileName
+        : getPathFromPathComponents(getNormalizedPathComponents(fileName, currentDirectory));
 }
 
 /** @internal */
@@ -660,6 +668,10 @@ export function getNormalizedAbsolutePathWithoutRoot(fileName: string, currentDi
 
 /** @internal */
 export function toPath(fileName: string, basePath: string | undefined, getCanonicalFileName: (path: string) => string): Path {
+    if (fileName.startsWith(providedNamePrefix)) {
+        return fileName as Path;
+    }
+
     const nonCanonicalizedPath = isRootedDiskPath(fileName)
         ? normalizePath(fileName)
         : getNormalizedAbsolutePath(fileName, basePath);

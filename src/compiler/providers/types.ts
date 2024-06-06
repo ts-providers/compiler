@@ -1,7 +1,5 @@
 import { ImportAttributes, StringLiteralLike } from "../types";
 
-export const providerOrg = "@ts-providers";
-
 export interface ProviderOptions {
     sample?: string;
     separator?: string;
@@ -11,5 +9,6 @@ export interface ProviderOptions {
 
 export interface ModuleImport {
     specifier: StringLiteralLike;
+    isProvided: boolean;
     attributes?: ImportAttributes;
 }

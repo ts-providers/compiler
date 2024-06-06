@@ -323,7 +323,7 @@ export interface LanguageServiceHost extends GetEffectiveTypeRootsHost, MinimalR
     getScriptFileNames(): string[];
     getScriptKind?(fileName: string): ScriptKind;
     getScriptVersion(fileName: string): string;
-    getScriptSnapshot(fileName: string): IScriptSnapshot | undefined;
+    getScriptSnapshot(fileName: string, isProvided?: boolean): IScriptSnapshot | undefined;
     getProjectReferences?(): readonly ProjectReference[] | undefined;
     getLocalizedDiagnosticMessages?(): any;
     getCancellationToken?(): HostCancellationToken;
@@ -1069,6 +1069,7 @@ export interface TextInsertion {
 export interface DocumentSpan {
     textSpan: TextSpan;
     fileName: string;
+    file?: SourceFile;
 
     /**
      * If the span represents a location that was remapped (e.g. via a .d.ts.map file),

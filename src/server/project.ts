@@ -1,5 +1,5 @@
+import { providerPackagePrefix } from "../compiler/providers/debugging.js";
 import * as ts from "./_namespaces/ts.js";
-import { providerPackageIndex } from "../compiler/providers/debugging.js";
 import {
     addRange,
     append,
@@ -647,8 +647,10 @@ export abstract class Project implements LanguageServiceHost, ModuleResolutionHo
         return addRange(result, this.typingFiles) || ts.emptyArray;
     }
 
-    private getOrCreateScriptInfoAndAttachToProject(fileName: string) {
-        const scriptInfo = this.projectService.getOrCreateScriptInfoNotOpenedByClient(
+    private getOrCreateScriptInfoAndAttachToProject(fileName: string, isProvided?: boolean) {
+        const scriptInfo =  isProvided === true
+            ? this.projectService.getOrCreateScriptInfoForProvidedSourceFile(fileName)
+            : this.projectService.getOrCreateScriptInfoNotOpenedByClient(
             fileName,
             this.currentDirectory,
             this.directoryStructureHost,
@@ -682,8 +684,8 @@ export abstract class Project implements LanguageServiceHost, ModuleResolutionHo
         return (info && info.getLatestVersion())!; // TODO: GH#18217
     }
 
-    getScriptSnapshot(filename: string): IScriptSnapshot | undefined {
-        const scriptInfo = this.getOrCreateScriptInfoAndAttachToProject(filename);
+    getScriptSnapshot(filename: string, isProvided?: boolean): IScriptSnapshot | undefined {
+        const scriptInfo = this.getOrCreateScriptInfoAndAttachToProject(filename, isProvided);
         if (scriptInfo) {
             return scriptInfo.getSnapshot();
         }
@@ -2462,7 +2464,7 @@ export class AutoImportProviderProject extends Project {
             const symlinkCache = hostProject.getSymlinkCache();
             for (const name of arrayFrom(dependencyNames.keys())) {
                 // TODO(OR): Handle this properly
-                if (name.includes("@ts-providers")) {
+                if (name.includes(providerPackagePrefix)) {
                     continue;
                 }
 

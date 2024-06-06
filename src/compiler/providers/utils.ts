@@ -1,6 +1,32 @@
-import { toPath } from "../_namespaces/ts";
+import { NotUndefined, sha1 } from "object-hash";
 import { Identifier, ImportAttributes, StringLiteral } from "../types";
 import { ProviderOptions } from "./types";
+import { Debug } from "../_namespaces/ts";
+
+export const providedNameSeparator = "|";
+export const providedNamePrefix = `Provided${providedNameSeparator}`;
+
+export function isProvidedModuleName(name: string): boolean {
+    return name.startsWith(providedNamePrefix);
+}
+
+export function getProvidedFileName(fileName: string, importAttributes: ImportAttributes): string {
+    return `${providedNamePrefix}${fileName}${providedNameSeparator}${getProvidedImportIdentifier(importAttributes)}`;
+}
+
+
+export function getProvidedModuleName(packageName: string, importAttributes: ImportAttributes): string {
+    return `${providedNamePrefix}${packageName}${providedNameSeparator}${getProvidedImportIdentifier(importAttributes)}`;
+}
+
+export function getProvidedImportIdentifier(importAttributes: ImportAttributes): string {
+    Debug.assert(importAttributes !== undefined);
+    return createObjectHash(importAttributes);
+}
+
+function createObjectHash<T extends NotUndefined>(instance: T): string {
+    return sha1(instance);
+}
 
 export function getProviderSamplePath(importAttributes?: ImportAttributes): string | undefined {
     if (!importAttributes) {
@@ -28,17 +54,21 @@ export function getProviderOptionsFromImportAttributes(attributes?: ImportAttrib
     return result as ProviderOptions;
 }
 
-export function getFileNameWithSample(fileName: string, samplePath: string): string {
-    const sanitizedSamplePath = samplePath.replace(":", "_").replace("/", "_");
-    const result = fileName + "____" + sanitizedSamplePath + ".d.ts";
-    return result.toLowerCase();
-}
+// export function getFileNameWithSample(fileName: string, samplePath: string): string {
+//     const sanitizedSamplePath = samplePath.replace(":", "_").replace("/", "_");
+//     const result = fileName + "____" + sanitizedSamplePath + ".d.ts";
+//     return result.toLowerCase();
+// }
 
-export function getModuleNameWithSample(moduleName: string, samplePath: string): string {
-    console.trace("ADDING SUFFIX TO MODULE NAME", moduleName, samplePath);
-    const sanitizedSamplePath = samplePath.replace(":", "_").replace("/", "_");
-    const result = moduleName + "__" + sanitizedSamplePath;
-    return result;
+// export function getModuleNameWithSample(moduleName: string, samplePath: string): string {
+//     console.trace("ADDING SUFFIX TO MODULE NAME", moduleName, samplePath);
+//     const sanitizedSamplePath = samplePath.replace(":", "_").replace("/", "_");
+//     const result = moduleName + "__" + sanitizedSamplePath;
+//     return result;
+// }
+
+export function generateHash(length = 6): string {
+    return ((Math.random() + 1).toString(36).substring(length));
 }
 
 // export function getFileNameWithSample(fileName: string, samplePath: string): string {

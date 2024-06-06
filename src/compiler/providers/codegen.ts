@@ -1,43 +1,52 @@
+import deasync from "deasync";
 import { dirname } from "path";
-import { createNodeFactory, createPrinter, emptyArray, emptyMap, factory, forEachChildRecursively, getLanguageVariant, ImportAttributes, Mutable, NewLineKind, Node, NodeFactoryFlags, NodeFlags, noop, parseBaseNodeFactory, ReadonlyPragmaMap, ScriptKind, ScriptTarget, setParentRecursive, SourceFile, Statement, SyntaxKind } from "../_namespaces/ts";
-import { logIfProviderFile } from "./debugging";
-import { getProviderOptionsFromImportAttributes } from "./utils";
+import { createNodeFactory, createPrinter, createSourceFile, emptyArray, emptyMap, forEachChildRecursively, getLanguageVariant, ImportAttributes, Mutable, NewLineKind, Node, NodeFactoryFlags, NodeFlags, noop, parseBaseNodeFactory, ReadonlyPragmaMap, ScriptKind, ScriptTarget, setParentRecursive, SourceFile, Statement, SyntaxKind } from "../_namespaces/ts";
+import { getProviderOptionsFromImportAttributes, providedNameSeparator } from "./utils";
 
-export function createProvidedSourceFile(fileName: string, importAttributes: ImportAttributes, setParentNodes: boolean) {
+export function createProvidedSourceFile(fileName: string, importAttributes: ImportAttributes, setParentNodes: boolean): SourceFile {
     const providerOptions = getProviderOptionsFromImportAttributes(importAttributes);
-    logIfProviderFile(fileName, "CREATING PROVIDED SOURCE FILE", `OPTIONS: '${JSON.stringify(providerOptions)}'`);
+    console.log("CREATING PROVIDED SOURCE FILE", fileName, `OPTIONS: '${JSON.stringify(providerOptions)}'`);
 
-    const originalFileName = fileName.split("____")[0];
-    let providedStatements: Statement[] = [];
-    if (providerOptions.sample) {
-        const providerPackagePath = dirname(originalFileName);
-        const providerPackage = require(providerPackagePath);
-        const providerGenerator = providerPackage.CsvProviderGenerator;
-        providedStatements = providerGenerator.provideDeclarations(providerOptions);
+    const originalFileName = fileName.split(providedNameSeparator)[1];
+    let providedSourceFile: SourceFile;
+
+    const providerPackagePath = dirname(originalFileName);
+    const providerPackage = require(providerPackagePath);
+    const providerGenerator = providerPackage.default;
+
+    if (typeof providerGenerator.provideDeclarationsSync === "function") {
+        const result = providerGenerator.provideDeclarationsSync(providerOptions);
+        providedSourceFile = result.sourceFile;
+    } else if (typeof providerGenerator.provideDeclarationsAsync === "function") {
+        const deasyncProvideDeclarations = deasync(providerGenerator.provideDeclarationsAsync) as (options: unknown) => { sourceFile: SourceFile };
+        const result = deasyncProvideDeclarations(providerOptions);
+        providedSourceFile = result.sourceFile;
+    } else {
+        console.error("INVALID PROVIDER PACKAGE");
+        return createSourceFile(fileName, "", ScriptTarget.ES5, /*isProvided*/ false);
     }
 
-    // const namespaceName = "CsvProvider_" + ((Math.random() + 1).toString(36).substring(7));
+    console.log("PROVIDER RESULT", providedSourceFile?.fileName, providedSourceFile?.statements.length, providedSourceFile.statements.map(s => s.kind));
 
-    // const namespaceDeclaration = factory.createModuleDeclaration(
-    //     [factory.createToken(SyntaxKind.ExportKeyword)],
-    //     factory.createIdentifier(namespaceName),
-    //     factory.createModuleBlock(providedStatements),
-    //     NodeFlags.Namespace
-    // );
+    // const printer2 = createPrinter({
+    //     newLine: NewLineKind.LineFeed,
+    //     removeComments: false,
+    //     omitTrailingSemicolon: true
+    // });
 
-    // const exportNode = factory.createExportAssignment(
-    //     undefined,
-    //     undefined,
-    //     factory.createIdentifier(namespaceName)
-    // );
+    // console.log("PROVIDED FILE:", fileName);
+    // console.log(printer2.printFile(providedSourceFile));
 
-    // const statements = [namespaceDeclaration, exportNode];
+    const declFile = configureVirtualSourceFile(providedSourceFile, fileName);
 
-    const declFile = createVirtualSourceFile(fileName, providedStatements);
+    console.log("PROVIDED FILE CONFIGURED", providedSourceFile?.fileName);
 
     if (setParentNodes) {
+        declFile.statements.forEach(s => (s as Mutable<Statement>).parent = declFile);
         setParentRecursive(declFile, true);
     }
+
+    console.log("PARENT NODES SET");
 
     const printer = createPrinter({
         newLine: NewLineKind.LineFeed,
@@ -48,36 +57,34 @@ export function createProvidedSourceFile(fileName: string, importAttributes: Imp
     console.log("PROVIDED FILE:", fileName);
     console.log(printer.printFile(declFile));
 
+    declFile.importAttributes = importAttributes;
+
     return declFile;
 }
 
-export function createVirtualSourceFile(fileName: string, statements: Statement[]): SourceFile {
-    const factory = createNodeFactory(NodeFactoryFlags.NoOriginalNode | NodeFactoryFlags.NoNodeConverters, parseBaseNodeFactory);
-    const eofToken = factory.createToken(SyntaxKind.EndOfFileToken);
-
-    const result = factory.createSourceFile(statements, eofToken, NodeFlags.Ambient);
-
-    result.referencedFiles = emptyArray;
-    result.typeReferenceDirectives = emptyArray;
-    result.libReferenceDirectives = emptyArray;
-    result.amdDependencies = emptyArray;
-    result.hasNoDefaultLib = false;
-    result.pragmas = emptyMap as ReadonlyPragmaMap;
-    result.parseDiagnostics = [];
-    result.isDeclarationFile = true;
-    result.fileName = `${fileName}.d.ts`;
-    result.bindDiagnostics = [];
-    result.bindSuggestionDiagnostics = undefined;
-    result.languageVersion = ScriptTarget.Latest;
-    result.languageVariant = getLanguageVariant(ScriptKind.TS);
-    result.scriptKind = ScriptKind.Provided;
-    result.externalModuleIndicator = result.statements[0];
-    result.text = "";
+// Based on https://github.com/microsoft/TypeScript/pull/39784
+function configureVirtualSourceFile(file: SourceFile, fileName: string): SourceFile {
+    finishNode(file);
+    file.referencedFiles = emptyArray;
+    file.typeReferenceDirectives = emptyArray;
+    file.libReferenceDirectives = emptyArray;
+    file.amdDependencies = emptyArray;
+    file.hasNoDefaultLib = false;
+    file.pragmas = emptyMap as ReadonlyPragmaMap;
+    file.parseDiagnostics = [];
+    file.isDeclarationFile = true;
+    file.fileName = `${fileName}.ts`;
+    file.bindDiagnostics = [];
+    file.bindSuggestionDiagnostics = undefined;
+    file.languageVersion = ScriptTarget.Latest;
+    file.languageVariant = getLanguageVariant(ScriptKind.TS);
+    file.scriptKind = ScriptKind.Provided;
+    file.externalModuleIndicator = file.statements[0];
 
     // Immediately printing the synthetic file declaration text allows us to generate concrete positions
     // for all the nodes we've synthesized, and essentially un-synthesize them (making them appear, by all
     // rights, to be veritable parse tree nodes)
-    result.text = createPrinter({}, {
+    file.text = createPrinter({}, {
         onEmitNode(hint, node, cb, getTextPos) {
             const start = getTextPos();
             cb(hint, node);
@@ -87,78 +94,15 @@ export function createVirtualSourceFile(fileName: string, statements: Statement[
             }
         },
 
-    }).printFile(result);
-    (eofToken as Mutable<typeof eofToken>).pos = result.text.length;
-    (eofToken as Mutable<typeof eofToken>).end = result.text.length;
+    }).printFile(file);
+    (file.endOfFileToken as Mutable<typeof file.endOfFileToken>).pos = file.text.length;
+    (file.endOfFileToken as Mutable<typeof file.endOfFileToken>).end = file.text.length;
 
     // The above sets all node positions, but node _arrays_ still have `-1` for their pos and end.
     // We fix those up to use their constituent start and end positions here.
-    fixupNodeArrays(result);
+    fixupNodeArrays(file);
 
-    return result;
-}
-
-// Based on: https://github.com/microsoft/TypeScript/pull/39784/commits/977c2b6e9cc9daa74212e8ee159d553628361047
-export function createMagicDeclarationFile(fileName: string, typeName: string, propNames: string[]): SourceFile {
-    const factory = createNodeFactory(NodeFactoryFlags.NoOriginalNode | NodeFactoryFlags.NoNodeConverters, parseBaseNodeFactory);
-
-    const magicDecl = factory.createInterfaceDeclaration(
-        [factory.createToken(SyntaxKind.ExportKeyword)],
-        factory.createIdentifier(typeName),
-        /*typeParameters*/ undefined,
-        /*heritageClauses*/ undefined,
-        propNames.map(name => factory.createPropertySignature(
-            /*modifiers*/ undefined,
-            factory.createIdentifier(name),
-            /*questionToken*/ undefined,
-            factory.createKeywordTypeNode(SyntaxKind.StringKeyword)
-        ))
-    );
-
-    const statements: Statement[] = [magicDecl];
-    const eofToken = factory.createToken(SyntaxKind.EndOfFileToken);
-
-    const result = factory.createSourceFile(statements, eofToken, NodeFlags.Ambient);
-
-    result.referencedFiles = emptyArray;
-    result.typeReferenceDirectives = emptyArray;
-    result.libReferenceDirectives = emptyArray;
-    result.amdDependencies = emptyArray;
-    result.hasNoDefaultLib = false;
-    result.pragmas = emptyMap as ReadonlyPragmaMap;
-    result.parseDiagnostics = [];
-    result.isDeclarationFile = true;
-    result.fileName = `${fileName}.d.ts`;
-    result.bindDiagnostics = [];
-    result.bindSuggestionDiagnostics = undefined;
-    result.languageVersion = ScriptTarget.Latest;
-    result.languageVariant = getLanguageVariant(ScriptKind.TS);
-    result.scriptKind = ScriptKind.Provided;
-    result.externalModuleIndicator = result.statements[0];
-    result.text = "";
-
-    // Immediately printing the synthetic file declaration text allows us to generate concrete positions
-    // for all the nodes we've synthesized, and essentially un-synthesize them (making them appear, by all
-    // rights, to be veritable parse tree nodes)
-    result.text = createPrinter({}, {
-        onEmitNode(hint, node, cb, getTextPos) {
-            const start = getTextPos();
-            cb(hint, node);
-            if (node) {
-                (node as Mutable<typeof node>).pos = start;
-                (node as Mutable<typeof node>).end = getTextPos();
-            }
-        },
-
-    }).printFile(result);
-    (eofToken as Mutable<typeof eofToken>).pos = result.text.length;
-    (eofToken as Mutable<typeof eofToken>).end = result.text.length;
-
-    // The above sets all node positions, but node _arrays_ still have `-1` for their pos and end.
-    // We fix those up to use their constituent start and end positions here.
-    fixupNodeArrays(result);
-
-    return result;
+    return file;
 }
 
 function fixupNodeArrays(node: Node) {

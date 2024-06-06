@@ -1,10 +1,9 @@
-import { logIfProviderFile } from "../compiler/providers/debugging";
-import { getProviderOptionsFromImportAttributes, getProviderSamplePath } from "../compiler/providers/utils";
 import {
     arrayFrom,
     CompilerOptions,
     createGetCanonicalFileName,
     createLanguageServiceSourceFile,
+    createProvidedLanguageServiceSourceFile,
     CreateSourceFileOptions,
     Debug,
     ensureScriptKind,
@@ -71,8 +70,10 @@ export interface DocumentRegistry {
         compilationSettingsOrHost: CompilerOptions | MinimalResolutionCacheHost,
         scriptSnapshot: IScriptSnapshot,
         version: string,
+        isProvided: boolean,
         scriptKind?: ScriptKind,
         sourceFileOptions?: CreateSourceFileOptions | ScriptTarget,
+        importAttributes?: ImportAttributes
     ): SourceFile;
 
     acquireDocumentWithKey(
@@ -82,9 +83,10 @@ export interface DocumentRegistry {
         key: DocumentRegistryBucketKey,
         scriptSnapshot: IScriptSnapshot,
         version: string,
+        isProvided: boolean,
         scriptKind?: ScriptKind,
         sourceFileOptions?: CreateSourceFileOptions | ScriptTarget,
-        importAttributes?: ImportAttributes
+        importAttributes?: ImportAttributes,
     ): SourceFile;
 
     /**
@@ -107,8 +109,10 @@ export interface DocumentRegistry {
         compilationSettingsOrHost: CompilerOptions | MinimalResolutionCacheHost,
         scriptSnapshot: IScriptSnapshot,
         version: string,
+        isProvided: boolean,
         scriptKind?: ScriptKind,
         sourceFileOptions?: CreateSourceFileOptions | ScriptTarget,
+        importAttributes?: ImportAttributes,
     ): SourceFile;
 
     updateDocumentWithKey(
@@ -118,8 +122,10 @@ export interface DocumentRegistry {
         key: DocumentRegistryBucketKey,
         scriptSnapshot: IScriptSnapshot,
         version: string,
+        isProvided: boolean,
         scriptKind?: ScriptKind,
         sourceFileOptions?: CreateSourceFileOptions | ScriptTarget,
+        importAttributes?: ImportAttributes,
     ): SourceFile;
 
     getKeyForCompilationSettings(settings: CompilerOptions): DocumentRegistryBucketKey;
@@ -229,24 +235,24 @@ export function createDocumentRegistryInternal(useCaseSensitiveFileNames?: boole
         return settingsOrHost as CompilerOptions;
     }
 
-    function acquireDocument(fileName: string, compilationSettings: CompilerOptions | MinimalResolutionCacheHost, scriptSnapshot: IScriptSnapshot, version: string, scriptKind?: ScriptKind, languageVersionOrOptions?: CreateSourceFileOptions | ScriptTarget, importAttributes?: ImportAttributes): SourceFile {
+    function acquireDocument(fileName: string, compilationSettings: CompilerOptions | MinimalResolutionCacheHost, scriptSnapshot: IScriptSnapshot, version: string, isProvided: boolean, scriptKind?: ScriptKind, languageVersionOrOptions?: CreateSourceFileOptions | ScriptTarget, importAttributes?: ImportAttributes): SourceFile {
         const path = toPath(fileName, currentDirectory, getCanonicalFileName);
         const key = getKeyForCompilationSettings(getCompilationSettings(compilationSettings));
-        return acquireDocumentWithKey(fileName, path, compilationSettings, key, scriptSnapshot, version, scriptKind, languageVersionOrOptions, importAttributes);
+        return acquireDocumentWithKey(fileName, path, compilationSettings, key, scriptSnapshot, version, isProvided, scriptKind, languageVersionOrOptions, importAttributes);
     }
 
-    function acquireDocumentWithKey(fileName: string, path: Path, compilationSettings: CompilerOptions | MinimalResolutionCacheHost, key: DocumentRegistryBucketKey, scriptSnapshot: IScriptSnapshot, version: string, scriptKind?: ScriptKind, languageVersionOrOptions?: CreateSourceFileOptions | ScriptTarget, importAttributes?: ImportAttributes): SourceFile {
-        return acquireOrUpdateDocument(fileName, path, compilationSettings, key, scriptSnapshot, version, /*acquiring*/ true, scriptKind, languageVersionOrOptions, importAttributes);
+    function acquireDocumentWithKey(fileName: string, path: Path, compilationSettings: CompilerOptions | MinimalResolutionCacheHost, key: DocumentRegistryBucketKey, scriptSnapshot: IScriptSnapshot, version: string, isProvided: boolean, scriptKind?: ScriptKind, languageVersionOrOptions?: CreateSourceFileOptions | ScriptTarget, importAttributes?: ImportAttributes): SourceFile {
+        return acquireOrUpdateDocument(fileName, path, compilationSettings, key, scriptSnapshot, version, /*acquiring*/ true, scriptKind, languageVersionOrOptions, isProvided, importAttributes);
     }
 
-    function updateDocument(fileName: string, compilationSettings: CompilerOptions | MinimalResolutionCacheHost, scriptSnapshot: IScriptSnapshot, version: string, scriptKind?: ScriptKind, languageVersionOrOptions?: CreateSourceFileOptions | ScriptTarget): SourceFile {
+    function updateDocument(fileName: string, compilationSettings: CompilerOptions | MinimalResolutionCacheHost, scriptSnapshot: IScriptSnapshot, version: string, isProvided: boolean, scriptKind?: ScriptKind, languageVersionOrOptions?: CreateSourceFileOptions | ScriptTarget): SourceFile {
         const path = toPath(fileName, currentDirectory, getCanonicalFileName);
         const key = getKeyForCompilationSettings(getCompilationSettings(compilationSettings));
-        return updateDocumentWithKey(fileName, path, compilationSettings, key, scriptSnapshot, version, scriptKind, languageVersionOrOptions);
+        return updateDocumentWithKey(fileName, path, compilationSettings, key, scriptSnapshot, version, isProvided, scriptKind, languageVersionOrOptions);
     }
 
-    function updateDocumentWithKey(fileName: string, path: Path, compilationSettings: CompilerOptions | MinimalResolutionCacheHost, key: DocumentRegistryBucketKey, scriptSnapshot: IScriptSnapshot, version: string, scriptKind?: ScriptKind, languageVersionOrOptions?: CreateSourceFileOptions | ScriptTarget, importAttributes?: ImportAttributes): SourceFile {
-        return acquireOrUpdateDocument(fileName, path, getCompilationSettings(compilationSettings), key, scriptSnapshot, version, /*acquiring*/ false, scriptKind, languageVersionOrOptions, importAttributes);
+    function updateDocumentWithKey(fileName: string, path: Path, compilationSettings: CompilerOptions | MinimalResolutionCacheHost, key: DocumentRegistryBucketKey, scriptSnapshot: IScriptSnapshot, version: string, isProvided: boolean, scriptKind?: ScriptKind, languageVersionOrOptions?: CreateSourceFileOptions | ScriptTarget, importAttributes?: ImportAttributes): SourceFile {
+        return acquireOrUpdateDocument(fileName, path, getCompilationSettings(compilationSettings), key, scriptSnapshot, version, /*acquiring*/ false, scriptKind, languageVersionOrOptions, isProvided, importAttributes);
     }
 
     function getDocumentRegistryEntry(bucketEntry: BucketEntry, scriptKind: ScriptKind | undefined) {
@@ -265,6 +271,7 @@ export function createDocumentRegistryInternal(useCaseSensitiveFileNames?: boole
         acquiring: boolean,
         scriptKind: ScriptKind | undefined,
         languageVersionOrOptions: CreateSourceFileOptions | ScriptTarget | undefined,
+        isProvided: boolean,
         importAttributes?: ImportAttributes
     ): SourceFile {
         scriptKind = ensureScriptKind(fileName, scriptKind);
@@ -283,7 +290,6 @@ export function createDocumentRegistryInternal(useCaseSensitiveFileNames?: boole
         Debug.assertEqual(jsDocParsingMode, sourceFileOptions.jsDocParsingMode);
         const oldBucketCount = buckets.size;
         const keyWithMode = getDocumentRegistryBucketKeyWithMode(key, sourceFileOptions.impliedNodeFormat);
-        const samplePath = getProviderSamplePath(importAttributes);
         // keyWithMode = (samplePath ? `${keyWithMode}|${samplePath}` : keyWithMode) as DocumentRegistryBucketKeyWithMode;
         const bucket = getOrUpdate(buckets, keyWithMode, () => new Map());
         if (tracing) {
@@ -304,11 +310,9 @@ export function createDocumentRegistryInternal(useCaseSensitiveFileNames?: boole
             }
         }
 
-        // TODO(OR) implement proper caching for providers
         const bucketEntry = bucket.get(path);
         let entry = bucketEntry && getDocumentRegistryEntry(bucketEntry, scriptKind);
 
-        logIfProviderFile(fileName, "acquireOrUpdateDocument", "SAMPLE", getProviderSamplePath(importAttributes), keyWithMode, "KIND", scriptKind);
 
         if (!entry && externalCache) {
             const sourceFile = externalCache.getDocument(keyWithMode, path);
@@ -322,9 +326,23 @@ export function createDocumentRegistryInternal(useCaseSensitiveFileNames?: boole
             }
         }
 
-        if (!entry || samplePath !== undefined) {
+        // TODO(OR) implement proper caching for providers
+        // logIfProviderFile(fileName, "acquireOrUpdateDocument", "SAMPLE", getProviderSamplePath(importAttributes), keyWithMode, "KIND", scriptKind, "ACQPATH", path);
+
+        if (isProvided) {
+            const sourceFile = createProvidedLanguageServiceSourceFile(fileName, importAttributes!, scriptSnapshot, version);
+            if (externalCache) {
+                externalCache.setDocument(keyWithMode, path, sourceFile);
+            }
+            entry = {
+                sourceFile,
+                languageServiceRefCount: 1,
+            };
+            setBucketEntry();
+        }
+        else if (!entry) {
             // Have never seen this file with these settings.  Create a new source file for it.
-            const sourceFile = createLanguageServiceSourceFile(fileName, scriptSnapshot, sourceFileOptions, version, /*setNodeParents*/ false, scriptKind, importAttributes);
+            const sourceFile = createLanguageServiceSourceFile(fileName, scriptSnapshot, sourceFileOptions, version, /*setNodeParents*/ false, scriptKind);
             if (externalCache) {
                 externalCache.setDocument(keyWithMode, path, sourceFile);
             }

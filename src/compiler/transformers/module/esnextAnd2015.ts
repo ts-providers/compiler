@@ -163,6 +163,7 @@ export function transformECMAScriptModule(context: TransformationContext): (x: S
                     ]),
                 ),
                 factory.createStringLiteral("module"),
+                /*isProvided*/ false,
                 /*attributes*/ undefined,
             );
             const requireHelperName = factory.createUniqueName("__require", GeneratedIdentifierFlags.Optimistic | GeneratedIdentifierFlags.FileLevel);
@@ -288,6 +289,7 @@ export function transformECMAScriptModule(context: TransformationContext): (x: S
                 ),
             ),
             node.moduleSpecifier,
+            /*isProvided*/ false,
             node.attributes,
         );
         setOriginalNode(importDecl, node.exportClause);

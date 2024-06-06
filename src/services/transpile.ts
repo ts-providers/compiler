@@ -187,6 +187,7 @@ function transpileWorker(input: string, transpileOptions: TranspileOptions, decl
             setExternalModuleIndicator: getSetExternalModuleIndicator(options),
             jsDocParsingMode: transpileOptions.jsDocParsingMode ?? JSDocParsingMode.ParseAll,
         },
+        /*isProvided*/ false
     );
     if (transpileOptions.moduleName) {
         sourceFile.moduleName = transpileOptions.moduleName;

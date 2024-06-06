@@ -108,7 +108,7 @@ import {
     versionMajorMinor,
     VersionRange,
 } from "./_namespaces/ts.js";
-import { providerPackagePrefix } from "./providers/debugging.js";
+import { isProvidedModuleName, providedNameSeparator } from "./providers/utils.js";
 
 /** @internal */
 export function trace(host: ModuleResolutionHost, message: DiagnosticMessage, ...args: any[]): void {
@@ -178,10 +178,10 @@ interface PathAndExtension {
  * Kinds of file that we are currently looking for.
  */
 const enum Extensions {
-    TypeScript  = 1 << 0, // '.ts', '.tsx', '.mts', '.cts'
-    JavaScript  = 1 << 1, // '.js', '.jsx', '.mjs', '.cjs'
+    TypeScript = 1 << 0, // '.ts', '.tsx', '.mts', '.cts'
+    JavaScript = 1 << 1, // '.js', '.jsx', '.mjs', '.cjs'
     Declaration = 1 << 2, // '.d.ts', etc.
-    Json        = 1 << 3, // '.json'
+    Json = 1 << 3, // '.json'
 
     ImplementationFiles = TypeScript | JavaScript,
 }
@@ -221,6 +221,7 @@ function createResolvedModuleWithFailedLookupLocationsHandlingSymlink(
     moduleName: string,
     resolved: Resolved | undefined,
     isExternalLibraryImport: boolean | undefined,
+    isProvided: boolean,
     failedLookupLocations: string[],
     affectingLocations: string[],
     diagnostics: Diagnostic[],
@@ -243,6 +244,7 @@ function createResolvedModuleWithFailedLookupLocationsHandlingSymlink(
     return createResolvedModuleWithFailedLookupLocations(
         resolved,
         isExternalLibraryImport,
+        isProvided,
         failedLookupLocations,
         affectingLocations,
         diagnostics,
@@ -255,6 +257,7 @@ function createResolvedModuleWithFailedLookupLocationsHandlingSymlink(
 function createResolvedModuleWithFailedLookupLocations(
     resolved: Resolved | undefined,
     isExternalLibraryImport: boolean | undefined,
+    isProvided: boolean,
     failedLookupLocations: string[],
     affectingLocations: string[],
     diagnostics: Diagnostic[],
@@ -287,6 +290,7 @@ function createResolvedModuleWithFailedLookupLocations(
             packageId: resolved.packageId,
             resolvedUsingTsExtension: !!resolved.resolvedUsingTsExtension,
         },
+        isProvided,
         failedLookupLocations: initializeResolutionField(failedLookupLocations),
         affectingLocations: initializeResolutionField(affectingLocations),
         resolutionDiagnostics: initializeResolutionField(diagnostics),
@@ -1108,9 +1112,6 @@ function createPerDirectoryResolutionCache<T>(
 export type ModeAwareCacheKey = string & { __modeAwareCacheKey: any; };
 /** @internal */
 export function createModeAwareCacheKey(specifier: string, mode: ResolutionMode) {
-    if (specifier.includes(providerPackagePrefix)) {
-        console.trace("CACHE KEY", specifier, mode?.toString());
-    }
     return (mode === undefined ? specifier : `${mode}|${specifier}`) as ModeAwareCacheKey;
 }
 /** @internal */
@@ -1402,6 +1403,10 @@ export function resolveModuleNameFromCache(moduleName: string, containingFile: s
 }
 
 export function resolveModuleName(moduleName: string, containingFile: string, compilerOptions: CompilerOptions, host: ModuleResolutionHost, cache?: ModuleResolutionCache, redirectedReference?: ResolvedProjectReference, resolutionMode?: ResolutionMode): ResolvedModuleWithFailedLookupLocations {
+    if (isProvidedModuleName(containingFile)) {
+        console.log("LS4 BINGO", containingFile, moduleName);
+    }
+
     const traceEnabled = isTraceEnabled(compilerOptions, host);
     if (redirectedReference) {
         compilerOptions = redirectedReference.commandLine.options;
@@ -1413,19 +1418,22 @@ export function resolveModuleName(moduleName: string, containingFile: string, co
         }
     }
     const containingDirectory = getDirectoryPath(containingFile);
+
+    if (isProvidedModuleName(containingFile)) {
+        console.log("LS4a", containingDirectory);
+    }
     let result = cache?.getFromDirectoryCache(moduleName, resolutionMode, containingDirectory, redirectedReference);
 
-    if (result && !moduleName.includes("@ts-providers")) {
-        // console.log("RESOLVED FROM DIR CACHE", moduleName, resolutionMode, containingDirectory, redirectedReference, result?.resolvedModule?.resolvedFileName);
+    if (isProvidedModuleName(containingFile)) {
+        console.log("LS4b", result?.resolvedModule?.resolvedFileName);
+    }
+
+    if (result) {
         if (traceEnabled) {
             trace(host, Diagnostics.Resolution_for_module_0_was_found_in_cache_from_location_1, moduleName, containingDirectory);
         }
     }
     else {
-        if (moduleName.includes("@ts-providers")) {
-            console.log("* RESOLVE MODULE NAME", moduleName);
-        }
-
         let moduleResolution = compilerOptions.moduleResolution;
         if (moduleResolution === undefined) {
             moduleResolution = getEmitModuleResolutionKind(compilerOptions);
@@ -1457,10 +1465,6 @@ export function resolveModuleName(moduleName: string, containingFile: string, co
                 break;
             default:
                 return Debug.fail(`Unexpected moduleResolution: ${moduleResolution}`);
-        }
-
-        if (moduleName.includes("@ts-providers")) {
-            console.log("** RESOLVE MODULE NAME", result);
         }
 
         if (cache && !cache.isReadonly) {
@@ -1742,6 +1746,10 @@ function nodeNextModuleNameResolver(moduleName: string, containingFile: string, 
 function nodeNextModuleNameResolverWorker(features: NodeResolutionFeatures, moduleName: string, containingFile: string, compilerOptions: CompilerOptions, host: ModuleResolutionHost, cache?: ModuleResolutionCache, redirectedReference?: ResolvedProjectReference, resolutionMode?: ResolutionMode, conditions?: string[]): ResolvedModuleWithFailedLookupLocations {
     const containingDirectory = getDirectoryPath(containingFile);
 
+    if (isProvidedModuleName(containingFile)) {
+        console.log("LS5 NODENEXT resolver", moduleName, containingDirectory);
+    }
+
     // es module file or cjs-like input file, use a variant of the legacy cjs resolver that supports the selected modern features
     const esmMode = resolutionMode === ModuleKind.ESNext ? NodeResolutionFeatures.EsmMode : 0;
     let extensions = compilerOptions.noDtsResolution ? Extensions.ImplementationFiles : Extensions.TypeScript | Extensions.JavaScript | Extensions.Declaration;
@@ -1814,10 +1822,12 @@ function nodeModuleNameResolverWorker(
     redirectedReference: ResolvedProjectReference | undefined,
     conditions: readonly string[] | undefined,
 ): ResolvedModuleWithFailedLookupLocations {
-
-    if (moduleName.includes("@ts-providers")) {
-        moduleName = moduleName.split("__")[0];
-        console.log("NODE MODULE RESOLVER", moduleName);
+    // TODO(OR): Handle this properly
+    const isProvided = isProvidedModuleName(moduleName);
+    if (isProvided) {
+        console.log("LS6", moduleName);
+        moduleName = moduleName.split(providedNameSeparator)[1];
+        console.log("LS6a", moduleName);
     }
 
     const traceEnabled = isTraceEnabled(compilerOptions, host);
@@ -1910,6 +1920,7 @@ function nodeModuleNameResolverWorker(
         moduleName,
         result?.value?.resolved,
         result?.value?.isExternalLibraryImport,
+        isProvided,
         failedLookupLocations,
         affectingLocations,
         diagnostics,
@@ -3267,6 +3278,7 @@ export function classicNameResolver(moduleName: string, containingFile: string, 
         moduleName,
         resolved && resolved.value,
         resolved?.value && pathContainsNodeModules(resolved.value.path),
+        /*isProvided*/ false,
         failedLookupLocations,
         affectingLocations,
         diagnostics,
@@ -3364,6 +3376,7 @@ export function loadModuleFromGlobalCache(moduleName: string, projectName: strin
     return createResolvedModuleWithFailedLookupLocations(
         resolved,
         /*isExternalLibraryImport*/ true,
+        /*isProvided*/ false,
         failedLookupLocations,
         affectingLocations,
         diagnostics,
@@ -3400,5 +3413,5 @@ function traceIfEnabled(state: ModuleResolutionState, diagnostic: DiagnosticMess
 function useCaseSensitiveFileNames(state: ModuleResolutionState) {
     return !state.host.useCaseSensitiveFileNames ? true :
         typeof state.host.useCaseSensitiveFileNames === "boolean" ? state.host.useCaseSensitiveFileNames :
-        state.host.useCaseSensitiveFileNames();
+            state.host.useCaseSensitiveFileNames();
 }

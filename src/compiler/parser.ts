@@ -402,9 +402,8 @@ import {
     YieldExpression,
 } from "./_namespaces/ts.js";
 import * as performance from "./_namespaces/ts.performance.js";
-import { createProvidedSourceFile, createVirtualSourceFile } from "./providers/codegen.js";
-import { logIfProviderFile, providerPackageIndex } from "./providers/debugging.js";
-import { getProviderOptionsFromImportAttributes, getProviderSamplePath } from "./providers/utils.js";
+import { createProvidedSourceFile } from "./providers/codegen.js";
+import { logIfProviderFile } from "./providers/debugging.js";
 
 const enum SignatureFlags {
     None = 0,
@@ -1344,7 +1343,7 @@ function setExternalModuleIndicator(sourceFile: SourceFile) {
     sourceFile.externalModuleIndicator = isFileProbablyExternalModule(sourceFile);
 }
 
-export function createSourceFile(fileName: string, sourceText: string, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, setParentNodes = false, scriptKind?: ScriptKind, importAttributes?: ImportAttributes): SourceFile {
+export function createSourceFile(fileName: string, sourceText: string, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, isProvided: boolean, setParentNodes = false, scriptKind?: ScriptKind, importAttributes?: ImportAttributes): SourceFile {
     tracing?.push(tracing.Phase.Parse, "createSourceFile", { path: fileName }, /*separateBeginAndEnd*/ true);
     performance.mark("beforeParse");
     let result: SourceFile;
@@ -1356,17 +1355,18 @@ export function createSourceFile(fileName: string, sourceText: string, languageV
         jsDocParsingMode,
     } = typeof languageVersionOrOptions === "object" ? languageVersionOrOptions : ({ languageVersion: languageVersionOrOptions } as CreateSourceFileOptions);
 
-    logIfProviderFile(fileName, "CREATE", "SAMPLE", getProviderSamplePath(importAttributes));
 
     if (languageVersion === ScriptTarget.JSON) {
-        result = Parser.parseSourceFile(fileName, sourceText, languageVersion, /*syntaxCursor*/ undefined, setParentNodes, ScriptKind.JSON, noop, jsDocParsingMode, importAttributes);
+        result = Parser.parseSourceFile(fileName, sourceText, languageVersion, /*syntaxCursor*/ undefined, setParentNodes, ScriptKind.JSON, noop, jsDocParsingMode);
     }
     else {
         const setIndicator = format === undefined ? overrideSetExternalModuleIndicator : (file: SourceFile) => {
             file.impliedNodeFormat = format;
             return (overrideSetExternalModuleIndicator || setExternalModuleIndicator)(file);
         };
-        result = Parser.parseSourceFile(fileName, sourceText, languageVersion, /*syntaxCursor*/ undefined, setParentNodes, scriptKind, setIndicator, jsDocParsingMode, importAttributes);
+        result = isProvided
+            ? createProvidedSourceFile(fileName, importAttributes!, true)
+            : Parser.parseSourceFile(fileName, sourceText, languageVersion, /*syntaxCursor*/ undefined, setParentNodes, scriptKind, setIndicator, jsDocParsingMode);
     }
 
     performance.mark("afterParse");
@@ -1605,8 +1605,7 @@ namespace Parser {
         setParentNodes = false,
         scriptKind?: ScriptKind,
         setExternalModuleIndicatorOverride?: (file: SourceFile) => void,
-        jsDocParsingMode = JSDocParsingMode.ParseAll,
-        importAttributes?: ImportAttributes
+        jsDocParsingMode = JSDocParsingMode.ParseAll
     ): SourceFile {
         scriptKind = ensureScriptKind(fileName, scriptKind);
         if (scriptKind === ScriptKind.JSON) {
@@ -1619,9 +1618,6 @@ namespace Parser {
             result.hasNoDefaultLib = false;
             result.pragmas = emptyMap as ReadonlyPragmaMap;
             return result;
-        }
-        else if (fileName.includes(providerPackageIndex)) {
-            return createProvidedSourceFile(fileName, importAttributes!, setParentNodes);
         } else {
             initializeState(fileName, sourceText, languageVersion, syntaxCursor, scriptKind, jsDocParsingMode);
 
@@ -7524,6 +7520,11 @@ namespace Parser {
         return nextToken() === SyntaxKind.StringLiteral;
     }
 
+    function nextTokenIsFromKeyword() {
+        nextToken();
+        return token() === SyntaxKind.FromKeyword;
+    }
+
     function nextTokenIsFromKeywordOrEqualsToken() {
         nextToken();
         return token() === SyntaxKind.FromKeyword || token() === SyntaxKind.EqualsToken;
@@ -8359,7 +8360,10 @@ namespace Parser {
             identifier = parseIdentifier();
         }
 
+
+        let isProvided = false;
         let isTypeOnly = false;
+
         if (
             identifier?.escapedText === "type" &&
             (token() !== SyntaxKind.FromKeyword || isIdentifier() && lookAhead(nextTokenIsFromKeywordOrEqualsToken)) &&
@@ -8367,9 +8371,16 @@ namespace Parser {
         ) {
             isTypeOnly = true;
             identifier = isIdentifier() ? parseIdentifier() : undefined;
+        } else if (
+            identifier?.escapedText === "provided" &&
+            (token() !== SyntaxKind.FromKeyword || isIdentifier() && lookAhead(nextTokenIsFromKeyword)) &&
+            (isIdentifier() || tokenAfterImportDefinitelyProducesImportDeclaration())
+        ) {
+            isProvided = true;
+            identifier = isIdentifier() ? parseIdentifier() : undefined;
         }
 
-        if (identifier && !tokenAfterImportedIdentifierDefinitelyProducesImportDeclaration()) {
+        if (identifier && !isProvided && !tokenAfterImportedIdentifierDefinitelyProducesImportDeclaration()) {
             return parseImportEqualsDeclaration(pos, hasJSDoc, modifiers, identifier, isTypeOnly);
         }
 

@@ -587,6 +587,7 @@ import {
     WriteFileCallbackData,
     YieldExpression,
 } from "./_namespaces/ts.js";
+import { isProvidedModuleName } from "./providers/utils.js";
 
 /** @internal */
 export const resolvingEmptyArray: never[] = [];
@@ -867,7 +868,7 @@ export function typeDirectiveIsEqualTo(oldResolution: ResolvedTypeReferenceDirec
 export function hasChangesInResolutions<K, V>(
     names: readonly K[],
     newResolutions: readonly V[],
-    getOldResolution: (name: K) => V | undefined,
+    getOldResolution: (name: K, newResolution: V) => V | undefined,
     comparer: (oldResolution: V, newResolution: V) => boolean,
 ): boolean {
     Debug.assert(names.length === newResolutions.length);
@@ -875,7 +876,7 @@ export function hasChangesInResolutions<K, V>(
     for (let i = 0; i < names.length; i++) {
         const newResolution = newResolutions[i];
         const entry = names[i];
-        const oldResolution = getOldResolution(entry);
+        const oldResolution = getOldResolution(entry, newResolution);
         const changed = oldResolution
             ? !newResolution || !comparer(oldResolution, newResolution)
             : newResolution;
@@ -6494,6 +6495,10 @@ export function getSourceFilesToEmit(host: EmitHost, targetSourceFile?: SourceFi
         const moduleKind = getEmitModuleKind(options);
         const moduleEmitEnabled = options.emitDeclarationOnly || moduleKind === ModuleKind.AMD || moduleKind === ModuleKind.System;
         // Can emit only sources that are not declaration file and are either non module code or module with --module or --target es6 specified
+        const files = host.getSourceFiles();
+
+        // console.log("TO EMIT getSourceFilesToEmit 1", files);
+
         return filter(
             host.getSourceFiles(),
             sourceFile =>
@@ -6503,6 +6508,7 @@ export function getSourceFilesToEmit(host: EmitHost, targetSourceFile?: SourceFi
     }
     else {
         const sourceFiles = targetSourceFile === undefined ? host.getSourceFiles() : [targetSourceFile];
+        // console.trace("TO EMIT getSourceFilesToEmit 2", sourceFiles.filter(f => !f.fileName.includes("local") && !f.fileName.includes("types")).map(f => f.fileName));
         return filter(
             sourceFiles,
             sourceFile => sourceFileMayBeEmitted(sourceFile, host, forceDtsEmit),
@@ -6517,6 +6523,10 @@ export function getSourceFilesToEmit(host: EmitHost, targetSourceFile?: SourceFi
  */
 export function sourceFileMayBeEmitted(sourceFile: SourceFile, host: SourceFileMayBeEmittedHost, forceDtsEmit?: boolean) {
     // TODO(OR): Add provided runtime code files?
+    if (isProvidedModuleName(sourceFile.fileName)) {
+        return false;
+    }
+
     const options = host.getCompilerOptions();
     // Js files are emitted only if option is enabled
     if (options.noEmitForJsFiles && isSourceFileJS(sourceFile)) return false;

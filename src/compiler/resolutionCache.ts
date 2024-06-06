@@ -77,8 +77,11 @@ import {
     updateResolutionField,
     WatchDirectoryFlags,
     moduleLiteralResolutionNameAndModeGetter,
+    ScriptKind,
 } from "./_namespaces/ts.js";
+import { providerPackagePrefix } from "./providers/debugging.js";
 import { ModuleImport } from "./providers/types.js";
+import { isProvidedModuleName, providedNameSeparator } from "./providers/utils.js";
 
 /** @internal */
 export interface HasInvalidatedFromResolutionCache {
@@ -511,7 +514,7 @@ export function createModuleResolutionLoaderUsingGlobalCache(
     moduleResolutionCache: ModuleResolutionCache,
 ): ResolutionLoader<ModuleImport, ResolvedModuleWithFailedLookupLocations, SourceFile> {
     return {
-        nameAndMode: moduleResolutionNameAndModeGetter,
+        propertiesGetter: moduleResolutionNameAndModeGetter,
         resolve: (moduleName, resoluionMode) =>
             resolveModuleNameUsingGlobalCache(
                 resolutionHost,
@@ -534,7 +537,7 @@ export function createModuleLiteralResolutionLoaderUsingGlobalCache(
     moduleResolutionCache: ModuleResolutionCache,
 ): ResolutionLoader<StringLiteralLike, ResolvedModuleWithFailedLookupLocations, SourceFile> {
     return {
-        nameAndMode: moduleLiteralResolutionNameAndModeGetter,
+        propertiesGetter: moduleLiteralResolutionNameAndModeGetter,
         resolve: (moduleName, resoluionMode) =>
             resolveModuleNameUsingGlobalCache(
                 resolutionHost,
@@ -559,14 +562,32 @@ function resolveModuleNameUsingGlobalCache(
 ): ResolvedModuleWithFailedLookupLocations {
     const host = getModuleResolutionHost(resolutionHost);
     const primaryResult = ts_resolveModuleName(moduleName, containingFile, compilerOptions, host, moduleResolutionCache, redirectedReference, mode);
+
+    if (isProvidedModuleName(containingFile)) {
+        console.log("LS3", moduleName, resolutionHost.getGlobalCache?.() != undefined, primaryResult.resolvedModule?.resolvedFileName, primaryResult.isProvided);
+    }
+
     // return result immediately only if global cache support is not enabled or if it is .ts, .tsx or .d.ts
     if (!resolutionHost.getGlobalCache) {
+        if (isProvidedModuleName(containingFile)) {
+            console.log("LS3a");
+        }
+
         return primaryResult;
+    }
+
+    if (isProvidedModuleName(containingFile)) {
+        console.log("LS3b");
     }
 
     // otherwise try to load typings from @types
     const globalCache = resolutionHost.getGlobalCache();
     if (globalCache !== undefined && !isExternalModuleNameRelative(moduleName) && !(primaryResult.resolvedModule && extensionIsTS(primaryResult.resolvedModule.extension))) {
+
+        if (isProvidedModuleName(containingFile)) {
+            console.log("LS3c");
+        }
+
         // create different collection of failed lookup locations for second pass
         // if it will fail and we've already found something during the first pass - we don't want to pollute its results
         const { resolvedModule, failedLookupLocations, affectingLocations, resolutionDiagnostics } = loadModuleFromGlobalCache(
@@ -578,6 +599,10 @@ function resolveModuleNameUsingGlobalCache(
             moduleResolutionCache,
         );
         if (resolvedModule) {
+
+            if (isProvidedModuleName(containingFile)) {
+                console.log("LS3d");
+            }
             // Modify existing resolution so its saved in the directory cache as well
             (primaryResult.resolvedModule as any) = resolvedModule;
             primaryResult.failedLookupLocations = updateResolutionField(primaryResult.failedLookupLocations, failedLookupLocations);
@@ -585,6 +610,11 @@ function resolveModuleNameUsingGlobalCache(
             primaryResult.resolutionDiagnostics = updateResolutionField(primaryResult.resolutionDiagnostics, resolutionDiagnostics);
             return primaryResult;
         }
+    }
+
+
+    if (isProvidedModuleName(containingFile)) {
+        console.log("LS3e");
     }
 
     // Default return the result from the first pass
@@ -883,7 +913,7 @@ export function createResolutionCache(resolutionHost: ResolutionCacheHost, rootD
         logChanges?: boolean;
         deferWatchingNonRelativeResolution: boolean;
     }
-    function resolveNamesWithLocalCache<Entry, SourceFile, T extends ResolutionWithFailedLookupLocations, R extends ResolutionWithResolvedFileName>({
+    function resolveNamesWithLocalCache<Entry, SourceFile extends { scriptKind: ScriptKind, fileName: string } | undefined, T extends ResolutionWithFailedLookupLocations, R extends ResolutionWithResolvedFileName>({
         entries,
         containingFile,
         containingSourceFile,
@@ -897,10 +927,25 @@ export function createResolutionCache(resolutionHost: ResolutionCacheHost, rootD
         shouldRetryResolution,
         logChanges,
     }: ResolveNamesWithLocalCacheInput<Entry, SourceFile, T, R>): readonly T[] {
-        const path = resolutionHost.toPath(containingFile);
+        // NOTE(OR): This resolves imports for language service
+
+        let path = resolutionHost.toPath(containingFile);
+
+        // TODO(OR): Name mangling
+        if (containingSourceFile?.scriptKind === ScriptKind.Provided) {
+            // path = containingFile.split(providedNameSeparator)[1] as Path;
+            console.trace("LS CONTAINED IN PROVIDED FILE", containingFile, path);
+        }
+
         const resolutionsInFile = perFileCache.get(path) || perFileCache.set(path, createModeAwareCache()).get(path)!;
         const resolvedModules: T[] = [];
         const hasInvalidatedNonRelativeUnresolvedImport = logChanges && isFileWithInvalidatedNonRelativeUnresolvedImports(path);
+
+        // console.log("STOP WATCH 1");
+        // console.log(containingFile);
+        // console.log("---");
+        // resolutionsInFile.forEach((_r, n) => console.log(`${n}`));
+        // console.log("---");
 
         // All the resolutions in this file are invalidated if this file wasn't resolved using same redirect
         const program = resolutionHost.getCurrentProgram();
@@ -911,8 +956,14 @@ export function createResolutionCache(resolutionHost: ResolutionCacheHost, rootD
 
         const seenNamesInFile = createModeAwareCache<true>();
         for (const entry of entries) {
-            const name = loader.nameAndMode.getName(entry);
-            const mode = loader.nameAndMode.getMode(entry, containingSourceFile, redirectedReference?.commandLine.options || options);
+            const name = loader.propertiesGetter.getName(entry);
+            const mode = loader.propertiesGetter.getMode(entry, containingSourceFile, redirectedReference?.commandLine.options || options);
+
+            if (containingSourceFile?.scriptKind === ScriptKind.Provided) {
+                // path = containingFile.split(providedNameSeparator)[1] as Path;
+                console.log("LS2", resolutionsInFile.size(), name, mode);
+            }
+
             let resolution = resolutionsInFile.get(name, mode);
             // Resolution is valid if it is present and not invalidated
             if (
@@ -921,26 +972,46 @@ export function createResolutionCache(resolutionHost: ResolutionCacheHost, rootD
                     // If the name is unresolved import that was invalidated, recalculate
                     (hasInvalidatedNonRelativeUnresolvedImport && !isExternalModuleNameRelative(name) && shouldRetryResolution(resolution)))
             ) {
+                if (containingSourceFile?.scriptKind === ScriptKind.Provided) {
+                    console.log("LS2A", name);
+                }
                 const existingResolution = resolution;
                 resolution = loader.resolve(name, mode);
                 if (resolutionHost.onDiscoveredSymlink && resolutionIsSymlink(resolution)) {
+                    if (containingSourceFile?.scriptKind === ScriptKind.Provided) {
+                        console.log("LS2A symlink", name);
+                    }
                     resolutionHost.onDiscoveredSymlink();
                 }
                 resolutionsInFile.set(name, mode, resolution);
                 if (resolution !== existingResolution) {
+                    if (containingSourceFile?.scriptKind === ScriptKind.Provided) {
+                        console.log("LS2A resolution !== existingResolution", name);
+                    }
                     watchFailedLookupLocationsOfExternalModuleResolutions(name, resolution, path, getResolutionWithResolvedFileName, deferWatchingNonRelativeResolution);
                     if (existingResolution) {
+                        if (containingSourceFile?.scriptKind === ScriptKind.Provided) {
+                            console.log("LS2A existingResolution is not null", name);
+                        }
+                        console.log("STOP WATCH EXISTING");
+                        console.log([...existingResolution.files?.values() ?? []]);
                         stopWatchFailedLookupLocationOfResolution(existingResolution, path, getResolutionWithResolvedFileName);
                     }
                 }
 
                 if (logChanges && filesWithChangedSetOfUnresolvedImports && !resolutionIsEqualTo(existingResolution, resolution)) {
+                    if (containingSourceFile?.scriptKind === ScriptKind.Provided) {
+                        console.log("LS2A filesWithChangedSetOfUnresolvedImports", name);
+                    }
                     filesWithChangedSetOfUnresolvedImports.push(path);
                     // reset log changes to avoid recording the same file multiple times
                     logChanges = false;
                 }
             }
             else {
+                if (containingSourceFile?.scriptKind === ScriptKind.Provided) {
+                    console.log("LS2B", name);
+                }
                 const host = getModuleResolutionHost(resolutionHost);
                 if (isTraceEnabled(options, host) && !seenNamesInFile.has(name, mode)) {
                     const resolved = getResolutionWithResolvedFileName(resolution!);
@@ -953,10 +1024,10 @@ export function createResolutionCache(resolutionHost: ResolutionCacheHost, rootD
                                     Diagnostics.Reusing_resolution_of_module_0_from_1_of_old_program_it_was_successfully_resolved_to_2 :
                                 Diagnostics.Reusing_resolution_of_module_0_from_1_of_old_program_it_was_not_resolved :
                             resolved?.resolvedFileName ?
-                            resolved.packageId ?
-                                Diagnostics.Reusing_resolution_of_type_reference_directive_0_from_1_of_old_program_it_was_successfully_resolved_to_2_with_Package_ID_3 :
-                                Diagnostics.Reusing_resolution_of_type_reference_directive_0_from_1_of_old_program_it_was_successfully_resolved_to_2 :
-                            Diagnostics.Reusing_resolution_of_type_reference_directive_0_from_1_of_old_program_it_was_not_resolved,
+                                resolved.packageId ?
+                                    Diagnostics.Reusing_resolution_of_type_reference_directive_0_from_1_of_old_program_it_was_successfully_resolved_to_2_with_Package_ID_3 :
+                                    Diagnostics.Reusing_resolution_of_type_reference_directive_0_from_1_of_old_program_it_was_successfully_resolved_to_2 :
+                                Diagnostics.Reusing_resolution_of_type_reference_directive_0_from_1_of_old_program_it_was_not_resolved,
                         name,
                         containingFile,
                         resolved?.resolvedFileName,
@@ -970,15 +1041,25 @@ export function createResolutionCache(resolutionHost: ResolutionCacheHost, rootD
         }
         reusedNames?.forEach(entry =>
             seenNamesInFile.set(
-                loader.nameAndMode.getName(entry),
-                loader.nameAndMode.getMode(entry, containingSourceFile, redirectedReference?.commandLine.options || options),
+                loader.propertiesGetter.getName(entry),
+                loader.propertiesGetter.getMode(entry, containingSourceFile, redirectedReference?.commandLine.options || options),
                 true,
             )
         );
         if (resolutionsInFile.size() !== seenNamesInFile.size()) {
+            console.log("STOP WATCH 2a");
+            console.log(containingFile, containingSourceFile?.fileName);
+            console.log("---");
+            resolutionsInFile.forEach((_r, n) => console.log(`${n}`));
+            console.log("---");
             // Stop watching and remove the unused name
             resolutionsInFile.forEach((resolution, name, mode) => {
                 if (!seenNamesInFile.has(name, mode)) {
+                    console.log("STOP WATCH 2b");
+                    console.log(name, mode);
+                    console.log("---");
+                    seenNamesInFile.forEach((_t, n) => console.log(n));
+                    console.log("---");
                     stopWatchFailedLookupLocationOfResolution(resolution, path, getResolutionWithResolvedFileName);
                     resolutionsInFile.delete(name, mode);
                 }
@@ -1143,6 +1224,10 @@ export function createResolutionCache(resolutionHost: ResolutionCacheHost, rootD
                 watchFailedLookupLocationOfResolution(resolution);
             }
             else {
+                if (name.includes(providerPackagePrefix)) {
+                    console.log("ADDING PROVIDER RESOLUTION", name, filePath);
+                }
+
                 nonRelativeExternalModuleResolutions.add(name, resolution);
             }
             const resolved = getResolutionWithResolvedFileName(resolution);
@@ -1181,6 +1266,10 @@ export function createResolutionCache(resolutionHost: ResolutionCacheHost, rootD
     }
 
     function watchFailedLookupLocationOfResolution(resolution: ResolutionWithFailedLookupLocations) {
+        if (resolution.refCount == 0) {
+            console.trace("REFCOUNT ZERO", resolution);
+        }
+
         Debug.assert(!!resolution.refCount);
 
         const { failedLookupLocations, affectingLocations, alternateResult } = resolution;
@@ -1418,6 +1507,9 @@ export function createResolutionCache(resolutionHost: ResolutionCacheHost, rootD
         syncDirWatcherRemove?: boolean,
     ) {
         Debug.checkDefined(resolution.files).delete(filePath);
+        if (resolution.affectingLocations?.some(r => r.includes(providerPackagePrefix))) {
+            console.trace("DECREMENTING PROVIDER REF");
+        }
         resolution.refCount!--;
         if (resolution.refCount) {
             return;

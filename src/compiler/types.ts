@@ -3659,6 +3659,7 @@ export interface ImportDeclaration extends Statement {
     readonly moduleSpecifier: Expression;
     /** @deprecated */ readonly assertClause?: AssertClause;
     readonly attributes?: ImportAttributes;
+    readonly isProvided: boolean;
 }
 
 export type NamedImportBindings =
@@ -4415,6 +4416,8 @@ export interface SourceFile extends Declaration, LocalsContainer {
     /** @internal */ endFlowNode?: FlowNode;
 
     /** @internal */ jsDocParsingMode?: JSDocParsingMode;
+
+    /** @internal */ importAttributes?: ImportAttributes;
 }
 
 /** @internal */
@@ -4653,6 +4656,8 @@ export interface LibResolution<T extends ResolvedModuleWithFailedLookupLocations
     actual: string;
 }
 export interface Program extends ScriptReferenceHost {
+    log: (...args: string[]) => void;
+    trace: (...args: string[]) => void;
     getCurrentDirectory(): string;
     /**
      * Get a list of root file names that were passed to a 'createProgram'
@@ -4678,6 +4683,8 @@ export interface Program extends ScriptReferenceHost {
 
     /** @internal */
     resolvedModules: Map<Path, ModeAwareCache<ResolvedModuleWithFailedLookupLocations>> | undefined;
+    // /** @internal */
+    // resolvedProvidedModules: Map<Path, Map<string, ResolvedModuleWithFailedLookupLocations>> | undefined;
     /** @internal */
     resolvedTypeReferenceDirectiveNames: Map<Path, ModeAwareCache<ResolvedTypeReferenceDirectiveWithFailedLookupLocations>> | undefined;
     /** @internal */
@@ -4942,6 +4949,7 @@ export interface TypeCheckerHost extends ModuleSpecifierResolutionHost {
     getModeForUsageLocation(file: SourceFile, usage: StringLiteralLike): ResolutionMode;
 
     getResolvedModule(f: SourceFile, moduleName: string, mode: ResolutionMode): ResolvedModuleWithFailedLookupLocations | undefined;
+    // getResolvedProvidedModule(f: SourceFile, moduleName: string, importAttributes?: ImportAttributes): ResolvedModuleWithFailedLookupLocations | undefined;
 
     readonly redirectTargetsMap: RedirectTargetsMap;
 
@@ -7872,6 +7880,7 @@ export const enum Extension {
 
 export interface ResolvedModuleWithFailedLookupLocations {
     readonly resolvedModule: ResolvedModuleFull | undefined;
+    readonly isProvided: boolean;
     /** @internal */
     failedLookupLocations?: string[];
     /** @internal */
@@ -7917,8 +7926,8 @@ export type HasInvalidatedLibResolutions = (libFileName: string) => boolean;
 export type HasChangedAutomaticTypeDirectiveNames = () => boolean;
 
 export interface CompilerHost extends ModuleResolutionHost {
-    getSourceFile(fileName: string, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, onError?: (message: string) => void, shouldCreateNewSourceFile?: boolean, importAttributes?: ImportAttributes): SourceFile | undefined;
-    getSourceFileByPath?(fileName: string, path: Path, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, onError?: (message: string) => void, shouldCreateNewSourceFile?: boolean): SourceFile | undefined;
+    getSourceFile(fileName: string, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, isProvided: boolean, onError?: (message: string) => void, shouldCreateNewSourceFile?: boolean, importAttributes?: ImportAttributes): SourceFile | undefined;
+    getSourceFileByPath?(fileName: string, path: Path, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, isProvided: boolean, onError?: (message: string) => void, shouldCreateNewSourceFile?: boolean, importAttributes?: ImportAttributes): SourceFile | undefined;
     getCancellationToken?(): CancellationToken;
     getDefaultLibFileName(options: CompilerOptions): string;
     getDefaultLibLocation?(): string;
@@ -8854,8 +8863,8 @@ export interface NodeFactory {
     updateNamespaceExportDeclaration(node: NamespaceExportDeclaration, name: Identifier): NamespaceExportDeclaration;
     createImportEqualsDeclaration(modifiers: readonly ModifierLike[] | undefined, isTypeOnly: boolean, name: string | Identifier, moduleReference: ModuleReference): ImportEqualsDeclaration;
     updateImportEqualsDeclaration(node: ImportEqualsDeclaration, modifiers: readonly ModifierLike[] | undefined, isTypeOnly: boolean, name: Identifier, moduleReference: ModuleReference): ImportEqualsDeclaration;
-    createImportDeclaration(modifiers: readonly ModifierLike[] | undefined, importClause: ImportClause | undefined, moduleSpecifier: Expression, attributes?: ImportAttributes): ImportDeclaration;
-    updateImportDeclaration(node: ImportDeclaration, modifiers: readonly ModifierLike[] | undefined, importClause: ImportClause | undefined, moduleSpecifier: Expression, attributes: ImportAttributes | undefined): ImportDeclaration;
+    createImportDeclaration(modifiers: readonly ModifierLike[] | undefined, importClause: ImportClause | undefined, moduleSpecifier: Expression, isProvided: boolean, attributes?: ImportAttributes): ImportDeclaration;
+    updateImportDeclaration(node: ImportDeclaration, modifiers: readonly ModifierLike[] | undefined, importClause: ImportClause | undefined, moduleSpecifier: Expression, isProvided: boolean, attributes: ImportAttributes | undefined): ImportDeclaration;
     createImportClause(isTypeOnly: boolean, name: Identifier | undefined, namedBindings: NamedImportBindings | undefined): ImportClause;
     updateImportClause(node: ImportClause, isTypeOnly: boolean, name: Identifier | undefined, namedBindings: NamedImportBindings | undefined): ImportClause;
     /** @deprecated */ createAssertClause(elements: NodeArray<AssertEntry>, multiLine?: boolean): AssertClause;

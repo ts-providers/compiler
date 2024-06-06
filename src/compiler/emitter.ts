@@ -450,7 +450,10 @@ export function forEachEmittedFile<T>(
     onlyBuildInfo?: boolean,
     includeBuildInfo?: boolean,
 ) {
+    // console.trace("TO EMIT forEachEmittedFile 1", isArray(sourceFilesOrTargetSourceFile) ? sourceFilesOrTargetSourceFile.map(f => f.fileName) : sourceFilesOrTargetSourceFile?.fileName);
+
     const sourceFiles = isArray(sourceFilesOrTargetSourceFile) ? sourceFilesOrTargetSourceFile : getSourceFilesToEmit(host, sourceFilesOrTargetSourceFile, forceDtsEmit);
+    // console.trace("TO EMIT forEachEmittedFile 2", sourceFiles.map(f => f.fileName));
     const options = host.getCompilerOptions();
     if (!onlyBuildInfo) {
         if (options.outFile) {

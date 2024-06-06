@@ -961,6 +961,7 @@ import {
     ResolvedType,
     resolvingEmptyArray,
     RestTypeNode,
+    returnFalse,
     ReturnStatement,
     ReverseMappedSymbol,
     ReverseMappedType,
@@ -1116,8 +1117,7 @@ import {
 } from "./_namespaces/ts.js";
 import * as moduleSpecifiers from "./_namespaces/ts.moduleSpecifiers.js";
 import * as performance from "./_namespaces/ts.performance.js";
-import { providerPackageIndex, providerPackagePrefix } from "./providers/debugging.js";
-import { getModuleNameWithSample, getProviderSamplePath } from "./providers/utils.js";
+import { getProvidedModuleName, isProvidedModuleName } from "./providers/utils.js";
 
 const ambientModuleSymbolRegex = /^".+"$/;
 const anon = "(anonymous)" as __String & string;
@@ -3711,16 +3711,12 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     }
 
     function getTargetOfImportClause(node: ImportClause, dontResolveAlias: boolean): Symbol | undefined {
-        const samplePath = getProviderSamplePath(node?.parent.attributes);
-        const isProvidedImport = samplePath !== undefined;
+        const importAttributes = node?.parent.attributes;
+        const isProvidedImport = node?.parent.isProvided;
 
         const moduleSymbol = isProvidedImport && isStringLiteralLike(node.parent.moduleSpecifier)
-            ? resolveExternalModule(node, getModuleNameWithSample(node.parent.moduleSpecifier.text, samplePath), undefined, node, undefined)
+            ? resolveExternalModule(node, getProvidedModuleName(node.parent.moduleSpecifier.text, importAttributes!), undefined, node, undefined)
             : resolveExternalModuleName(node, node.parent.moduleSpecifier);
-
-        if (isStringLiteralLike(node.parent.moduleSpecifier) && node.parent.moduleSpecifier.text.includes("@ts-providers")) {
-            console.trace("getTargetOfImportClause", "symbol name", moduleSymbol?.escapedName, "sample path", samplePath);
-        }
 
         if (moduleSymbol) {
             return getTargetofModuleDefault(moduleSymbol, node, dontResolveAlias);
@@ -4144,10 +4140,6 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         const links = getSymbolLinks(symbol);
 
         if (!links.aliasTarget) {
-            if (symbol.escapedName === "Csv2") {
-                console.log("RESOLVING ALIAS no target", symbol.escapedName);
-            }
-
             links.aliasTarget = resolvingSymbol;
             const node = getDeclarationOfAliasSymbol(symbol);
             if (!node) return Debug.fail();
@@ -4160,15 +4152,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
             }
         }
         else if (links.aliasTarget === resolvingSymbol) {
-            if (symbol.escapedName === "Csv2") {
-                console.log("RESOLVING ALIAS unknownSymbol");
-            }
-
             links.aliasTarget = unknownSymbol;
-        } else {
-            if (symbol.escapedName === "Csv2") {
-                console.log("RESOLVING ALIAS has target", symbol.escapedName);
-            }
         }
         return links.aliasTarget;
     }
@@ -4468,7 +4452,6 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
                             return undefined;
                         }
                     }
-                    console.log("NAMESPACE NO EXPORTED MEMBER (resolveEntityName)");
                     error(right, Diagnostics.Namespace_0_has_no_exported_member_1, namespaceName, declarationName);
                 }
                 return undefined;
@@ -4479,9 +4462,6 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         }
         if (!nodeIsSynthesized(name) && isEntityName(name) && (symbol.flags & SymbolFlags.Alias || name.parent.kind === SyntaxKind.ExportAssignment)) {
             markSymbolOfAliasDeclarationIfTypeOnly(getAliasDeclarationFromName(name), symbol, /*finalTarget*/ undefined, /*overwriteEmpty*/ true);
-        }
-        if (name.kind === SyntaxKind.Identifier && name.escapedText === "Csv2") {
-            console.log("RETURNING FROM resolveEntityName", (symbol.flags & meaning) || dontResolveAlias)
         }
 
         return (symbol.flags & meaning) || dontResolveAlias ? symbol : resolveAlias(symbol);
@@ -4592,14 +4572,12 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
             error(errorNode, diag, withoutAtTypePrefix, moduleReference);
         }
 
-        console.log("resolveExternalModule", moduleReference);
-
         const ambientModule = tryFindAmbientModule(moduleReference, /*withAugmentations*/ true);
         if (ambientModule) {
-            console.log("resolveExternalModule return ambientModule", moduleReference);
             return ambientModule;
         }
         const currentSourceFile = getSourceFileOfNode(location);
+
         const contextSpecifier = isStringLiteralLike(location)
             ? location
             : (isModuleDeclaration(location) ? location : location.parent && isModuleDeclaration(location.parent) && location.parent.name === location ? location.parent : undefined)?.name ||
@@ -4611,38 +4589,20 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
                 findAncestor(location, isExternalModuleImportEqualsDeclaration)?.moduleReference.expression ||
                 findAncestor(location, isExportDeclaration)?.moduleSpecifier;
 
-        let importAttributes: ImportAttributes | undefined = findAncestor(location, isImportDeclaration)?.attributes;
+        // console.log("CHECKING", moduleReference, isImportDeclaration(contextSpecifier!.parent));
 
-        if (moduleReference.includes(providerPackagePrefix)) {
-            const sample = getProviderSamplePath(importAttributes);
-
-            if (sample && !moduleReference.endsWith(".csv")) {
-                moduleReference = getModuleNameWithSample(moduleReference, sample);
-            }
-
-            console.log("RESOLVE 1", "SAMPLE", sample);
-            if (contextSpecifier?.kind === SyntaxKind.StringLiteral) {
-                console.log((contextSpecifier as StringLiteral).text);
-            }
-            // moduleReference = getModuleNameWithSample(moduleReference, )
-        }
-
-        const mode = contextSpecifier && isStringLiteralLike(contextSpecifier) ? host.getModeForUsageLocation(currentSourceFile, contextSpecifier) : currentSourceFile.impliedNodeFormat;
+        // const isProvided = contextSpecifier?.parent && isImportDeclaration(contextSpecifier.parent) && contextSpecifier.parent.isProvided;
         const moduleResolutionKind = getEmitModuleResolutionKind(compilerOptions);
+        const mode = contextSpecifier && isStringLiteralLike(contextSpecifier) ? host.getModeForUsageLocation(currentSourceFile, contextSpecifier) : currentSourceFile.impliedNodeFormat;
+        // const resolvedModule = isProvided
+        //     ? host.getResolvedModule(currentSourceFile, moduleReference, ModuleKind.ESNext)?.resolvedModule
+        //     : host.getResolvedModule(currentSourceFile, moduleReference, mode)?.resolvedModule;
         const resolvedModule = host.getResolvedModule(currentSourceFile, moduleReference, mode)?.resolvedModule;
-
-        if (moduleReference.includes(providerPackagePrefix)) {
-            console.log("RESOLVE 2", resolvedModule?.resolvedFileName, resolvedModule?.packageId?.name);
-        }
 
         const resolutionDiagnostic = resolvedModule && getResolutionDiagnostic(compilerOptions, resolvedModule, currentSourceFile);
         const sourceFile = resolvedModule
             && (!resolutionDiagnostic || resolutionDiagnostic === Diagnostics.Module_0_was_resolved_to_1_but_jsx_is_not_set)
             && host.getSourceFile(resolvedModule.resolvedFileName);
-
-        if (moduleReference.includes(providerPackagePrefix)) {
-            console.log("RESOLVE 3", sourceFile);
-        }
 
         if (sourceFile) {
             // If there's a resolutionDiagnostic we need to report it even if a sourceFile is found.
@@ -4741,6 +4701,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
             }
             if (moduleNotFoundError) {
                 // report errors only if it was requested
+                console.log("MODULE NOT FOUND", moduleReference);
                 error(errorNode, Diagnostics.File_0_is_not_a_module, sourceFile.fileName);
             }
             return undefined;
@@ -4859,15 +4820,6 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     function resolveExternalModuleSymbol(moduleSymbol: Symbol, dontResolveAlias?: boolean): Symbol;
     function resolveExternalModuleSymbol(moduleSymbol: Symbol | undefined, dontResolveAlias?: boolean): Symbol | undefined;
     function resolveExternalModuleSymbol(moduleSymbol: Symbol | undefined, dontResolveAlias?: boolean): Symbol | undefined {
-        if (moduleSymbol?.escapedName && (moduleSymbol?.escapedName as string).includes("rovider")) {
-            const tmp = Error.stackTraceLimit;
-            Error.stackTraceLimit = Infinity;
-            if (moduleSymbol?.escapedName.includes("@ts-providers")) {
-                console.log("RESOLVE EXTERNAL MODULE SYMBOL", moduleSymbol?.escapedName);
-            }
-            Error.stackTraceLimit = tmp;
-        }
-
         if (moduleSymbol?.exports) {
             const exportEquals = resolveSymbol(moduleSymbol.exports.get(InternalSymbolName.ExportEquals), dontResolveAlias);
             const exported = getCommonJsExportEquals(getMergedSymbol(exportEquals), getMergedSymbol(moduleSymbol));
@@ -10023,6 +9975,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
                                         )]),
                                     ),
                                     factory.createStringLiteral(specifier),
+                                    /*isProvided*/ false,
                                     /*attributes*/ undefined,
                                 ),
                                 ModifierFlags.None,
@@ -10102,13 +10055,14 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
                     case SyntaxKind.ImportClause: {
                         const generatedSpecifier = getSpecifierForModuleSymbol(target.parent || target, context); // generate specifier (even though we're reusing and existing one) for ambient module reference include side effects
                         const specifier = context.bundled ? factory.createStringLiteral(generatedSpecifier) : (node as ImportClause).parent.moduleSpecifier;
-                        const attributes = isImportDeclaration(node.parent) ? node.parent.attributes : undefined;
+                        const [isProvided, attributes] =  isImportDeclaration(node.parent) ? [node.parent.isProvided, node.parent.attributes] : [false, undefined];
                         const isTypeOnly = isJSDocImportTag((node as ImportClause).parent);
                         addResult(
                             factory.createImportDeclaration(
                                 /*modifiers*/ undefined,
                                 factory.createImportClause(isTypeOnly, factory.createIdentifier(localName), /*namedBindings*/ undefined),
                                 specifier,
+                                isProvided,
                                 attributes,
                             ),
                             ModifierFlags.None,
@@ -10124,6 +10078,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
                                 /*modifiers*/ undefined,
                                 factory.createImportClause(isTypeOnly, /*name*/ undefined, factory.createNamespaceImport(factory.createIdentifier(localName))),
                                 specifier,
+                                (node as ImportClause).parent.isProvided,
                                 (node as ImportClause).parent.attributes,
                             ),
                             ModifierFlags.None,
@@ -10160,6 +10115,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
                                     ]),
                                 ),
                                 specifier,
+                                (node as ImportSpecifier).parent.parent.parent.isProvided,
                                 (node as ImportSpecifier).parent.parent.parent.attributes,
                             ),
                             ModifierFlags.None,
@@ -33977,7 +33933,6 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
                     return anyType;
                 }
             }
-            console.log("CHECK PROPERTY ACCESS getPrivateIdentifierPropertyOfType");
             prop = lexicallyScopedSymbol && getPrivateIdentifierPropertyOfType(leftType, lexicallyScopedSymbol);
             if (prop === undefined) {
                 // Check for private-identifier-specific shadowing and lexical-scoping errors.
@@ -34003,7 +33958,6 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
                 }
                 return isErrorType(apparentType) ? errorType : apparentType;
             }
-            console.log("CHECK PROPERTY ACCESS getPropertyOfType", right?.escapedText);
             prop = getPropertyOfType(apparentType, right.escapedText, /*skipObjectFunctionPropertyAugment*/ isConstEnumObjectType(apparentType), /*includeTypeOnlyMembers*/ node.kind === SyntaxKind.QualifiedName);
         }
         markLinkedReferences(node, ReferenceHint.Property, prop, leftType);
@@ -34027,8 +33981,6 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
                     return anyType;
                 }
                 if (right.escapedText && !checkAndReportErrorForExtendingInterface(node)) {
-                    // console.log("CHECK PROPERTY ACCESS ERROR", right.escapedText, "PROP", prop, "LEFT", leftType, "APPARENT", apparentType);
-                    console.log("CHECK PROPERTY ACCESS ERROR", right.escapedText, "PROP", prop);
                     reportNonexistentProperty(right, isThisTypeParameter(leftType) ? apparentType : leftType, isUncheckedJS);
                 }
                 return errorType;
@@ -40326,9 +40278,6 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     }
 
     function instantiateTypeWithSingleGenericCallSignature(node: Expression | MethodDeclaration | QualifiedName, type: Type, checkMode?: CheckMode) {
-        if (type?.symbol?.escapedName && (type.symbol.escapedName as string).includes("Row"))
-            console.log("INSTANTIATE TYPE", type?.symbol?.escapedName);
-
         if (checkMode && checkMode & (CheckMode.Inferential | CheckMode.SkipGenericFunctions)) {
             const callSignature = getSingleSignature(type, SignatureKind.Call, /*allowMembers*/ true);
             const constructSignature = getSingleSignature(type, SignatureKind.Construct, /*allowMembers*/ true);
@@ -40562,9 +40511,6 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         instantiationCount = 0;
         const uninstantiatedType = checkExpressionWorker(node, checkMode, forceTuple);
         const name = uninstantiatedType?.symbol?.escapedName ?? "no name" as string;
-        if (name.includes("Csv") || name.includes("RowType")) {
-            console.log("CHECKEXPRESSION", name);
-        }
         const type = instantiateTypeWithSingleGenericCallSignature(node, uninstantiatedType, checkMode);
         if (isConstEnumObjectType(type)) {
             checkConstEnumAccess(node, type);
@@ -47988,7 +47934,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     function checkSourceFileWorker(node: SourceFile) {
         const links = getNodeLinks(node);
 
-        if (!node.fileName.includes(".d.ts")) {
+        if (!node.fileName.includes(".d.")) {
             console.log("STARTING TO CHECK FILE", node.fileName, node.moduleName);
         }
 
@@ -49964,15 +49910,9 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         // Bind all source files and propagate errors
         const files = host.getSourceFiles();
 
-        console.log("FILES TO BIND");
-        console.log(
-            files
-                .map(f => f.fileName)
-                .filter(n => n.includes(providerPackageIndex)));
+        console.log("BINDING", files.filter(f => isProvidedModuleName(f.fileName)).map(f => f.fileName));
 
         for (const file of files) {
-            //// logIfProviderFile(file.fileName, "BINDING");
-
             bindSourceFile(file, compilerOptions);
         }
 

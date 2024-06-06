@@ -388,7 +388,6 @@ export class SessionClient implements LanguageService {
 
     getDefinitionAndBoundSpan(fileName: string, position: number): DefinitionInfoAndBoundSpan {
         const args: protocol.FileLocationRequestArgs = this.createFileLocationRequestArgs(fileName, position);
-
         const request = this.processRequest<protocol.DefinitionAndBoundSpanRequest>(protocol.CommandTypes.DefinitionAndBoundSpan, args);
         const response = this.processResponse<protocol.DefinitionInfoAndBoundSpanResponse>(request);
         const body = Debug.checkDefined(response.body); // TODO: GH#18217

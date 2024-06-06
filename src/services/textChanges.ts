@@ -1294,9 +1294,10 @@ namespace changesToText {
     }
 
     export function newFileChangesWorker(scriptKind: ScriptKind, insertions: readonly NewFileInsertion[], newLineCharacter: string, formatContext: formatting.FormatContext): string {
+        Debug.assert(scriptKind !== ScriptKind.Provided);
         // TODO: this emits the file, parses it back, then formats it that -- may be a less roundabout way to do this
         const nonFormattedText = flatMap(insertions, insertion => insertion.statements.map(s => s === SyntaxKind.NewLineTrivia ? "" : getNonformattedText(s, insertion.oldFile, newLineCharacter).text)).join(newLineCharacter);
-        const sourceFile = createSourceFile("any file name", nonFormattedText, { languageVersion: ScriptTarget.ESNext, jsDocParsingMode: JSDocParsingMode.ParseNone }, /*setParentNodes*/ true, scriptKind);
+        const sourceFile = createSourceFile("any file name", nonFormattedText, { languageVersion: ScriptTarget.ESNext, jsDocParsingMode: JSDocParsingMode.ParseNone },  /*isProvided*/ false, /*setParentNodes*/ true, scriptKind);
         const changes = formatting.formatDocument(sourceFile, formatContext);
         return applyChanges(nonFormattedText, changes) + newLineCharacter;
     }

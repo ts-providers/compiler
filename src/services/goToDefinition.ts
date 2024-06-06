@@ -40,6 +40,7 @@ import {
     hasEffectiveModifier,
     hasInitializer,
     hasStaticModifier,
+    ImportDeclaration,
     isAnyImportOrBareOrAccessedRequire,
     isAssignmentDeclaration,
     isAssignmentExpression,
@@ -58,6 +59,7 @@ import {
     isFunctionLikeDeclaration,
     isFunctionTypeNode,
     isIdentifier,
+    isImportDeclaration,
     isImportMeta,
     isImportOrExportSpecifier,
     isJSDocOverrideTag,
@@ -70,6 +72,7 @@ import {
     isPropertyName,
     isRightSideOfPropertyAccess,
     isStaticModifier,
+    isStringLiteral,
     isSwitchStatement,
     isTypeAliasDeclaration,
     isTypeReferenceNode,
@@ -84,6 +87,7 @@ import {
     NodeFlags,
     ObjectFlags,
     Program,
+    ProgramUpdateLevel,
     ResolvedModuleWithFailedLookupLocations,
     resolvePath,
     ScriptElementKind,
@@ -113,6 +117,7 @@ import {
 export function getDefinitionAtPosition(program: Program, sourceFile: SourceFile, position: number, searchOtherFilesOnly?: boolean, stopAtAlias?: boolean): readonly DefinitionInfo[] | undefined {
     const resolvedRef = getReferenceAtPosition(sourceFile, position, program);
     const fileReferenceDefinition = resolvedRef && [getDefinitionInfoForFileReference(resolvedRef.reference.fileName, resolvedRef.fileName, resolvedRef.unverified)] || emptyArray;
+
     if (resolvedRef?.file) {
         // If `file` is missing, do a symbol-based lookup as well
         return fileReferenceDefinition;
@@ -466,7 +471,7 @@ export function getTypeDefinitionAtPosition(typeChecker: TypeChecker, sourceFile
 
     return typeDefinitions.length ? [...getFirstTypeArgumentDefinitions(typeChecker, resolvedType, node, failedAliasResolution), ...typeDefinitions]
         : !(symbol.flags & SymbolFlags.Value) && symbol.flags & SymbolFlags.Type ? getDefinitionFromSymbol(typeChecker, skipAlias(symbol, typeChecker), node, failedAliasResolution)
-        : undefined;
+            : undefined;
 }
 
 function definitionFromType(type: Type, checker: TypeChecker, node: Node, failedAliasResolution: boolean | undefined): readonly DefinitionInfo[] {
@@ -646,6 +651,7 @@ function createDefinitionInfoFromName(checker: TypeChecker, declaration: Declara
     }
     return {
         fileName: sourceFile.fileName,
+        file: sourceFile,
         textSpan,
         kind: symbolKind,
         name: symbolName,

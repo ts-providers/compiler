@@ -350,6 +350,7 @@ function removeUnusedImports(oldImports: readonly ImportDeclaration[], sourceFil
                     importDecl.modifiers,
                     /*importClause*/ undefined,
                     moduleSpecifier,
+                    /*isProvided*/ false,
                     /*attributes*/ undefined,
                 ));
             }
@@ -643,6 +644,7 @@ function updateImportDeclarationAndClause(
         importDeclaration.modifiers,
         factory.updateImportClause(importDeclaration.importClause!, importDeclaration.importClause!.isTypeOnly, name, namedBindings), // TODO: GH#18217
         importDeclaration.moduleSpecifier,
+        importDeclaration.isProvided,
         importDeclaration.attributes,
     );
 }

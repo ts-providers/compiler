@@ -1,4 +1,4 @@
-import { providerOrg } from "../compiler/providers/types";
+import { isProvidedModuleName, providedNamePrefix } from "../compiler/providers/utils.js";
 import {
     addToSeen,
     arrayFrom,
@@ -3216,6 +3216,11 @@ export class ProjectService {
     }
 
     getScriptInfo(uncheckedFileName: string) {
+        if (isProvidedModuleName(uncheckedFileName)) {
+            console.log([...this.filenameToScriptInfo.keys()]);
+            return this.getScriptInfoForPath(uncheckedFileName as Path);
+        }
+
         return this.getScriptInfoForNormalizedPath(toNormalizedPath(uncheckedFileName));
     }
 
@@ -3436,6 +3441,7 @@ export class ProjectService {
                 fileName,
                 currentDirectory,
                 /*openedByClient*/ false,
+                /*isProvided*/ false,
                 /*fileContent*/ undefined,
                 scriptKind,
                 !!hasMixedContent,
@@ -3468,6 +3474,7 @@ export class ProjectService {
             fileName,
             this.currentDirectory,
             openedByClient,
+            /*isProvided*/ false,
             fileContent,
             scriptKind,
             !!hasMixedContent,
@@ -3476,10 +3483,25 @@ export class ProjectService {
         );
     }
 
+    getOrCreateScriptInfoForProvidedSourceFile(fileName: string): ScriptInfo | undefined {
+        const normalizedFileName = toNormalizedPath(fileName);
+        return this.getOrCreateScriptInfoWorker(
+            normalizedFileName,
+            this.currentDirectory,
+            /*openedByClient*/ false,
+            /*isProvided*/ true,
+            /*fileContent*/ undefined,
+            ScriptKind.Provided,
+            /*hasMixedContent*/ true,
+            /*hostToQueryFileExistsOn*/ undefined,
+           /*deferredDeleteOk*/ true);
+    }
+
     private getOrCreateScriptInfoWorker(
         fileName: NormalizedPath,
         currentDirectory: string,
         openedByClient: boolean,
+        isProvided: boolean,
         fileContent: string | undefined,
         scriptKind: ScriptKind | undefined,
         hasMixedContent: boolean,
@@ -3487,10 +3509,9 @@ export class ProjectService {
         deferredDeleteOk: boolean,
     ) {
         Debug.assert(fileContent === undefined || openedByClient, "ScriptInfo needs to be opened by client to be able to set its user defined content");
-        const path = normalizedPathToPath(fileName, currentDirectory, this.toCanonicalFileName);
+        const path = isProvided ? fileName as string as Path : normalizedPathToPath(fileName, currentDirectory, this.toCanonicalFileName);
         let info = this.filenameToScriptInfo.get(path);
         if (!info) {
-            const isProvided = fileName.includes(providerOrg);
             const isDynamic = isDynamicFileName(fileName) || isProvided;
             Debug.assert(isRootedDiskPath(fileName) || isDynamic || openedByClient, "", () => `${JSON.stringify({ fileName, currentDirectory, hostCurrentDirectory: this.currentDirectory, openKeys: arrayFrom(this.openFilesWithNonRootedDiskPath.keys()) })}\nScript info with non-dynamic relative file name can only be open script info or in context of host currentDirectory`);
             Debug.assert(!isRootedDiskPath(fileName) || this.currentDirectory === currentDirectory || !this.openFilesWithNonRootedDiskPath.has(this.toCanonicalFileName(fileName)), "", () => `${JSON.stringify({ fileName, currentDirectory, hostCurrentDirectory: this.currentDirectory, openKeys: arrayFrom(this.openFilesWithNonRootedDiskPath.keys()) })}\nOpen script files with non rooted disk path opened with current directory context cannot have same canonical names`);
@@ -3498,7 +3519,6 @@ export class ProjectService {
             // If the file is not opened by client and the file doesnot exist on the disk, return
             if (!openedByClient && !isDynamic && !(hostToQueryFileExistsOn || this.host).fileExists(fileName)) {
                 console.log("CREATE SCRIPT INFO 2", fileName);
-                // console.trace("CREATE SCRIPT INFO 2", fileName, openedByClient, isDynamic);
                 return;
             }
             if (isProvided) {
@@ -3507,6 +3527,11 @@ export class ProjectService {
             } else {
                 info = new ScriptInfo(this.host, fileName, scriptKind!, hasMixedContent, path, this.filenameToScriptInfoVersion.get(path));
             }
+
+            if (info.path.includes(providedNamePrefix)) {
+                console.log("SETTING PROVIDED INFO PATH", info.path);
+            }
+
             this.filenameToScriptInfo.set(info.path, info);
             this.filenameToScriptInfoVersion.delete(info.path);
             if (!openedByClient) {

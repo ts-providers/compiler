@@ -286,7 +286,7 @@ function isExportEqualsModule(moduleSpecifier: Expression, checker: TypeChecker)
 }
 
 function createImport(node: ImportDeclaration, defaultImportName: Identifier | undefined, elements: readonly ImportSpecifier[] | undefined): ImportDeclaration {
-    return factory.createImportDeclaration(/*modifiers*/ undefined, createImportClause(defaultImportName, elements), node.moduleSpecifier, /*attributes*/ undefined);
+    return factory.createImportDeclaration(/*modifiers*/ undefined, createImportClause(defaultImportName, elements), node.moduleSpecifier, /*isProvided*/ false, /*attributes*/ undefined);
 }
 
 function createImportClause(defaultImportName: Identifier | undefined, elements: readonly ImportSpecifier[] | undefined) {
