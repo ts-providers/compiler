@@ -321,7 +321,8 @@ import {
     UnionType,
     updateSourceFile,
     UserPreferences,
-    VariableDeclaration
+    VariableDeclaration,
+    createProvidedSourceFile2
 } from "./_namespaces/ts";
 import * as NavigateTo from "./_namespaces/ts.NavigateTo";
 import * as NavigationBar from "./_namespaces/ts.NavigationBar";
@@ -1390,6 +1391,17 @@ function setSourceFileFields(sourceFile: SourceFile, scriptSnapshot: IScriptSnap
     sourceFile.scriptSnapshot = scriptSnapshot;
 }
 
+export function createProvidedLanguageServiceSourceFile(
+    fileName: string,
+    importAttributes: ImportAttributes,
+    scriptSnapshot: IScriptSnapshot,
+    version: string,
+): SourceFile {
+    const sourceFile = createProvidedSourceFile2(fileName, importAttributes);
+    setSourceFileFields(sourceFile, scriptSnapshot, version);
+    return sourceFile;
+}
+
 export function createLanguageServiceSourceFile(
     fileName: string,
     scriptSnapshot: IScriptSnapshot,
@@ -1397,9 +1409,8 @@ export function createLanguageServiceSourceFile(
     version: string,
     setNodeParents: boolean,
     scriptKind?: ScriptKind,
-    importAttributes?: ImportAttributes
 ): SourceFile {
-    const sourceFile = createSourceFile(fileName, getSnapshotText(scriptSnapshot), scriptTargetOrOptions, setNodeParents, scriptKind, importAttributes);
+    const sourceFile = createSourceFile(fileName, getSnapshotText(scriptSnapshot), scriptTargetOrOptions, /*isProvided*/ false, setNodeParents, scriptKind);
     setSourceFileFields(sourceFile, scriptSnapshot, version);
     return sourceFile;
 }
@@ -1407,7 +1418,8 @@ export function createLanguageServiceSourceFile(
 export function updateLanguageServiceSourceFile(sourceFile: SourceFile, scriptSnapshot: IScriptSnapshot, version: string, textChangeRange: TextChangeRange | undefined, aggressiveChecks?: boolean): SourceFile {
     // If we were given a text change range, and our version or open-ness changed, then
     // incrementally parse this file.
-    if (textChangeRange && !sourceFile.fileName.includes(providerPackagePrefix)) {
+    Debug.assert(!sourceFile.fileName.includes(providerPackagePrefix));
+    if (textChangeRange) {
         if (version !== sourceFile.version) {
             let newText: string;
 
@@ -1796,7 +1808,7 @@ export function createLanguageService(
         }
 
         function getParsedCommandLineOfConfigFileUsingSourceFile(configFileName: string): ParsedCommandLine | undefined {
-            const result = getOrCreateSourceFile(configFileName, ScriptTarget.JSON) as JsonSourceFile | undefined;
+            const result = getOrCreateSourceFile(configFileName, ScriptTarget.JSON, /*isProvided*/ false) as JsonSourceFile | undefined;
             if (!result) return undefined;
             result.path = toPath(configFileName, currentDirectory, getCanonicalFileName);
             result.resolvedPath = result.path;
@@ -1826,11 +1838,11 @@ export function createLanguageService(
             documentRegistry.releaseDocumentWithKey(oldSourceFile.resolvedPath, oldSettingsKey, oldSourceFile.scriptKind, oldSourceFile.impliedNodeFormat);
         }
 
-        function getOrCreateSourceFile(fileName: string, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, onError?: (message: string) => void, shouldCreateNewSourceFile?: boolean, importAttributes?: ImportAttributes): SourceFile | undefined {
-            return getOrCreateSourceFileByPath(fileName, toPath(fileName, currentDirectory, getCanonicalFileName), languageVersionOrOptions, onError, shouldCreateNewSourceFile, importAttributes);
+        function getOrCreateSourceFile(fileName: string, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, isProvided: boolean, onError?: (message: string) => void, shouldCreateNewSourceFile?: boolean, importAttributes?: ImportAttributes): SourceFile | undefined {
+            return getOrCreateSourceFileByPath(fileName, toPath(fileName, currentDirectory, getCanonicalFileName), languageVersionOrOptions, isProvided, onError, shouldCreateNewSourceFile, importAttributes);
         }
 
-        function getOrCreateSourceFileByPath(fileName: string, path: Path, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, _onError?: (message: string) => void, shouldCreateNewSourceFile?: boolean, importAttributes?: ImportAttributes): SourceFile | undefined {
+        function getOrCreateSourceFileByPath(fileName: string, path: Path, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, isProvided: boolean, _onError?: (message: string) => void, shouldCreateNewSourceFile?: boolean, importAttributes?: ImportAttributes): SourceFile | undefined {
             Debug.assert(compilerHost, "getOrCreateSourceFileByPath called after typical CompilerHost lifetime, check the callstack something with a reference to an old host.");
             // The program is asking for this file, check first if the host can locate it.
             // If the host can not locate the file, then it does not exist. return undefined
@@ -1846,7 +1858,7 @@ export function createLanguageService(
             // Check if the language version has changed since we last created a program; if they are the same,
             // it is safe to reuse the sourceFiles; if not, then the shape of the AST can change, and the oldSourceFile
             // can not be reused. we have to dump all syntax trees and create new ones.
-            if (!shouldCreateNewSourceFile && !fileName.includes(providerPackagePrefix)) {
+            if (!shouldCreateNewSourceFile && !isProvided) {
                 // Check if the old program had this file already
                 const oldSourceFile = program && program.getSourceFileByPath(path);
                 if (oldSourceFile) {
@@ -1876,7 +1888,7 @@ export function createLanguageService(
                     // file's script kind, i.e. in one project some file is treated as ".ts"
                     // and in another as ".js"
                     if (scriptKind === oldSourceFile.scriptKind || releasedScriptKinds!.has(oldSourceFile.resolvedPath)) {
-                        return documentRegistry.updateDocumentWithKey(fileName, path, host, documentRegistryBucketKey, scriptSnapshot, scriptVersion, scriptKind, languageVersionOrOptions);
+                        return documentRegistry.updateDocumentWithKey(fileName, path, host, documentRegistryBucketKey, scriptSnapshot, scriptVersion, /*isProvided*/ false, scriptKind, languageVersionOrOptions);
                     }
                     else {
                         // Release old source file and fall through to aquire new file with new script kind
@@ -1889,7 +1901,7 @@ export function createLanguageService(
             }
 
             // Could not find this file in the old program, create a new SourceFile for it.
-            return documentRegistry.acquireDocumentWithKey(fileName, path, host, documentRegistryBucketKey, scriptSnapshot, scriptVersion, scriptKind, languageVersionOrOptions, importAttributes);
+            return documentRegistry.acquireDocumentWithKey(fileName, path, host, documentRegistryBucketKey, scriptSnapshot, scriptVersion, isProvided, scriptKind, languageVersionOrOptions, importAttributes);
         }
     }
 

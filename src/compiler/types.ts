@@ -4341,6 +4341,8 @@ export interface SourceFile extends Declaration, LocalsContainer {
     /** @internal */ endFlowNode?: FlowNode;
 
     /** @internal */ jsDocParsingMode?: JSDocParsingMode;
+
+    /** @internal */ importAttributes?: ImportAttributes;
 }
 
 /** @internal */
@@ -7817,8 +7819,8 @@ export type HasInvalidatedLibResolutions = (libFileName: string) => boolean;
 export type HasChangedAutomaticTypeDirectiveNames = () => boolean;
 
 export interface CompilerHost extends ModuleResolutionHost {
-    getSourceFile(fileName: string, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, onError?: (message: string) => void, shouldCreateNewSourceFile?: boolean, importAttributes?: ImportAttributes): SourceFile | undefined;
-    getSourceFileByPath?(fileName: string, path: Path, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, onError?: (message: string) => void, shouldCreateNewSourceFile?: boolean): SourceFile | undefined;
+    getSourceFile(fileName: string, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, isProvided: boolean, onError?: (message: string) => void, shouldCreateNewSourceFile?: boolean, importAttributes?: ImportAttributes): SourceFile | undefined;
+    getSourceFileByPath?(fileName: string, path: Path, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, isProvided: boolean, onError?: (message: string) => void, shouldCreateNewSourceFile?: boolean, importAttributes?: ImportAttributes): SourceFile | undefined;
     getCancellationToken?(): CancellationToken;
     getDefaultLibFileName(options: CompilerOptions): string;
     getDefaultLibLocation?(): string;

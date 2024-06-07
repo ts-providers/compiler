@@ -1091,7 +1091,7 @@ import {
 } from "./_namespaces/ts";
 import * as moduleSpecifiers from "./_namespaces/ts.moduleSpecifiers";
 import * as performance from "./_namespaces/ts.performance";
-import { providerPackageIndex, providerPackagePrefix } from "./providers/debugging";
+import { providerPackagePrefix } from "./providers/debugging";
 import { getModuleNameWithSample, getProviderSamplePath } from "./providers/utils";
 
 const ambientModuleSymbolRegex = /^".+"$/;
@@ -48909,7 +48909,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         console.log(
             files
                 .map(f => f.fileName)
-                .filter(n => n.includes(providerPackageIndex)));
+                .filter(n => n.includes(providerPackagePrefix)));
 
         for (const file of files) {
             //// logIfProviderFile(file.fileName, "BINDING");

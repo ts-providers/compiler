@@ -9,5 +9,6 @@ export interface ProviderOptions {
 
 export interface ModuleImport {
     specifier: StringLiteralLike;
+    isProvided: boolean;
     attributes?: ImportAttributes;
 }

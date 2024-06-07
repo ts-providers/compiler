@@ -400,9 +400,9 @@ import {
     YieldExpression,
 } from "./_namespaces/ts";
 import * as performance from "./_namespaces/ts.performance";
-import { createProvidedSourceFile, createVirtualSourceFile } from "./providers/codegen";
-import { logIfProviderFile, providerPackageIndex } from "./providers/debugging";
-import { getProviderOptionsFromImportAttributes, getProviderSamplePath } from "./providers/utils";
+import { createProvidedSourceFile } from "./providers/codegen";
+import { logIfProviderFile } from "./providers/debugging";
+import { getProviderSamplePath } from "./providers/utils";
 
 const enum SignatureFlags {
     None = 0,
@@ -1333,7 +1333,7 @@ function setExternalModuleIndicator(sourceFile: SourceFile) {
     sourceFile.externalModuleIndicator = isFileProbablyExternalModule(sourceFile);
 }
 
-export function createSourceFile(fileName: string, sourceText: string, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, setParentNodes = false, scriptKind?: ScriptKind, importAttributes?: ImportAttributes): SourceFile {
+export function createSourceFile(fileName: string, sourceText: string, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, isProvided: boolean, setParentNodes = false, scriptKind?: ScriptKind, importAttributes?: ImportAttributes): SourceFile {
     tracing?.push(tracing.Phase.Parse, "createSourceFile", { path: fileName }, /*separateBeginAndEnd*/ true);
     performance.mark("beforeParse");
     let result: SourceFile;
@@ -1346,17 +1346,18 @@ export function createSourceFile(fileName: string, sourceText: string, languageV
         jsDocParsingMode,
     } = typeof languageVersionOrOptions === "object" ? languageVersionOrOptions : ({ languageVersion: languageVersionOrOptions } as CreateSourceFileOptions);
 
-    logIfProviderFile(fileName, "CREATE", "SAMPLE", getProviderSamplePath(importAttributes));
 
     if (languageVersion === ScriptTarget.JSON) {
-        result = Parser.parseSourceFile(fileName, sourceText, languageVersion, /*syntaxCursor*/ undefined, setParentNodes, ScriptKind.JSON, noop, jsDocParsingMode, importAttributes);
+        result = Parser.parseSourceFile(fileName, sourceText, languageVersion, /*syntaxCursor*/ undefined, setParentNodes, ScriptKind.JSON, noop, jsDocParsingMode);
     }
     else {
         const setIndicator = format === undefined ? overrideSetExternalModuleIndicator : (file: SourceFile) => {
             file.impliedNodeFormat = format;
             return (overrideSetExternalModuleIndicator || setExternalModuleIndicator)(file);
         };
-        result = Parser.parseSourceFile(fileName, sourceText, languageVersion, /*syntaxCursor*/ undefined, setParentNodes, scriptKind, setIndicator, jsDocParsingMode, importAttributes);
+        result = isProvided
+            ? createProvidedSourceFile2(fileName, importAttributes!)
+            : Parser.parseSourceFile(fileName, sourceText, languageVersion, /*syntaxCursor*/ undefined, setParentNodes, scriptKind, setIndicator, jsDocParsingMode);
     }
     perfLogger?.logStopParseSourceFile();
 
@@ -1364,6 +1365,11 @@ export function createSourceFile(fileName: string, sourceText: string, languageV
     performance.measure("Parse", "beforeParse", "afterParse");
     tracing?.pop();
     return result;
+}
+
+export function createProvidedSourceFile2(fileName: string, importAttributes: ImportAttributes): SourceFile {
+    logIfProviderFile(fileName, "CREATE", "SAMPLE", getProviderSamplePath(importAttributes));
+    return createProvidedSourceFile(fileName, importAttributes, true);
 }
 
 export function parseIsolatedEntityName(text: string, languageVersion: ScriptTarget): EntityName | undefined {
@@ -1596,8 +1602,7 @@ namespace Parser {
         setParentNodes = false,
         scriptKind?: ScriptKind,
         setExternalModuleIndicatorOverride?: (file: SourceFile) => void,
-        jsDocParsingMode = JSDocParsingMode.ParseAll,
-        importAttributes?: ImportAttributes
+        jsDocParsingMode = JSDocParsingMode.ParseAll
     ): SourceFile {
         scriptKind = ensureScriptKind(fileName, scriptKind);
         if (scriptKind === ScriptKind.JSON) {
@@ -1610,9 +1615,6 @@ namespace Parser {
             result.hasNoDefaultLib = false;
             result.pragmas = emptyMap as ReadonlyPragmaMap;
             return result;
-        }
-        else if (fileName.includes(providerPackageIndex)) {
-            return createProvidedSourceFile(fileName, importAttributes!, setParentNodes);
         } else {
             initializeState(fileName, sourceText, languageVersion, syntaxCursor, scriptKind, jsDocParsingMode);
 

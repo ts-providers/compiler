@@ -48,6 +48,8 @@ export function createProvidedSourceFile(fileName: string, importAttributes: Imp
     console.log("PROVIDED FILE:", fileName);
     console.log(printer.printFile(declFile));
 
+    declFile.importAttributes = importAttributes;
+
     return declFile;
 }
 

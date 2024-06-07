@@ -1,4 +1,3 @@
-import { toPath } from "../_namespaces/ts";
 import { Identifier, ImportAttributes, StringLiteral } from "../types";
 import { ProviderOptions } from "./types";
 
@@ -39,6 +38,10 @@ export function getModuleNameWithSample(moduleName: string, samplePath: string):
     const sanitizedSamplePath = samplePath.replace(":", "_").replace("/", "_");
     const result = moduleName + "__" + sanitizedSamplePath;
     return result;
+}
+
+export function generateHash(length = 6): string {
+    return ((Math.random() + 1).toString(36).substring(length));
 }
 
 // export function getFileNameWithSample(fileName: string, samplePath: string): string {
