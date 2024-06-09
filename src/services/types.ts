@@ -323,7 +323,7 @@ export interface LanguageServiceHost extends GetEffectiveTypeRootsHost, MinimalR
     getScriptFileNames(): string[];
     getScriptKind?(fileName: string): ScriptKind;
     getScriptVersion(fileName: string): string;
-    getScriptSnapshot(fileName: string): IScriptSnapshot | undefined;
+    getScriptSnapshot(fileName: string, isProvided?: boolean): IScriptSnapshot | undefined;
     getProjectReferences?(): readonly ProjectReference[] | undefined;
     getLocalizedDiagnosticMessages?(): any;
     getCancellationToken?(): HostCancellationToken;

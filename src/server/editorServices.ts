@@ -1,4 +1,3 @@
-import { providerPackagePrefix } from "../compiler/providers/debugging";
 import {
     addToSeen,
     arrayFrom,
@@ -3175,7 +3174,7 @@ export class ProjectService {
 
     private getOrCreateScriptInfoNotOpenedByClientForNormalizedPath(fileName: NormalizedPath, currentDirectory: string, scriptKind: ScriptKind | undefined, hasMixedContent: boolean | undefined, hostToQueryFileExistsOn: DirectoryStructureHost | undefined) {
         if (isRootedDiskPath(fileName) || isDynamicFileName(fileName)) {
-            return this.getOrCreateScriptInfoWorker(fileName, currentDirectory, /*openedByClient*/ false, /*fileContent*/ undefined, scriptKind, hasMixedContent, hostToQueryFileExistsOn);
+            return this.getOrCreateScriptInfoWorker(fileName, currentDirectory, /*openedByClient*/ false, /*isProvided*/ false, /*fileContent*/ undefined, scriptKind, hasMixedContent, hostToQueryFileExistsOn);
         }
 
         // This is non rooted path with different current directory than project service current directory
@@ -3191,21 +3190,32 @@ export class ProjectService {
     }
 
     private getOrCreateScriptInfoOpenedByClientForNormalizedPath(fileName: NormalizedPath, currentDirectory: string, fileContent: string | undefined, scriptKind: ScriptKind | undefined, hasMixedContent: boolean | undefined) {
-        return this.getOrCreateScriptInfoWorker(fileName, currentDirectory, /*openedByClient*/ true, fileContent, scriptKind, hasMixedContent);
+        return this.getOrCreateScriptInfoWorker(fileName, currentDirectory, /*openedByClient*/ true, /*isProvided*/ false, fileContent, scriptKind, hasMixedContent);
     }
 
     getOrCreateScriptInfoForNormalizedPath(fileName: NormalizedPath, openedByClient: boolean, fileContent?: string, scriptKind?: ScriptKind, hasMixedContent?: boolean, hostToQueryFileExistsOn?: { fileExists(path: string): boolean; }) {
-        return this.getOrCreateScriptInfoWorker(fileName, this.currentDirectory, openedByClient, fileContent, scriptKind, hasMixedContent, hostToQueryFileExistsOn);
+        return this.getOrCreateScriptInfoWorker(fileName, this.currentDirectory, openedByClient, /*isProvided*/ false, fileContent, scriptKind, hasMixedContent, hostToQueryFileExistsOn);
     }
 
-    private getOrCreateScriptInfoWorker(fileName: NormalizedPath, currentDirectory: string, openedByClient: boolean, fileContent?: string, scriptKind?: ScriptKind, hasMixedContent?: boolean, hostToQueryFileExistsOn?: { fileExists(path: string): boolean; }) {
+    getOrCreateScriptInfoForProvidedSourceFile(fileName: string): ScriptInfo | undefined {
+        const normalizedFileName = toNormalizedPath(fileName);
+        return this.getOrCreateScriptInfoWorker(
+            normalizedFileName,
+            this.currentDirectory,
+            /*openedByClient*/ false,
+            /*isProvided*/ true,
+            /*fileContent*/ undefined,
+            ScriptKind.Provided,
+            /*hasMixedContent*/ true,
+            /*hostToQueryFileExistsOn*/ undefined);
+    }
+
+    private getOrCreateScriptInfoWorker(fileName: NormalizedPath, currentDirectory: string, openedByClient: boolean, isProvided: boolean, fileContent?: string, scriptKind?: ScriptKind, hasMixedContent?: boolean, hostToQueryFileExistsOn?: { fileExists(path: string): boolean; }) {
         Debug.assert(fileContent === undefined || openedByClient, "ScriptInfo needs to be opened by client to be able to set its user defined content");
         const path = normalizedPathToPath(fileName, currentDirectory, this.toCanonicalFileName);
         let info = this.getScriptInfoForPath(path);
 
         if (!info) {
-            // TODO(OR): Handle this properly
-            const isProvided = fileName.includes(providerPackagePrefix);
             const isDynamic = isDynamicFileName(fileName) || isProvided;
             Debug.assert(isRootedDiskPath(fileName) || isDynamic || openedByClient, "", () => `${JSON.stringify({ fileName, currentDirectory, hostCurrentDirectory: this.currentDirectory, openKeys: arrayFrom(this.openFilesWithNonRootedDiskPath.keys()) })}\nScript info with non-dynamic relative file name can only be open script info or in context of host currentDirectory`);
             Debug.assert(!isRootedDiskPath(fileName) || this.currentDirectory === currentDirectory || !this.openFilesWithNonRootedDiskPath.has(this.toCanonicalFileName(fileName)), "", () => `${JSON.stringify({ fileName, currentDirectory, hostCurrentDirectory: this.currentDirectory, openKeys: arrayFrom(this.openFilesWithNonRootedDiskPath.keys()) })}\nOpen script files with non rooted disk path opened with current directory context cannot have same canonical names`);

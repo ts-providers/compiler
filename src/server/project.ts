@@ -659,8 +659,10 @@ export abstract class Project implements LanguageServiceHost, ModuleResolutionHo
         return addRange(result, this.typingFiles) || ts.emptyArray;
     }
 
-    private getOrCreateScriptInfoAndAttachToProject(fileName: string) {
-        const scriptInfo = this.projectService.getOrCreateScriptInfoNotOpenedByClient(fileName, this.currentDirectory, this.directoryStructureHost);
+    private getOrCreateScriptInfoAndAttachToProject(fileName: string, isProvided?: boolean) {
+        const scriptInfo = isProvided === true
+            ? this.projectService.getOrCreateScriptInfoForProvidedSourceFile(fileName)
+            : this.projectService.getOrCreateScriptInfoNotOpenedByClient(fileName, this.currentDirectory, this.directoryStructureHost);
         if (scriptInfo) {
             const existingValue = this.rootFilesMap.get(scriptInfo.path);
             if (existingValue && existingValue.info !== scriptInfo) {
@@ -685,8 +687,8 @@ export abstract class Project implements LanguageServiceHost, ModuleResolutionHo
         return (info && info.getLatestVersion())!; // TODO: GH#18217
     }
 
-    getScriptSnapshot(filename: string): IScriptSnapshot | undefined {
-        const scriptInfo = this.getOrCreateScriptInfoAndAttachToProject(filename);
+    getScriptSnapshot(filename: string, isProvided?: boolean): IScriptSnapshot | undefined {
+        const scriptInfo = this.getOrCreateScriptInfoAndAttachToProject(filename, isProvided);
         if (scriptInfo) {
             return scriptInfo.getSnapshot();
         }

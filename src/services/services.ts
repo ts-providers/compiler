@@ -1847,12 +1847,12 @@ export function createLanguageService(
             // The program is asking for this file, check first if the host can locate it.
             // If the host can not locate the file, then it does not exist. return undefined
             // to the program to allow reporting of errors for missing files.
-            const scriptSnapshot = host.getScriptSnapshot(fileName);
+            const scriptSnapshot = host.getScriptSnapshot(fileName, isProvided);
             if (!scriptSnapshot) {
                 return undefined;
             }
 
-            const scriptKind = getScriptKind(fileName, host);
+            const scriptKind = isProvided ? ScriptKind.Provided : getScriptKind(fileName, host);
             const scriptVersion = host.getScriptVersion(fileName);
 
             // Check if the language version has changed since we last created a program; if they are the same,

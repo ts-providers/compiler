@@ -1091,7 +1091,6 @@ import {
 } from "./_namespaces/ts";
 import * as moduleSpecifiers from "./_namespaces/ts.moduleSpecifiers";
 import * as performance from "./_namespaces/ts.performance";
-import { providerPackagePrefix } from "./providers/debugging";
 import { getModuleNameWithSample, getProviderSamplePath } from "./providers/utils";
 
 const ambientModuleSymbolRegex = /^".+"$/;
@@ -5032,8 +5031,6 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
             error(errorNode, diag, withoutAtTypePrefix, moduleReference);
         }
 
-        console.log("resolveExternalModule", moduleReference);
-
         const ambientModule = tryFindAmbientModule(moduleReference, /*withAugmentations*/ true);
         if (ambientModule) {
             console.log("resolveExternalModule return ambientModule", moduleReference);
@@ -5052,38 +5049,14 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
         let importAttributes: ImportAttributes | undefined = findAncestor(location, isImportDeclaration)?.attributes;
 
-        if (moduleReference.includes(providerPackagePrefix)) {
-            const sample = getProviderSamplePath(importAttributes);
-
-            if (sample && !moduleReference.endsWith(".csv")) {
-                moduleReference = getModuleNameWithSample(moduleReference, sample);
-            }
-
-            console.log("RESOLVE 1", "SAMPLE", sample);
-            if (contextSpecifier?.kind === SyntaxKind.StringLiteral) {
-                console.log((contextSpecifier as StringLiteral).text);
-            }
-
-
-            // moduleReference = getModuleNameWithSample(moduleReference, )
-        }
-
         const mode = contextSpecifier && isStringLiteralLike(contextSpecifier) ? host.getModeForUsageLocation(currentSourceFile, contextSpecifier) : currentSourceFile.impliedNodeFormat;
         const moduleResolutionKind = getEmitModuleResolutionKind(compilerOptions);
         const resolvedModule = host.getResolvedModule(currentSourceFile, moduleReference, mode)?.resolvedModule;
-
-        if (moduleReference.includes(providerPackagePrefix)) {
-            console.log("RESOLVE 2", resolvedModule?.resolvedFileName, resolvedModule?.packageId?.name);
-        }
 
         const resolutionDiagnostic = resolvedModule && getResolutionDiagnostic(compilerOptions, resolvedModule, currentSourceFile);
         const sourceFile = resolvedModule
             && (!resolutionDiagnostic || resolutionDiagnostic === Diagnostics.Module_0_was_resolved_to_1_but_jsx_is_not_set)
             && host.getSourceFile(resolvedModule.resolvedFileName);
-
-        if (moduleReference.includes(providerPackagePrefix)) {
-            console.log("RESOLVE 3", sourceFile);
-        }
 
         if (sourceFile) {
             // If there's a resolutionDiagnostic we need to report it even if a sourceFile is found.
@@ -5182,6 +5155,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
             }
             if (moduleNotFoundError) {
                 // report errors only if it was requested
+                console.trace("MODULE NOT FOUND", moduleReference);
                 error(errorNode, Diagnostics.File_0_is_not_a_module, sourceFile.fileName);
             }
             return undefined;
@@ -33027,7 +33001,6 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
                     return anyType;
                 }
             }
-            console.log("CHECK PROPERTY ACCESS getPrivateIdentifierPropertyOfType");
             prop = lexicallyScopedSymbol && getPrivateIdentifierPropertyOfType(leftType, lexicallyScopedSymbol);
             if (prop === undefined) {
                 // Check for private-identifier-specific shadowing and lexical-scoping errors.
@@ -33053,7 +33026,6 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
                 }
                 return isErrorType(apparentType) ? errorType : apparentType;
             }
-            console.log("CHECK PROPERTY ACCESS getPropertyOfType", right?.escapedText);
             prop = getPropertyOfType(apparentType, right.escapedText, /*skipObjectFunctionPropertyAugment*/ isConstEnumObjectType(apparentType), /*includeTypeOnlyMembers*/ node.kind === SyntaxKind.QualifiedName);
         }
         // In `Foo.Bar.Baz`, 'Foo' is not referenced if 'Bar' is a const enum or a module containing only const enums.
@@ -33092,8 +33064,6 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
                     return anyType;
                 }
                 if (right.escapedText && !checkAndReportErrorForExtendingInterface(node)) {
-                    // console.log("CHECK PROPERTY ACCESS ERROR", right.escapedText, "PROP", prop, "LEFT", leftType, "APPARENT", apparentType);
-                    console.log("CHECK PROPERTY ACCESS ERROR", right.escapedText, "PROP", prop);
                     reportNonexistentProperty(right, isThisTypeParameter(leftType) ? apparentType : leftType, isUncheckedJS);
                 }
                 return errorType;
@@ -39307,9 +39277,6 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     }
 
     function instantiateTypeWithSingleGenericCallSignature(node: Expression | MethodDeclaration | QualifiedName, type: Type, checkMode?: CheckMode) {
-        if (type?.symbol?.escapedName && (type.symbol.escapedName as string).includes("Row"))
-            console.log("INSTANTIATE TYPE", type?.symbol?.escapedName);
-
         if (checkMode && checkMode & (CheckMode.Inferential | CheckMode.SkipGenericFunctions)) {
             const callSignature = getSingleSignature(type, SignatureKind.Call, /*allowMembers*/ true);
             const constructSignature = getSingleSignature(type, SignatureKind.Construct, /*allowMembers*/ true);
@@ -39540,9 +39507,6 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         instantiationCount = 0;
         const uninstantiatedType = checkExpressionWorker(node, checkMode, forceTuple);
         const name = uninstantiatedType?.symbol?.escapedName ?? "no name" as string;
-        if (name.includes("Csv") || name.includes("RowType")) {
-            console.log("CHECKEXPRESSION", name);
-        }
         const type = instantiateTypeWithSingleGenericCallSignature(node, uninstantiatedType, checkMode);
         if (isConstEnumObjectType(type)) {
             checkConstEnumAccess(node, type);
@@ -48905,15 +48869,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         // Bind all source files and propagate errors
         const files = host.getSourceFiles();
 
-        console.log("FILES TO BIND");
-        console.log(
-            files
-                .map(f => f.fileName)
-                .filter(n => n.includes(providerPackagePrefix)));
-
         for (const file of files) {
-            //// logIfProviderFile(file.fileName, "BINDING");
-
             bindSourceFile(file, compilerOptions);
         }
 

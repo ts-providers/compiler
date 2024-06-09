@@ -563,22 +563,13 @@ export function changeCompilerHostLikeToUseCache(
     };
 
     const getSourceFileWithCache: CompilerHost["getSourceFile"] | undefined = getSourceFile ? (fileName, languageVersionOrOptions, isProvided, onError, shouldCreateNewSourceFile, importAttributes) => {
-        logIfProviderFile(fileName, "CACHE 1", "SAMPLE", getProviderSamplePath(importAttributes));
         const key = toPath(fileName);
         const impliedNodeFormat: ResolutionMode = typeof languageVersionOrOptions === "object" ? languageVersionOrOptions.impliedNodeFormat : undefined;
         const forImpliedNodeFormat = sourceFileCache.get(impliedNodeFormat);
         const value = forImpliedNodeFormat?.get(key);
-        logIfProviderFile(fileName, "CACHE 2", key, impliedNodeFormat, value);
         if (value) return value;
 
         let sourceFile = getSourceFile(fileName, languageVersionOrOptions, isProvided, onError, shouldCreateNewSourceFile, importAttributes);
-
-        // if (fileName && fileName.includes(providerPackageIndex)) {
-        //     sourceFile = createProvidedSourceFile(fileName, importAttributes!, true);
-        //     console.log("CACHE 2.5", sourceFile.fileName);
-        // }
-
-        logIfProviderFile(fileName, "CACHE 3", sourceFile?.fileName, sourceFile);
 
         if (sourceFile && (isDeclarationFileName(fileName) || fileExtensionIs(fileName, Extension.Json))) {
             sourceFileCache.set(impliedNodeFormat, (forImpliedNodeFormat || new Map()).set(key, sourceFile));
@@ -1143,7 +1134,6 @@ export function loadWithModeAwareCache<Entry, SourceFile, ResolutionCache, Resol
             //     console.trace("LOADER RESULT", loaderResult);
             // }
             const result = loader.resolve(name, mode);
-            console.trace("LOADER RESULT", result);
             resolutions.push(result);
         } else {
             const name = loader.nameAndMode.getName(entry);
@@ -2053,14 +2043,14 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
 
     function getResolvedModule(file: SourceFile, moduleName: string, mode: ResolutionMode) {
         const resolved = resolvedModules?.get(file.path)?.get(moduleName, mode);
-        if (moduleName.includes(providerPackagePrefix)) {
-            console.log("GET RESOLVED MODULE", file.path, moduleName, mode, resolved?.resolvedModule?.resolvedFileName);
-            console.log("\n== FILE NAMES ==\n");
-            resolvedModules?.get(file.path)?.forEach((item, key) => console.log(key, item.resolvedModule?.resolvedFileName));
-            console.log("==\n /FILE NAMES ==\n");
-            // const keys = [...resolvedModules?.keys() ?? []].filter(m => !m.includes("types"));
-            // console.log(keys);
-        }
+        // if (moduleName.includes(providerPackagePrefix)) {
+        //     console.log("GET RESOLVED MODULE", file.path, moduleName, mode, resolved?.resolvedModule?.resolvedFileName);
+        //     console.log("\n== FILE NAMES ==\n");
+        //     resolvedModules?.get(file.path)?.forEach((item, key) => console.log(key, item.resolvedModule?.resolvedFileName));
+        //     console.log("==\n /FILE NAMES ==\n");
+        //     // const keys = [...resolvedModules?.keys() ?? []].filter(m => !m.includes("types"));
+        //     // console.log(keys);
+        // }
         return resolved;
     }
 
@@ -2257,11 +2247,9 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     }
 
     function resolveModuleNamesReusingOldState(moduleImports: readonly ModuleImport[], file: SourceFile): readonly ResolvedModuleWithFailedLookupLocations[] {
-        console.log("RESUING OLD STATE", file.ambientModuleNames.length);
         if (structureIsReused === StructureIsReused.Not && !file.ambientModuleNames.length) {
             // If the old program state does not permit reusing resolutions and `file` does not contain locally defined ambient modules,
             // the best we can do is fallback to the default logic.
-            console.log("RESUING OLD STATE TRUE", file.fileName, moduleImports.length);
             return resolveModuleNamesWorker(moduleImports, file, /*reusedNames*/ undefined);
         }
 
@@ -2906,13 +2894,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     }
 
     function getSourceFile(fileName: string): SourceFile | undefined {
-        const result = getSourceFileByPath(toPath(fileName));
-
-        if (fileName.includes(providerPackagePrefix)) {
-            console.trace("GET SOURCE FILE", fileName, result?.fileName, result?.scriptKind);
-        }
-
-        return result;
+        return getSourceFileByPath(toPath(fileName));
     }
 
     function getSourceFileByPath(path: Path): SourceFile | undefined {
@@ -3522,7 +3504,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
                         : undefined;
                     const samplePath = getProviderSamplePath(attributes);
 
-                    if (samplePath && !moduleNameExpr.text.endsWith(".csv")) {
+                    if (isProvided && samplePath && !moduleNameExpr.text.endsWith(".csv")) {
                         moduleNameExpr.text = getModuleNameWithSample(moduleNameExpr.text, samplePath);
                     }
 
@@ -3925,8 +3907,9 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     }
 
     function addFileToFilesByName(file: SourceFile | undefined, path: Path, fileName: string, redirectedPath: Path | undefined) {
-        if (file?.fileName.includes(providerPackagePrefix))
-            console.trace("ADD FILE", "file.fileName", file?.fileName, "path", path, "fileName", fileName, "toPath", toPath(fileName), "RedirectedPath", redirectedPath);
+        if (file?.fileName.includes(providerPackagePrefix)) {
+            console.log("ADD FILE", "file.fileName", file?.fileName, "path", path, "fileName", fileName, "toPath", toPath(fileName), "RedirectedPath", redirectedPath);
+        }
 
         if (file?.scriptKind === ScriptKind.Provided) {
             updateFilesByNameMap(fileName, toPath(fileName), file);
@@ -4233,7 +4216,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
             Debug.assert(resolutions.length === moduleImports.length);
 
             if (file.fileName.includes("src"))
-                console.log("PROCESS IMPORTED MODULES", file.fileName, "RESOLUTIONS", [...resolutions?.map(r => r.resolvedModule) ?? []]);
+                console.log("PROCESS IMPORTED MODULES", file.fileName, "RESOLUTIONS", [...resolutions?.map(r => r.resolvedModule?.resolvedFileName) ?? []]);
 
             const optionsForFile = getRedirectReferenceForResolution(file)?.commandLine.options || options;
             const resolutionsInFile = createModeAwareCache<ResolutionWithFailedLookupLocations>();

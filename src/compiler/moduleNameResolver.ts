@@ -1105,9 +1105,6 @@ function createPerDirectoryResolutionCache<T>(
 export type ModeAwareCacheKey = string & { __modeAwareCacheKey: any; };
 /** @internal */
 export function createModeAwareCacheKey(specifier: string, mode: ResolutionMode) {
-    if (specifier.includes(providerPackagePrefix)) {
-        console.trace("CACHE KEY", specifier, mode?.toString());
-    }
     return (mode === undefined ? specifier : `${mode}|${specifier}`) as ModeAwareCacheKey;
 }
 /** @internal */
@@ -1805,7 +1802,7 @@ function nodeModuleNameResolverWorker(
     redirectedReference: ResolvedProjectReference | undefined,
     conditions: readonly string[] | undefined,
 ): ResolvedModuleWithFailedLookupLocations {
-
+    // TODO(OR): Handle this properly
     if (moduleName.includes(providerPackagePrefix)) {
         moduleName = moduleName.split("__")[0];
         console.log("NODE MODULE RESOLVER", moduleName);
