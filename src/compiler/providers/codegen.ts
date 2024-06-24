@@ -1,6 +1,6 @@
 import deasync from "deasync";
 import { dirname } from "path";
-import { createNodeFactory, createPrinter, createSourceFile, emptyArray, emptyMap, forEachChildRecursively, getLanguageVariant, ImportAttributes, Mutable, NewLineKind, Node, NodeFactoryFlags, NodeFlags, noop, parseBaseNodeFactory, ReadonlyPragmaMap, ScriptKind, ScriptTarget, setParentRecursive, SourceFile, Statement, SyntaxKind } from "../_namespaces/ts";
+import { createNodeFactory, createPrinter, createSourceFile, Debug, emptyArray, emptyMap, forEachChildRecursively, getLanguageVariant, ImportAttributes, Mutable, NewLineKind, Node, NodeFactoryFlags, NodeFlags, noop, parseBaseNodeFactory, ReadonlyPragmaMap, ScriptKind, ScriptTarget, setParentRecursive, SourceFile, Statement, SyntaxKind } from "../_namespaces/ts";
 import { getProviderOptionsFromImportAttributes, providedNameSeparator } from "./utils";
 
 export function createProvidedSourceFile(fileName: string, importAttributes: ImportAttributes, setParentNodes: boolean): SourceFile {
@@ -65,7 +65,7 @@ export function createProvidedSourceFile(fileName: string, importAttributes: Imp
 // Based on https://github.com/microsoft/TypeScript/pull/39784
 function configureVirtualSourceFile(file: SourceFile, fileName: string): SourceFile {
     finishNode(file);
-    (file as Mutable<Node>).flags &= ~NodeFlags.Synthesized;
+    (file as Mutable<Node>).kind = SyntaxKind.SourceFile;
     file.referencedFiles = emptyArray;
     file.typeReferenceDirectives = emptyArray;
     file.libReferenceDirectives = emptyArray;
@@ -118,5 +118,6 @@ function fixupNodeArrays(node: Node) {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function finishNode<T extends Node>(node: T) {
     (node as Mutable<T>).flags |= NodeFlags.Ambient;
+    (node as Mutable<T>).flags &= ~NodeFlags.Synthesized;
     return node;
 }
