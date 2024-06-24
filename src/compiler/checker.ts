@@ -3712,7 +3712,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
     function getTargetOfImportClause(node: ImportClause, dontResolveAlias: boolean): Symbol | undefined {
         const importAttributes = node?.parent.attributes;
-        const isProvidedImport = node?.parent.isProvided;
+        const isProvidedImport = isImportDeclaration(node?.parent) && node?.parent.isProvided;
 
         const moduleSymbol = isProvidedImport && isStringLiteralLike(node.parent.moduleSpecifier)
             ? resolveExternalModule(node, getProvidedModuleName(node.parent.moduleSpecifier.text, importAttributes!), undefined, node, undefined)
@@ -10073,13 +10073,14 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
                         const generatedSpecifier = getSpecifierForModuleSymbol(target.parent || target, context); // generate specifier (even though we're reusing and existing one) for ambient module reference include side effects
                         const specifier = context.bundled ? factory.createStringLiteral(generatedSpecifier) : (node as NamespaceImport).parent.parent.moduleSpecifier;
                         const isTypeOnly = isJSDocImportTag((node as NamespaceImport).parent.parent);
+                        const isProvided = isImportDeclaration(node.parent.parent) && node.parent.parent.isProvided;
                         addResult(
                             factory.createImportDeclaration(
                                 /*modifiers*/ undefined,
                                 factory.createImportClause(isTypeOnly, /*name*/ undefined, factory.createNamespaceImport(factory.createIdentifier(localName))),
                                 specifier,
-                                (node as ImportClause).parent.isProvided,
-                                (node as ImportClause).parent.attributes,
+                                isProvided,
+                                (node as NamespaceImport).parent.parent.attributes,
                             ),
                             ModifierFlags.None,
                         );
@@ -10100,6 +10101,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
                         const generatedSpecifier = getSpecifierForModuleSymbol(target.parent || target, context); // generate specifier (even though we're reusing and existing one) for ambient module reference include side effects
                         const specifier = context.bundled ? factory.createStringLiteral(generatedSpecifier) : (node as ImportSpecifier).parent.parent.parent.moduleSpecifier;
                         const isTypeOnly = isJSDocImportTag((node as ImportSpecifier).parent.parent.parent);
+                        const isProvided = isImportDeclaration(node.parent.parent.parent) && node.parent.parent.parent.isProvided;
                         addResult(
                             factory.createImportDeclaration(
                                 /*modifiers*/ undefined,
@@ -10115,7 +10117,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
                                     ]),
                                 ),
                                 specifier,
-                                (node as ImportSpecifier).parent.parent.parent.isProvided,
+                                isProvided,
                                 (node as ImportSpecifier).parent.parent.parent.attributes,
                             ),
                             ModifierFlags.None,
@@ -52104,7 +52106,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
     function getImportHelpersImportSpecifier(file: SourceFile) {
         Debug.assert(compilerOptions.importHelpers, "Expected importHelpers to be enabled");
-        const specifier = file.imports[0];
+        const specifier = file.imports[0].specifier;
         Debug.assert(specifier && nodeIsSynthesized(specifier) && specifier.text === "tslib", `Expected sourceFile.imports[0] to be the synthesized tslib import`);
         return specifier;
     }

@@ -8389,7 +8389,7 @@ namespace Parser {
         const attributes = tryParseImportAttributes();
 
         parseSemicolon();
-        const node = factory.createImportDeclaration(modifiers, importClause, moduleSpecifier, attributes);
+        const node = factory.createImportDeclaration(modifiers, importClause, moduleSpecifier, isProvided, attributes);
         return withJSDoc(finishNode(node, pos), hasJSDoc);
     }
 

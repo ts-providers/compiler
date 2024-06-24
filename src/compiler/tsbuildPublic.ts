@@ -126,6 +126,7 @@ import {
     WatchType,
     WildcardDirectoryWatcher,
     WriteFileCallback,
+    createModuleLiteralResolutionLoader,
 } from "./_namespaces/ts.js";
 import * as performance from "./_namespaces/ts.performance.js";
 

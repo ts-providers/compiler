@@ -638,6 +638,7 @@ function createImportAdderWorker(sourceFile: SourceFile | FutureSourceFile, prog
                                 : undefined,
                         ),
                         d.moduleSpecifier,
+                        d.isProvided,
                         d.attributes,
                     ),
                     /*includeTrivia*/ true,

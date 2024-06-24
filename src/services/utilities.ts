@@ -2538,7 +2538,7 @@ export function getQuotePreference(sourceFile: SourceFile | FutureSourceFile, pr
     else {
         // ignore synthetic import added when importHelpers: true
         const firstModuleSpecifier = isFullSourceFile(sourceFile) && sourceFile.imports &&
-            find(sourceFile.imports, n => isStringLiteral(n.spcifier) && !nodeIsSynthesized(n.parent))?.specifier as StringLiteral;
+            find(sourceFile.imports, n => isStringLiteral(n.specifier) && !nodeIsSynthesized(n.specifier.parent))?.specifier as StringLiteral;
         return firstModuleSpecifier ? quotePreferenceFromString(firstModuleSpecifier, sourceFile) : QuotePreference.Double;
     }
 }

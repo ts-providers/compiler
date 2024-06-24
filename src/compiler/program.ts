@@ -3728,7 +3728,9 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
                     const moduleNameExpr = getExternalModuleName(node);
                     if (moduleNameExpr && isStringLiteral(moduleNameExpr) && moduleNameExpr.text) {
                         setParentRecursive(node, /*incremental*/ false);
-                        imports = append(imports, moduleNameExpr);
+                    const attributes = node.attributes;
+                    const moduleImport: ModuleImport = { specifier: moduleNameExpr, isProvided: false, attributes };
+                    imports = append(imports, moduleImport);
                     }
                 }
             }

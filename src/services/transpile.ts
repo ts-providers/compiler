@@ -113,7 +113,7 @@ const barebonesLibName = "lib.d.ts";
 let barebonesLibSourceFile: SourceFile | undefined;
 
 function transpileWorker(input: string, transpileOptions: TranspileOptions, declaration?: boolean): TranspileOutput {
-    barebonesLibSourceFile ??= createSourceFile(barebonesLibName, barebonesLibContent, { languageVersion: ScriptTarget.Latest });
+    barebonesLibSourceFile ??= createSourceFile(barebonesLibName, barebonesLibContent, { languageVersion: ScriptTarget.Latest }, /*isProvided*/ false);
 
     const diagnostics: Diagnostic[] = [];
 

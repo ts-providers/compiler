@@ -4114,6 +4114,7 @@ export class ProjectService {
             fileName,
             projectRootPath ? this.getNormalizedAbsolutePath(projectRootPath) : this.currentDirectory,
             /*openedByClient*/ true,
+            /*isProvided*/ false,
             fileContent,
             scriptKind,
             !!hasMixedContent,
