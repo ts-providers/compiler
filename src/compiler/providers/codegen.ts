@@ -65,6 +65,7 @@ export function createProvidedSourceFile(fileName: string, importAttributes: Imp
 // Based on https://github.com/microsoft/TypeScript/pull/39784
 function configureVirtualSourceFile(file: SourceFile, fileName: string): SourceFile {
     finishNode(file);
+    (file as Mutable<Node>).flags &= ~NodeFlags.Synthesized;
     file.referencedFiles = emptyArray;
     file.typeReferenceDirectives = emptyArray;
     file.libReferenceDirectives = emptyArray;
