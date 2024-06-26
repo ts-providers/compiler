@@ -8396,6 +8396,7 @@ export interface EmitHost extends ScriptReferenceHost, ModuleSpecifierResolution
     getSourceFileFromReference: Program["getSourceFileFromReference"];
     readonly redirectTargetsMap: RedirectTargetsMap;
     createHash?(data: string): string;
+    // addProvidedFile(hash: string): void;
 }
 
 /** @internal */

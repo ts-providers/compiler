@@ -1403,10 +1403,6 @@ export function resolveModuleNameFromCache(moduleName: string, containingFile: s
 }
 
 export function resolveModuleName(moduleName: string, containingFile: string, compilerOptions: CompilerOptions, host: ModuleResolutionHost, cache?: ModuleResolutionCache, redirectedReference?: ResolvedProjectReference, resolutionMode?: ResolutionMode): ResolvedModuleWithFailedLookupLocations {
-    if (isProvidedModuleName(containingFile)) {
-        console.log("LS4 BINGO", containingFile, moduleName);
-    }
-
     const traceEnabled = isTraceEnabled(compilerOptions, host);
     if (redirectedReference) {
         compilerOptions = redirectedReference.commandLine.options;
@@ -1418,15 +1414,7 @@ export function resolveModuleName(moduleName: string, containingFile: string, co
         }
     }
     const containingDirectory = getDirectoryPath(containingFile);
-
-    if (isProvidedModuleName(containingFile)) {
-        console.log("LS4a", containingDirectory);
-    }
     let result = cache?.getFromDirectoryCache(moduleName, resolutionMode, containingDirectory, redirectedReference);
-
-    if (isProvidedModuleName(containingFile)) {
-        console.log("LS4b", result?.resolvedModule?.resolvedFileName);
-    }
 
     if (result) {
         if (traceEnabled) {
@@ -1746,10 +1734,6 @@ function nodeNextModuleNameResolver(moduleName: string, containingFile: string, 
 function nodeNextModuleNameResolverWorker(features: NodeResolutionFeatures, moduleName: string, containingFile: string, compilerOptions: CompilerOptions, host: ModuleResolutionHost, cache?: ModuleResolutionCache, redirectedReference?: ResolvedProjectReference, resolutionMode?: ResolutionMode, conditions?: string[]): ResolvedModuleWithFailedLookupLocations {
     const containingDirectory = getDirectoryPath(containingFile);
 
-    if (isProvidedModuleName(containingFile)) {
-        console.log("LS5 NODENEXT resolver", moduleName, containingDirectory);
-    }
-
     // es module file or cjs-like input file, use a variant of the legacy cjs resolver that supports the selected modern features
     const esmMode = resolutionMode === ModuleKind.ESNext ? NodeResolutionFeatures.EsmMode : 0;
     let extensions = compilerOptions.noDtsResolution ? Extensions.ImplementationFiles : Extensions.TypeScript | Extensions.JavaScript | Extensions.Declaration;
@@ -1825,9 +1809,7 @@ function nodeModuleNameResolverWorker(
     // TODO(OR): Handle this properly
     const isProvided = isProvidedModuleName(moduleName);
     if (isProvided) {
-        console.log("LS6", moduleName);
         moduleName = moduleName.split(providedNameSeparator)[1];
-        console.log("LS6a", moduleName);
     }
 
     const traceEnabled = isTraceEnabled(compilerOptions, host);

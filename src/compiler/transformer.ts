@@ -74,6 +74,7 @@ import {
     VariableDeclaration,
 } from "./_namespaces/ts.js";
 import * as performance from "./_namespaces/ts.performance.js";
+import { transformProvidedImports } from "./providers/transformer.js";
 
 function getModuleTransformer(moduleKind: ModuleKind): TransformerFactory<SourceFile | Bundle> {
     switch (moduleKind) {
@@ -127,6 +128,8 @@ function getScriptTransformers(compilerOptions: CompilerOptions, customTransform
     addRange(transformers, customTransformers && map(customTransformers.before, wrapScriptTransformerFactory));
 
     transformers.push(transformTypeScript);
+
+    transformers.push(transformProvidedImports);
 
     if (compilerOptions.experimentalDecorators) {
         transformers.push(transformLegacyDecorators);

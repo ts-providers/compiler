@@ -453,7 +453,7 @@ export function forEachEmittedFile<T>(
     // console.trace("TO EMIT forEachEmittedFile 1", isArray(sourceFilesOrTargetSourceFile) ? sourceFilesOrTargetSourceFile.map(f => f.fileName) : sourceFilesOrTargetSourceFile?.fileName);
 
     const sourceFiles = isArray(sourceFilesOrTargetSourceFile) ? sourceFilesOrTargetSourceFile : getSourceFilesToEmit(host, sourceFilesOrTargetSourceFile, forceDtsEmit);
-    // console.trace("TO EMIT forEachEmittedFile 2", sourceFiles.map(f => f.fileName));
+    console.log("TO EMIT forEachEmittedFile 2", sourceFiles.map(f => f.fileName));
     const options = host.getCompilerOptions();
     if (!onlyBuildInfo) {
         if (options.outFile) {
@@ -523,6 +523,15 @@ export function getOutputPathsFor(sourceFile: SourceFile | Bundle, host: EmitHos
         return getOutputPathsForBundle(options, forceDtsPaths);
     }
     else {
+        if (sourceFile.scriptKind === ts.ScriptKind.Provided) {
+            return {
+                jsFilePath: "c:/code/ts-providers/emit/test.js",
+                sourceMapFilePath: "c:/code/ts-providers/emit/test.js.map",
+                // declarationFilePath: "c:/code/ts-providers/emit/test.d.ts",
+                // declarationMapPath: "c:/code/ts-providers/emit/test.d.ts.map",
+            }
+        }
+
         const ownOutputFilePath = getOwnEmitOutputFilePath(sourceFile.fileName, host, getOutputExtension(sourceFile.fileName, options));
         const isJsonFile = isJsonSourceFile(sourceFile);
         // If json file emits to the same location skip writing it, if emitDeclarationOnly skip writing it
@@ -753,6 +762,9 @@ export function emitFiles(
     var { enter, exit } = performance.createTimer("printTime", "beforePrint", "afterPrint");
     var emitSkipped = false;
     /* eslint-enable no-var */
+
+    // TODO(OR): Remove this
+    Error.stackTraceLimit = Infinity;
 
     // Emit each output file
     enter();
@@ -3596,6 +3608,10 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
         emitDecoratorsAndModifiers(node, node.modifiers, /*allowDecorators*/ false);
         emitTokenWithComment(SyntaxKind.ImportKeyword, node.modifiers ? node.modifiers.end : node.pos, writeKeyword, node);
         writeSpace();
+        if (node.isProvided) {
+            writeKeyword("provided");
+            writeSpace();
+        }
         if (node.importClause) {
             emit(node.importClause);
             writeSpace();

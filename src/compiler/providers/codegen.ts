@@ -1,6 +1,6 @@
 import deasync from "deasync";
 import { dirname } from "path";
-import { createNodeFactory, createPrinter, createSourceFile, Debug, emptyArray, emptyMap, forEachChildRecursively, getLanguageVariant, ImportAttributes, Mutable, NewLineKind, Node, NodeFactoryFlags, NodeFlags, noop, parseBaseNodeFactory, ReadonlyPragmaMap, ScriptKind, ScriptTarget, setParentRecursive, SourceFile, Statement, SyntaxKind } from "../_namespaces/ts";
+import { createPrinter, createSourceFile, emptyArray, emptyMap, forEachChildRecursively, getLanguageVariant, ImportAttributes, Mutable, NewLineKind, Node, NodeFlags, noop, ReadonlyPragmaMap, ScriptKind, ScriptTarget, setParentRecursive, SourceFile, Statement, SyntaxKind, TransformFlags } from "../_namespaces/ts";
 import { getProviderOptionsFromImportAttributes, providedNameSeparator } from "./utils";
 
 export function createProvidedSourceFile(fileName: string, importAttributes: ImportAttributes, setParentNodes: boolean): SourceFile {
@@ -26,27 +26,12 @@ export function createProvidedSourceFile(fileName: string, importAttributes: Imp
         return createSourceFile(fileName, "", ScriptTarget.ES5, /*isProvided*/ false);
     }
 
-    console.log("PROVIDER RESULT", providedSourceFile?.fileName, providedSourceFile?.statements.length, providedSourceFile.statements.map(s => s.kind));
-
-    // const printer2 = createPrinter({
-    //     newLine: NewLineKind.LineFeed,
-    //     removeComments: false,
-    //     omitTrailingSemicolon: true
-    // });
-
-    // console.log("PROVIDED FILE:", fileName);
-    // console.log(printer2.printFile(providedSourceFile));
-
     const declFile = configureVirtualSourceFile(providedSourceFile, fileName);
-
-    console.log("PROVIDED FILE CONFIGURED", providedSourceFile?.fileName);
 
     if (setParentNodes) {
         declFile.statements.forEach(s => (s as Mutable<Statement>).parent = declFile);
         setParentRecursive(declFile, true);
     }
-
-    console.log("PARENT NODES SET");
 
     const printer = createPrinter({
         newLine: NewLineKind.LineFeed,
@@ -64,8 +49,10 @@ export function createProvidedSourceFile(fileName: string, importAttributes: Imp
 
 // Based on https://github.com/microsoft/TypeScript/pull/39784
 function configureVirtualSourceFile(file: SourceFile, fileName: string): SourceFile {
-    finishNode(file);
-    (file as Mutable<Node>).kind = SyntaxKind.SourceFile;
+    (file as Mutable<SourceFile>).flags |= NodeFlags.Ambient;
+    (file as Mutable<SourceFile>).flags &= ~NodeFlags.Synthesized;
+    (file as Mutable<SourceFile>).kind = SyntaxKind.SourceFile;
+    file.identifiers = emptyMap;
     file.referencedFiles = emptyArray;
     file.typeReferenceDirectives = emptyArray;
     file.libReferenceDirectives = emptyArray;
@@ -73,7 +60,7 @@ function configureVirtualSourceFile(file: SourceFile, fileName: string): SourceF
     file.hasNoDefaultLib = false;
     file.pragmas = emptyMap as ReadonlyPragmaMap;
     file.parseDiagnostics = [];
-    file.isDeclarationFile = true;
+    file.isDeclarationFile = false;
     file.fileName = `${fileName}.ts`;
     file.bindDiagnostics = [];
     file.bindSuggestionDiagnostics = undefined;
@@ -113,11 +100,4 @@ function fixupNodeArrays(node: Node) {
             (arr as Mutable<typeof arr>).end = arr[arr.length - 1].end;
         }
     });
-}
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function finishNode<T extends Node>(node: T) {
-    (node as Mutable<T>).flags |= NodeFlags.Ambient;
-    (node as Mutable<T>).flags &= ~NodeFlags.Synthesized;
-    return node;
 }

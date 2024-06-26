@@ -1114,34 +1114,20 @@ export function loadWithModeAwareCache<Entry, SourceFile extends { scriptKind: S
     if (entries.length === 0) return emptyArray;
 
     if (containingSourceFile?.scriptKind === ScriptKind.Provided) {
-        console.log("CONTAINED IN PROVIDED FILE", containingFile);
         containingFile = containingFile.split(providedNameSeparator)[1];
     }
 
     const resolutions: Resolution[] = [];
     const cache = new Map<ModeAwareCacheKey, Resolution>();
-    // const providedCache = new Map<string, Resolution>();
     const loader = createLoader(containingFile, redirectedReference, options, host, resolutionCache);
     for (const entry of entries) {
-        // TODO: Provider aware cache
+        // TODO(OR): Provider aware cache
         const isProvided = loader.propertiesGetter.getIsProvided(entry);
 
         if (isProvided) {
             const name = loader.propertiesGetter.getName(entry);
             const mode = loader.propertiesGetter.getMode(entry, containingSourceFile, redirectedReference?.commandLine.options || options);
-            // let key = createModeAwareCacheKey(name, mode) as string;
-            // key = `${key}|${attributeKey}`;
-            // let result = providedCache.get(key);
-            // if (containingFile.includes("src"))
-            //     console.log("LOAD WITH CACHE", containingFile, key, result);
-            // if (!result) {
-            //     const loaderResult = loader.resolve(name, mode);
-            //     result = loaderResult;
-            //     console.trace("LOADER RESULT", loaderResult);
-            // }
-            console.log("PROVIDED LOAD", name, mode);
             const result = loader.resolve(name, mode);
-            console.log("PROVIDED LOAD RESULT", result);
             resolutions.push(result);
         } else {
             const name = loader.propertiesGetter.getName(entry);
@@ -1700,13 +1686,13 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     ) => readonly ResolvedModuleWithFailedLookupLocations[];
     const hasInvalidatedResolutions = host.hasInvalidatedResolutions || returnFalse;
     if (host.resolveModuleNameLiterals) {
-        console.log("### resolveModuleNameLiterals");
+        console.log("MODULE RESOLVER = resolveModuleNameLiterals");
         actualResolveModuleNamesWorker = (moduleImports, containingFile, redirectedReference, options, containingSourceFile, reusedNames) =>
             host.resolveModuleNameLiterals!(moduleImports.map(m => m.specifier), containingFile, redirectedReference, options, containingSourceFile, reusedNames);
         moduleResolutionCache = host.getModuleResolutionCache?.();
     }
     else if (host.resolveModuleNames) {
-        console.log("### resolveModuleNames");
+        console.log("MODULE RESOLVER = resolveModuleNames");
         actualResolveModuleNamesWorker = (moduleImports, containingFile, redirectedReference, options, containingSourceFile, reusedNames) =>
             host.resolveModuleNames!(
                 moduleImports.map(m => getModuleResolutionName(m.specifier)),
@@ -1727,7 +1713,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     }
     else {
         // TODO(OR): Provider aware resolution cache
-        console.log("### else");
+        console.log("MODULE RESOLVER = loadWithModeAwareCache");
         moduleResolutionCache = createModuleResolutionCache(currentDirectory, getCanonicalFileName, options);
         actualResolveModuleNamesWorker = (moduleImports, containingFile, redirectedReference, options, containingSourceFile) =>
             loadWithModeAwareCache(
@@ -2210,20 +2196,11 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
         if (!moduleImports.length) return emptyArray;
         // TODO(OR): Name mangling
         // const containingFileName = containingFile.scriptKind === ScriptKind.Provided
-        //     ? getNormalizedAbsolutePath(containingFile.fileName.split(providedNameSeparator)[1], currentDirectory)
-        //     : getNormalizedAbsolutePath(containingFile.originalFileName, currentDirectory);
-
-        // const containingFileName = containingFile.scriptKind === ScriptKind.Provided
         //     ? containingFile.fileName
         //     : getNormalizedAbsolutePath(containingFile.originalFileName, currentDirectory);
 
         const containingFileName = getNormalizedAbsolutePath(containingFile.originalFileName, currentDirectory);
-
         const redirectedReference = getRedirectReferenceForResolution(containingFile);
-
-        if (containingFile.scriptKind === ScriptKind.Provided) {
-            console.log("PROVIDED resolveModuleNamesWorker", containingFileName, redirectedReference);
-        }
 
         tracing?.push(tracing.Phase.Program, "resolveModuleNamesWorker", { containingFileName });
         performance.mark("beforeResolveModule");
@@ -2327,16 +2304,9 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     }
 
     function resolveModuleNamesReusingOldState(moduleImports: readonly ModuleImport[], file: SourceFile): readonly ResolvedModuleWithFailedLookupLocations[] {
-        if (file.scriptKind === ScriptKind.Provided) {
-            console.log("RESOLVING FOR PROVIDED FILE");
-        }
-
         if (structureIsReused === StructureIsReused.Not && !file.ambientModuleNames.length) {
             // If the old program state does not permit reusing resolutions and `file` does not contain locally defined ambient modules,
             // the best we can do is fallback to the default logic.
-            if (file.scriptKind === ScriptKind.Provided) {
-                console.log("RESOLVING FOR PROVIDED FILE 2", structureIsReused, file.ambientModuleNames.length);
-            }
             return resolveModuleNamesWorker(moduleImports, file, /*reusedNames*/ undefined);
         }
 
@@ -4062,14 +4032,8 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     }
 
     function addFileToFilesByName(file: SourceFile | undefined, path: Path, fileName: string, redirectedPath: Path | undefined) {
-        // if (file?.fileName.includes(providerPackagePrefix)) {
-        //     console.log("ADD FILE", "file.fileName", file?.fileName, "path", path, "fileName", fileName, "toPath", toPath(fileName), "RedirectedPath", redirectedPath);
-        // }
-
         if (file?.scriptKind === ScriptKind.Provided) {
-            console.log("ADDING PROVIDED FILE TO NAMES", fileName);
             updateFilesByNameMap(fileName, toPath(fileName), file);
-            // providedFilesByname.set(fileName, file);
         }
         else if (redirectedPath) {
             updateFilesByNameMap(fileName, redirectedPath, file);
