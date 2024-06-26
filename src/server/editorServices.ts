@@ -1,4 +1,4 @@
-import { isProvidedModuleName, providedNamePrefix } from "../compiler/providers/utils.js";
+import { isProvidedName, providedNamePrefix } from "../compiler/providers/utils.js";
 import {
     addToSeen,
     arrayFrom,
@@ -3216,7 +3216,7 @@ export class ProjectService {
     }
 
     getScriptInfo(uncheckedFileName: string) {
-        if (isProvidedModuleName(uncheckedFileName)) {
+        if (isProvidedName(uncheckedFileName)) {
             console.log([...this.filenameToScriptInfo.keys()]);
             return this.getScriptInfoForPath(uncheckedFileName as Path);
         }

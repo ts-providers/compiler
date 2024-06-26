@@ -108,7 +108,7 @@ import {
     versionMajorMinor,
     VersionRange,
 } from "./_namespaces/ts.js";
-import { isProvidedModuleName, providedNameSeparator } from "./providers/utils.js";
+import { isProvidedName, providedNameSeparator } from "./providers/utils.js";
 
 /** @internal */
 export function trace(host: ModuleResolutionHost, message: DiagnosticMessage, ...args: any[]): void {
@@ -1807,7 +1807,7 @@ function nodeModuleNameResolverWorker(
     conditions: readonly string[] | undefined,
 ): ResolvedModuleWithFailedLookupLocations {
     // TODO(OR): Handle this properly
-    const isProvided = isProvidedModuleName(moduleName);
+    const isProvided = isProvidedName(moduleName);
     if (isProvided) {
         moduleName = moduleName.split(providedNameSeparator)[1];
     }

@@ -1,4 +1,4 @@
-import { isProvidedModuleName } from "../compiler/providers/utils";
+import { isProvidedName } from "../compiler/providers/utils";
 import {
     arrayFrom,
     arrayReverseIterator,
@@ -3129,7 +3129,7 @@ export class Session<TMessage = string> implements EventSender {
             }
             else {
                 const info = this.projectService.getScriptInfo(fileNameInProject)!; // TODO: GH#18217
-                if (isProvidedModuleName(fileNameInProject)) {
+                if (isProvidedName(fileNameInProject)) {
                     console.log("GET DIAGNOSTICS FROM INFO", fileNameInProject, info?.fileName ?? "nil:info");
                 }
                 if (!info.isScriptOpen()) {

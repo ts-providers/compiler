@@ -17,7 +17,7 @@ import {
     some,
     startsWith,
 } from "./_namespaces/ts.js";
-import { isProvidedModuleName, providedNamePrefix, providedNameSeparator } from "./providers/utils.js";
+import { isProvidedName, providedNamePrefix, providedNameSeparator } from "./providers/utils.js";
 
 /**
  * Internally, we represent paths as strings with '/' as the directory separator.
@@ -311,7 +311,7 @@ export function getDirectoryPath(path: Path): Path;
 export function getDirectoryPath(path: string): string;
 /** @internal */
 export function getDirectoryPath(path: string): string {
-    if (isProvidedModuleName(path)) {
+    if (isProvidedName(path)) {
         path = path.split(providedNameSeparator)[1];
     }
 
@@ -631,7 +631,7 @@ export function getNormalizedPathComponents(path: string, currentDirectory: stri
 /** @internal */
 export function getNormalizedAbsolutePath(fileName: string, currentDirectory: string | undefined) {
     // TODO(OR): Name mangling
-    return isProvidedModuleName(fileName)
+    return isProvidedName(fileName)
         ? fileName
         : getPathFromPathComponents(getNormalizedPathComponents(fileName, currentDirectory));
 }

@@ -587,7 +587,7 @@ import {
     WriteFileCallbackData,
     YieldExpression,
 } from "./_namespaces/ts.js";
-import { isProvidedModuleName } from "./providers/utils.js";
+import { isProvidedName } from "./providers/utils.js";
 
 /** @internal */
 export const resolvingEmptyArray: never[] = [];
@@ -6504,12 +6504,13 @@ export function getSourceFilesToEmit(host: EmitHost, targetSourceFile?: SourceFi
     }
     else {
         const sourceFiles = targetSourceFile === undefined ? host.getSourceFiles() : [targetSourceFile];
-        const result = filter(
+        const filteredFiles = filter(
             sourceFiles,
             sourceFile => sourceFileMayBeEmitted(sourceFile, host, forceDtsEmit),
         );
-        console.log("TO EMIT getSourceFilesToEmit 2", sourceFiles.filter(f => !f.fileName.includes("local") && !f.fileName.includes("types")).map(f => f.fileName));
-        return result;
+        const uniqueFiles = filteredFiles.filter((file, index, array) => index === array.findIndex(f => f.fileName === file.fileName));
+        // console.log("TO EMIT getSourceFilesToEmit 2", filteredFiles.map(f => f.fileName), uniqueFiles.map(f => f.fileName));
+        return uniqueFiles;
     }
 }
 

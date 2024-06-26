@@ -1,10 +1,10 @@
 import deasync from "deasync";
 import { dirname } from "path";
 import { createPrinter, createSourceFile, emptyArray, emptyMap, forEachChildRecursively, getLanguageVariant, ImportAttributes, Mutable, NewLineKind, Node, NodeFlags, noop, ReadonlyPragmaMap, ScriptKind, ScriptTarget, setParentRecursive, SourceFile, Statement, SyntaxKind, TransformFlags } from "../_namespaces/ts";
-import { getProviderOptionsFromImportAttributes, providedNameSeparator } from "./utils";
+import { getImportAttributesAsRecord, providedNameSeparator } from "./utils";
 
 export function createProvidedSourceFile(fileName: string, importAttributes: ImportAttributes, setParentNodes: boolean): SourceFile {
-    const providerOptions = getProviderOptionsFromImportAttributes(importAttributes);
+    const providerOptions = getImportAttributesAsRecord(importAttributes);
     console.log("CREATING PROVIDED SOURCE FILE", fileName, `OPTIONS: '${JSON.stringify(providerOptions)}'`);
 
     const originalFileName = fileName.split(providedNameSeparator)[1];

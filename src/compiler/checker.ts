@@ -1117,7 +1117,7 @@ import {
 } from "./_namespaces/ts.js";
 import * as moduleSpecifiers from "./_namespaces/ts.moduleSpecifiers.js";
 import * as performance from "./_namespaces/ts.performance.js";
-import { getProvidedModuleName, isProvidedModuleName } from "./providers/utils.js";
+import { getProvidedModuleName, isProvidedName } from "./providers/utils.js";
 
 const ambientModuleSymbolRegex = /^".+"$/;
 const anon = "(anonymous)" as __String & string;
@@ -49912,7 +49912,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         // Bind all source files and propagate errors
         const files = host.getSourceFiles();
 
-        console.log("BINDING", files.filter(f => isProvidedModuleName(f.fileName)).map(f => f.fileName));
+        console.log("BINDING", files.filter(f => isProvidedName(f.fileName)).map(f => f.fileName));
 
         for (const file of files) {
             bindSourceFile(file, compilerOptions);

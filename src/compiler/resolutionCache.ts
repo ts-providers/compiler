@@ -81,7 +81,7 @@ import {
 } from "./_namespaces/ts.js";
 import { providerPackagePrefix } from "./providers/debugging.js";
 import { ModuleImport } from "./providers/types.js";
-import { isProvidedModuleName, providedNameSeparator } from "./providers/utils.js";
+import { isProvidedName, providedNameSeparator } from "./providers/utils.js";
 
 /** @internal */
 export interface HasInvalidatedFromResolutionCache {

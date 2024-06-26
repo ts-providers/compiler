@@ -1,27 +1,30 @@
 import { NotUndefined, sha1 } from "object-hash";
 import { Identifier, ImportAttributes, StringLiteral } from "../types";
-import { ProviderOptions } from "./types";
 import { Debug } from "../_namespaces/ts";
 
 export const providedNameSeparator = "|";
 export const providedNamePrefix = `Provided${providedNameSeparator}`;
 
-export function isProvidedModuleName(name: string): boolean {
+export function isProvidedName(name: string): boolean {
     return name.startsWith(providedNamePrefix);
 }
 
-export function getProvidedFileName(fileName: string, importAttributes: ImportAttributes): string {
-    return `${providedNamePrefix}${fileName}${providedNameSeparator}${getProvidedImportIdentifier(importAttributes)}`;
+export function getProvidedFileName(fileName: string, packageName: string, importAttributes: ImportAttributes): string {
+    return `${providedNamePrefix}${fileName}${providedNameSeparator}${getProvidedImportHash(packageName, importAttributes)}`;
 }
 
 
 export function getProvidedModuleName(packageName: string, importAttributes: ImportAttributes): string {
-    return `${providedNamePrefix}${packageName}${providedNameSeparator}${getProvidedImportIdentifier(importAttributes)}`;
+    return `${providedNamePrefix}${packageName}${providedNameSeparator}${getProvidedImportHash(packageName, importAttributes)}`;
 }
 
-export function getProvidedImportIdentifier(importAttributes: ImportAttributes): string {
+export function getProvidedImportHash(packageName: string, importAttributes: ImportAttributes): string {
     Debug.assert(importAttributes !== undefined);
-    return createObjectHash(importAttributes);
+    Debug.assert(!isProvidedName(packageName));
+    const importOptions = getImportAttributesAsKeyValuePairs(importAttributes);
+    const result = createObjectHash({ packageName, importOptions });
+    // console.log("PROVIDER HASH", packageName, importOptions, result);
+    return result;
 }
 
 function createObjectHash<T extends NotUndefined>(instance: T): string {
@@ -37,44 +40,19 @@ export function getProviderSamplePath(importAttributes?: ImportAttributes): stri
     return attribute ? (attribute.value as StringLiteral).text : undefined;
 }
 
-export function getImportAttributeProperties(attributes?: ImportAttributes) {
+export function getImportAttributesAsKeyValuePairs(attributes?: ImportAttributes) {
     return attributes?.elements.map(e => ({ key: (e.name as Identifier).escapedText, value: (e.value as StringLiteral).text }));
 }
 
-export function getProviderOptionsFromImportAttributes(attributes?: ImportAttributes): ProviderOptions {
+export function getImportAttributesAsRecord(attributes?: ImportAttributes): Record<string, string> {
     const result: Record<string, string> = {};
 
     if (attributes) {
-        const keyValuePairs = getImportAttributeProperties(attributes) ?? [];
+        const keyValuePairs = getImportAttributesAsKeyValuePairs(attributes) ?? [];
         for (const kv of keyValuePairs) {
             result[kv.key as string] = kv.value;
         }
     }
 
-    return result as ProviderOptions;
+    return result;
 }
-
-// export function getFileNameWithSample(fileName: string, samplePath: string): string {
-//     const sanitizedSamplePath = samplePath.replace(":", "_").replace("/", "_");
-//     const result = fileName + "____" + sanitizedSamplePath + ".d.ts";
-//     return result.toLowerCase();
-// }
-
-// export function getModuleNameWithSample(moduleName: string, samplePath: string): string {
-//     console.trace("ADDING SUFFIX TO MODULE NAME", moduleName, samplePath);
-//     const sanitizedSamplePath = samplePath.replace(":", "_").replace("/", "_");
-//     const result = moduleName + "__" + sanitizedSamplePath;
-//     return result;
-// }
-
-export function generateHash(length = 6): string {
-    return ((Math.random() + 1).toString(36).substring(length));
-}
-
-// export function getFileNameWithSample(fileName: string, samplePath: string): string {
-//     return fileName;
-// }
-
-// export function getModuleNameWithSample(moduleName: string, samplePath: string): string {
-//     return moduleName;
-// }

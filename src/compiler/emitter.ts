@@ -423,6 +423,7 @@ import {
     YieldExpression,
 } from "./_namespaces/ts.js";
 import * as performance from "./_namespaces/ts.performance.js";
+import { providedNameSeparator } from "./providers/utils.js";
 
 const brackets = createBracketsMap();
 
@@ -453,7 +454,7 @@ export function forEachEmittedFile<T>(
     // console.trace("TO EMIT forEachEmittedFile 1", isArray(sourceFilesOrTargetSourceFile) ? sourceFilesOrTargetSourceFile.map(f => f.fileName) : sourceFilesOrTargetSourceFile?.fileName);
 
     const sourceFiles = isArray(sourceFilesOrTargetSourceFile) ? sourceFilesOrTargetSourceFile : getSourceFilesToEmit(host, sourceFilesOrTargetSourceFile, forceDtsEmit);
-    console.log("TO EMIT forEachEmittedFile 2", sourceFiles.map(f => f.fileName));
+    // console.log("TO EMIT forEachEmittedFile 2", sourceFiles.map(f => f.fileName));
     const options = host.getCompilerOptions();
     if (!onlyBuildInfo) {
         if (options.outFile) {
@@ -523,12 +524,18 @@ export function getOutputPathsFor(sourceFile: SourceFile | Bundle, host: EmitHos
         return getOutputPathsForBundle(options, forceDtsPaths);
     }
     else {
+        // TODO(OR): Handle case when outDir is not set properly
+        // TODO(OR): Handle case when outFile is used
         if (sourceFile.scriptKind === ts.ScriptKind.Provided) {
+            const outDir = options.outDir!;
+            const hash = sourceFile.fileName.split(providedNameSeparator)[2];
+
+            const jsFilePath = !options.emitDeclarationOnly ? `${outDir}/${hash}.js` : undefined;
+            const sourceMapFilePath = jsFilePath ? `${outDir}/${hash}.js.map` : undefined;
+            const declarationFilePath = getEmitDeclarations(options) ? `${outDir}/${hash}.d.ts` : undefined;
+            const declarationMapPath = getAreDeclarationMapsEnabled(options) ? `${outDir}/${hash}.d.ts.map` : undefined;
             return {
-                jsFilePath: "c:/code/ts-providers/emit/test.js",
-                sourceMapFilePath: "c:/code/ts-providers/emit/test.js.map",
-                // declarationFilePath: "c:/code/ts-providers/emit/test.d.ts",
-                // declarationMapPath: "c:/code/ts-providers/emit/test.d.ts.map",
+                jsFilePath, sourceMapFilePath, declarationFilePath, declarationMapPath
             }
         }
 

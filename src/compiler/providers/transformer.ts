@@ -1,5 +1,6 @@
-import { Bundle, chainBundle, ImportDeclaration, isImportDeclaration, Mutable, Node, SourceFile, TransformationContext, TransformFlags, visitEachChild, VisitResult } from "../_namespaces/ts.js";
-import { getProvidedImportIdentifier } from "./utils.js";
+import { Bundle, chainBundle, ImportDeclaration, isImportDeclaration, Mutable, Node, SourceFile, StringLiteralLike, TransformationContext, TransformFlags, visitEachChild, VisitResult } from "../_namespaces/ts.js";
+import { providerPackagePrefix } from "./debugging.js";
+import { getProvidedImportHash, providedNameSeparator } from "./utils.js";
 
 export function transformProvidedImports(context: TransformationContext): (x: SourceFile | Bundle) => SourceFile | Bundle {
     const factory = context.factory;
@@ -19,12 +20,13 @@ export function transformProvidedImports(context: TransformationContext): (x: So
             return node;
         }
 
-        console.log("TRANSFORMING PROVIDED IMPORT");
 
         // Remove import attributes and replace module specifier with relative path to a generated .js file.
         let declNode = node as ImportDeclaration;
-        const providerAttributesHash = getProvidedImportIdentifier(declNode.attributes!);
-        const specifier = factory.createStringLiteral(`./${providerAttributesHash}.js`);
+        const specifierText = (declNode.moduleSpecifier as StringLiteralLike).text;
+        const providedImportHash = specifierText.split(providedNameSeparator)[2];
+        console.log("TRANSFORMING PROVIDED IMPORT",  specifierText, providedImportHash);
+        const specifier = factory.createStringLiteral(`./${providedImportHash}.js`);
 
         declNode = factory.updateImportDeclaration(node, node.modifiers, node.importClause, specifier, false, undefined);
 

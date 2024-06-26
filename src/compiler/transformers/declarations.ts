@@ -177,6 +177,7 @@ import {
     PropertySignature,
     pushIfUnique,
     removeAllComments,
+    ScriptKind,
     ScriptTarget,
     SetAccessorDeclaration,
     setCommentRange,
@@ -430,6 +431,10 @@ export function transformDeclarations(context: TransformationContext) {
     function transformRoot(node: SourceFile | Bundle): SourceFile | Bundle;
     function transformRoot(node: SourceFile | Bundle) {
         if (node.kind === SyntaxKind.SourceFile && node.isDeclarationFile) {
+            return node;
+        }
+
+        if (node.kind === SyntaxKind.SourceFile && node.scriptKind === ScriptKind.Provided) {
             return node;
         }
 
@@ -859,6 +864,17 @@ export function transformDeclarations(context: TransformationContext) {
     }
 
     function transformImportDeclaration(decl: ImportDeclaration) {
+        // if (decl.isProvided) {
+        //     return factory.updateImportDeclaration(
+        //         decl,
+        //         decl.modifiers,
+        //         decl.importClause,
+        //         decl.moduleSpecifier,
+        //         /*isProvided*/ false,
+        //         /*attributes*/ undefined,
+        //     );
+        // }
+
         if (!decl.importClause) {
             // import "mod" - possibly needed for side effects? (global interface patches, module augmentations, etc)
             return factory.updateImportDeclaration(
@@ -866,7 +882,7 @@ export function transformDeclarations(context: TransformationContext) {
                 decl.modifiers,
                 decl.importClause,
                 rewriteModuleSpecifier(decl, decl.moduleSpecifier),
-                decl.isProvided,
+                /*isProvided*/ false,
                 tryGetResolutionModeOverride(decl.attributes),
             );
         }

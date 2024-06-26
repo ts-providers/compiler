@@ -334,7 +334,7 @@ import * as performance from "./_namespaces/ts.performance.js";
 import { logIfProviderFile, providerPackagePrefix } from "./providers/debugging.js";
 import { createTypeProviderHost, TypeProviderHost } from "./providers/host.js";
 import { ModuleImport } from "./providers/types.js";
-import { getProvidedFileName, getProvidedModuleName, getProviderSamplePath, isProvidedModuleName, providedNameSeparator } from "./providers/utils.js";
+import { getProvidedFileName, getProvidedModuleName, getProviderSamplePath, isProvidedName, providedNameSeparator } from "./providers/utils.js";
 
 export function findConfigFile(searchPath: string, fileExists: (fileName: string) => boolean, configName = "tsconfig.json"): string | undefined {
     return forEachAncestorDirectory(searchPath, ancestor => {
@@ -1012,7 +1012,7 @@ export const moduleLiteralResolutionNameAndModeGetter: ResolutionPropertiesGette
     getName: entry => getModuleResolutionName(entry),
     getMode: (entry, file, compilerOptions) => getModeForUsageLocation(file, entry, compilerOptions),
     // TODO(OR): Rework?
-    getIsProvided: entry => isProvidedModuleName(getModuleResolutionName(entry))
+    getIsProvided: entry => isProvidedName(getModuleResolutionName(entry))
 };
 
 /** @internal */
@@ -2277,7 +2277,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
 
     function getCommonSourceDirectory() {
         if (commonSourceDirectory === undefined) {
-            const emittedFiles = filter(files, file => sourceFileMayBeEmitted(file, program));
+            const emittedFiles = filter(files, file => sourceFileMayBeEmitted(file, program) && file.scriptKind !== ScriptKind.Provided);
             commonSourceDirectory = ts_getCommonSourceDirectory(
                 options,
                 () => mapDefined(emittedFiles, file => file.isDeclarationFile ? undefined : file.fileName),
@@ -3627,8 +3627,8 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
                         ? node.attributes
                         : undefined;
 
-                    if (isProvided && attributes && !isProvidedModuleName(moduleNameExpr.text)) {
-                        moduleNameExpr.text = getProvidedModuleName(moduleNameExpr.text, attributes!);
+                    if (isProvided && attributes && !isProvidedName(moduleNameExpr.text)) {
+                        moduleNameExpr.text = getProvidedModuleName(moduleNameExpr.text, attributes);
                     }
 
                     const moduleImport: ModuleImport = { specifier: moduleNameExpr, isProvided, attributes };
@@ -4305,28 +4305,31 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
             (resolvedModules ??= new Map()).set(file.path, resolutionsInFile);
             // (resolvedProvidedModules ??= new Map()).set(file.path, providedResolutionsInFile);
             for (let index = 0; index < moduleImports.length; index++) {
-                const resolution = resolutions[index].resolvedModule;
+                const resolution = resolutions[index]?.resolvedModule;
+                const isProvided = moduleImports[index]?.isProvided;
                 let moduleName = moduleNames[index].text;
 
-                const isProvided = moduleImports[index].isProvided;
-                const importAttributes = moduleImports[index].attributes;
-
+                // TODO(OR): Handle this better
                 if (resolution && isProvided) {
-                    // TODO(OR): Handle this properly
-                    if (!isProvidedModuleName(moduleName) && importAttributes) {
-                        moduleName = getProvidedModuleName(moduleName, importAttributes);
-                    }
-                    const prevResolvedFileName = resolution.resolvedFileName;
-                    const prevPackageId = resolution.packageId;
-                    // TODO(OR): Handle this properly
-                    if (isProvidedModuleName(prevResolvedFileName)) {
-                        console.log("CACHED PROVIDED MODULE", file.fileName, moduleName, prevResolvedFileName, prevPackageId);
-                    }
-                    else if (importAttributes) {
-                        resolution.resolvedFileName = getProvidedFileName(prevResolvedFileName, importAttributes);
-                        resolution.packageId = { ...prevPackageId!, name: getProvidedModuleName(prevPackageId!.name, importAttributes) };
-                        console.log("NEW PROVIDED MODULE", file.fileName, moduleName);
-                    }
+                    const importAttributes = moduleImports[index].attributes ?? factory.createImportAttributes(factory.createNodeArray());
+
+                    const [originalPackageName, providedModuleName] = isProvidedName(moduleName)
+                        ? [moduleName.split(providedNameSeparator)[1], moduleName]
+                        : [moduleName, getProvidedModuleName(moduleName, importAttributes)];
+
+                    moduleName = providedModuleName;
+
+                    console.log(resolution.resolvedFileName, originalPackageName, providedModuleName);
+
+                    resolution.resolvedFileName = !isProvidedName(resolution.resolvedFileName)
+                        ? getProvidedFileName(resolution.resolvedFileName, originalPackageName, importAttributes)
+                        : resolution.resolvedFileName;
+
+                    console.log("SET NAME TO", resolution.resolvedFileName);
+
+                    resolution.packageId = resolution.packageId && !isProvidedName(resolution.packageId?.name)
+                        ? { ...resolution.packageId, name: getProvidedModuleName(originalPackageName, importAttributes) }
+                        : resolution.packageId;
                 }
 
                 const mode = getModeForUsageLocationWorker(file, moduleNames[index], optionsForFile);
@@ -4367,7 +4370,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
                     modulesWithElidedImports.set(file.path, true);
                 }
                 else if (shouldAddFile) {
-                    logIfProviderFile(resolvedFileName, "BEFORE findSourceFile", "SAMPLE", getProviderSamplePath(moduleImports[index].attributes));
+                    console.log("USING NAME", resolvedFileName);
                     findSourceFile(
                         resolvedFileName,
                         /*isDefaultLib*/ false,
@@ -4773,7 +4776,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
             if (emitFileName) {
                 const emitFilePath = toPath(emitFileName);
                 // Report error if the output overwrites input file
-                if (!isProvidedModuleName(emitFileName) && filesByName.has(emitFilePath)) {
+                if (!isProvidedName(emitFileName) && filesByName.has(emitFilePath)) {
                     let chain: DiagnosticMessageChain | undefined;
                     if (!options.configFilePath) {
                         // The program is from either an inferred project or an external project
