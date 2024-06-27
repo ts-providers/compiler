@@ -1,6 +1,6 @@
 import deasync from "deasync";
 import { dirname } from "path";
-import { createPrinter, createSourceFile, emptyArray, emptyMap, forEachChildRecursively, getLanguageVariant, ImportAttributes, Mutable, NewLineKind, Node, NodeFlags, noop, ReadonlyPragmaMap, ScriptKind, ScriptTarget, setParentRecursive, SourceFile, Statement, SyntaxKind, TransformFlags } from "../_namespaces/ts";
+import { createPrinter, createSourceFile, emptyArray, emptyMap, forEachChild, forEachChildRecursively, getLanguageVariant, ImportAttributes, Mutable, NewLineKind, Node, NodeFlags, noop, ReadonlyPragmaMap, ScriptKind, ScriptTarget, setParentRecursive, SourceFile, Statement, SyntaxKind, TransformFlags } from "../_namespaces/ts";
 import { getImportAttributesAsRecord, providedNameSeparator } from "./utils";
 
 export function createProvidedSourceFile(fileName: string, importAttributes: ImportAttributes, setParentNodes: boolean): SourceFile {
@@ -26,12 +26,22 @@ export function createProvidedSourceFile(fileName: string, importAttributes: Imp
         return createSourceFile(fileName, "", ScriptTarget.ES5, /*isProvided*/ false);
     }
 
-    const declFile = configureVirtualSourceFile(providedSourceFile, fileName);
+    const file = configureVirtualSourceFile(providedSourceFile, fileName);
+
+    // file.statements.forEach(s => (s as Mutable<Node>).transformFlags |= TransformFlags.ContainsTypeScript);
+
 
     if (setParentNodes) {
-        declFile.statements.forEach(s => (s as Mutable<Statement>).parent = declFile);
-        setParentRecursive(declFile, true);
+        file.statements.forEach(s => (s as Mutable<Statement>).parent = file);
+        setParentRecursive(file, true);
     }
+
+    const recurse = (node: Node) => {
+        (node as Mutable<Node>).transformFlags |= TransformFlags.ContainsTypeScript;
+        forEachChild(node, recurse);
+    }
+
+    recurse(file);
 
     const printer = createPrinter({
         newLine: NewLineKind.LineFeed,
@@ -40,11 +50,11 @@ export function createProvidedSourceFile(fileName: string, importAttributes: Imp
     });
 
     console.log("PROVIDED FILE:", fileName);
-    console.log(printer.printFile(declFile));
+    console.log(printer.printFile(file));
 
-    declFile.importAttributes = importAttributes;
+    file.importAttributes = importAttributes;
 
-    return declFile;
+    return file;
 }
 
 // Based on https://github.com/microsoft/TypeScript/pull/39784
@@ -69,20 +79,8 @@ function configureVirtualSourceFile(file: SourceFile, fileName: string): SourceF
     file.scriptKind = ScriptKind.Provided;
     file.externalModuleIndicator = file.statements[0];
 
-    // Immediately printing the synthetic file declaration text allows us to generate concrete positions
-    // for all the nodes we've synthesized, and essentially un-synthesize them (making them appear, by all
-    // rights, to be veritable parse tree nodes)
-    file.text = createPrinter({}, {
-        onEmitNode(hint, node, cb, getTextPos) {
-            const start = getTextPos();
-            cb(hint, node);
-            if (node) {
-                (node as Mutable<typeof node>).pos = start;
-                (node as Mutable<typeof node>).end = getTextPos();
-            }
-        },
 
-    }).printFile(file);
+    unsynthesizeFile(file);
     (file.endOfFileToken as Mutable<typeof file.endOfFileToken>).pos = file.text.length;
     (file.endOfFileToken as Mutable<typeof file.endOfFileToken>).end = file.text.length;
 
@@ -91,6 +89,25 @@ function configureVirtualSourceFile(file: SourceFile, fileName: string): SourceF
     fixupNodeArrays(file);
 
     return file;
+}
+
+// We need the generated AST nodes to behave as a normal nodes parsed from a text file in the rest of the compiler.
+// To achieve this, we need to remove the Synthesized flag and set their text position start and end.
+const unsynthetizationPrinter = createPrinter({}, {
+    onEmitNode(hint, node, cb, getTextPos) {
+        const start = getTextPos();
+        cb(hint, node);
+        if (node) {
+            (node as Mutable<typeof node>).flags &= ~NodeFlags.Synthesized;
+            (node as Mutable<typeof node>).pos = start;
+            (node as Mutable<typeof node>).end = getTextPos();
+        }
+    },
+
+});
+
+function unsynthesizeFile(file: SourceFile) {
+    file.text = unsynthetizationPrinter.printFile(file);
 }
 
 function fixupNodeArrays(node: Node) {

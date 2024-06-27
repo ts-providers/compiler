@@ -16,7 +16,6 @@ import {
     SymlinkCache,
     ThisContainer,
 } from "./_namespaces/ts.js";
-import { TypeProviderHost } from "./providers/host.js";
 import { ModuleImport } from "./providers/types.js";
 
 // branded string type used to store absolute, normalized and canonicalized paths
@@ -4739,8 +4738,6 @@ export interface Program extends ScriptReferenceHost {
      * Gets a type checker that can be used to semantically analyze source files in the program.
      */
     getTypeChecker(): TypeChecker;
-
-    getTypeProviderHost(): TypeProviderHost;
 
     /** @internal */ getCommonSourceDirectory(): string;
 

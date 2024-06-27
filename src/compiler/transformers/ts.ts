@@ -201,6 +201,7 @@ import {
     visitNodes,
     visitParameterList,
     VisitResult,
+    forEachChild,
 } from "../_namespaces/ts.js";
 
 /**
@@ -301,6 +302,7 @@ export function transformTypeScript(context: TransformationContext) {
      * @param node A SourceFile node.
      */
     function transformSourceFile(node: SourceFile) {
+        console.log("TS TRANSFORM", node.fileName, node.isDeclarationFile, node.scriptKind);
         if (node.isDeclarationFile) {
             return node;
         }
@@ -392,8 +394,10 @@ export function transformTypeScript(context: TransformationContext) {
      */
     function visitorWorker(node: Node): VisitResult<Node | undefined> {
         if (node.transformFlags & TransformFlags.ContainsTypeScript) {
+            // console.log("RECURSE", getTextOfNode(node));
             return visitTypeScript(node);
         }
+        // console.log("END", getTextOfNode(node));
         return node;
     }
 
@@ -417,6 +421,7 @@ export function transformTypeScript(context: TransformationContext) {
             case SyntaxKind.ImportEqualsDeclaration:
             case SyntaxKind.ExportAssignment:
             case SyntaxKind.ExportDeclaration:
+                console.log("SOURCE ELEM", getTextOfNode(node));
                 return visitElidableStatement(node as ImportDeclaration | ImportEqualsDeclaration | ExportAssignment | ExportDeclaration);
             default:
                 return visitorWorker(node);
@@ -432,13 +437,16 @@ export function transformTypeScript(context: TransformationContext) {
      * as long as the local bindings for the declarations are unchanged.
      */
     function isElisionBlocked(node: ImportDeclaration | ImportEqualsDeclaration | ExportAssignment | ExportDeclaration) {
-        const parsed = getParseTreeNode(node);
+            console.log(`ELLISION 0`, getTextOfNode(node));
+            const parsed = getParseTreeNode(node);
         if (parsed === node || isExportAssignment(node)) {
+            console.log(`ELLISION 1`);
             return false;
         }
 
         if (!parsed || parsed.kind !== node.kind) {
             // no longer safe to elide as the declaration was replaced with a node of a different kind
+            console.log(`ELLISION 2`, parsed, parsed?.kind, node.kind, node.flags & NodeFlags.Synthesized);
             return true;
         }
 
@@ -446,40 +454,49 @@ export function transformTypeScript(context: TransformationContext) {
             case SyntaxKind.ImportDeclaration:
                 Debug.assertNode(parsed, isImportDeclaration);
                 if (node.importClause !== parsed.importClause) {
-                    return true; // no longer safe to elide as the import clause has changed
+            console.log(`ELLISION 3`);
+            return true; // no longer safe to elide as the import clause has changed
                 }
                 if (node.attributes !== parsed.attributes) {
-                    return true; // no longer safe to elide as the import attributes have changed
+            console.log(`ELLISION 4`);
+            return true; // no longer safe to elide as the import attributes have changed
                 }
                 break;
             case SyntaxKind.ImportEqualsDeclaration:
                 Debug.assertNode(parsed, isImportEqualsDeclaration);
                 if (node.name !== parsed.name) {
-                    return true; // no longer safe to elide as local binding has changed
+            console.log(`ELLISION 5`);
+            return true; // no longer safe to elide as local binding has changed
                 }
                 if (node.isTypeOnly !== parsed.isTypeOnly) {
-                    return true; // no longer safe to elide as `type` modifier has changed
+            console.log(`ELLISION 6`);
+            return true; // no longer safe to elide as `type` modifier has changed
                 }
                 if (node.moduleReference !== parsed.moduleReference && (isEntityName(node.moduleReference) || isEntityName(parsed.moduleReference))) {
-                    return true; // no longer safe to elide as EntityName reference has changed.
+            console.log(`ELLISION 7`);
+            return true; // no longer safe to elide as EntityName reference has changed.
                 }
                 break;
             case SyntaxKind.ExportDeclaration:
                 Debug.assertNode(parsed, isExportDeclaration);
                 if (node.exportClause !== parsed.exportClause) {
-                    return true; // no longer safe to elide as the export clause has changed
+            console.log(`ELLISION 8`);
+            return true; // no longer safe to elide as the export clause has changed
                 }
                 if (node.attributes !== parsed.attributes) {
-                    return true; // no longer safe to elide as the export attributes have changed
+            console.log(`ELLISION 9`);
+            return true; // no longer safe to elide as the export attributes have changed
                 }
                 break;
         }
+        console.log(`ELLISION 10`);
 
         return false;
     }
 
     function visitElidableStatement(node: ImportDeclaration | ImportEqualsDeclaration | ExportAssignment | ExportDeclaration): VisitResult<Node | undefined> {
         if (isElisionBlocked(node)) {
+            console.log("ELISION BLOCKED", getTextOfNode(node), (node.transformFlags & TransformFlags.ContainsTypeScript) != 0);
             // We do not reuse `visitorWorker`, as the ellidable statement syntax kinds are technically unrecognized by
             // the switch-case in `visitTypeScript`, and will trigger debug failures when debug verbosity is turned up.
             if (node.transformFlags & TransformFlags.ContainsTypeScript) {
@@ -489,6 +506,7 @@ export function transformTypeScript(context: TransformationContext) {
             // Otherwise, we can just return the node
             return node;
         }
+        console.log("ELISION NOT BLOCKED", getTextOfNode(node));
         switch (node.kind) {
             case SyntaxKind.ImportDeclaration:
                 return visitImportDeclaration(node);
@@ -694,8 +712,8 @@ export function transformTypeScript(context: TransformationContext) {
             case SyntaxKind.IndexedAccessType:
             case SyntaxKind.MappedType:
             case SyntaxKind.LiteralType:
-                // TypeScript type nodes are elided.
-                // falls through
+            // TypeScript type nodes are elided.
+            // falls through
             case SyntaxKind.IndexSignature:
                 // TypeScript index signatures are elided.
                 return undefined;
@@ -1953,7 +1971,7 @@ export function transformTypeScript(context: TransformationContext) {
         if (constantValue !== undefined) {
             return typeof constantValue === "string" ? factory.createStringLiteral(constantValue) :
                 constantValue < 0 ? factory.createPrefixUnaryExpression(SyntaxKind.MinusToken, factory.createNumericLiteral(-constantValue)) :
-                factory.createNumericLiteral(constantValue);
+                    factory.createNumericLiteral(constantValue);
         }
         else {
             enableSubstitutionForNonQualifiedEnumMembers();
@@ -2266,6 +2284,7 @@ export function transformTypeScript(context: TransformationContext) {
             // Always elide type-only imports
             return undefined;
         }
+        console.log("VISIT DECL", getTextOfNode(node));
 
         // Elide the declaration if the import clause was elided.
         const importClause = visitNode(node.importClause, visitImportClause, isImportClause);
@@ -2300,6 +2319,7 @@ export function transformTypeScript(context: TransformationContext) {
      * @param node The named import bindings node.
      */
     function visitNamedImportBindings(node: NamedImportBindings): VisitResult<NamedImportBindings> | undefined {
+        console.log("VISIT NAMED IMPORT", getTextOfNode(node));
         if (node.kind === SyntaxKind.NamespaceImport) {
             // Elide a namespace import if it is not referenced.
             return shouldEmitAliasDeclaration(node) ? node : undefined;
@@ -2717,7 +2737,7 @@ export function transformTypeScript(context: TransformationContext) {
             setConstantValue(node, constantValue);
             const substitute = typeof constantValue === "string" ? factory.createStringLiteral(constantValue) :
                 constantValue < 0 ? factory.createPrefixUnaryExpression(SyntaxKind.MinusToken, factory.createNumericLiteral(-constantValue)) :
-                factory.createNumericLiteral(constantValue);
+                    factory.createNumericLiteral(constantValue);
 
             if (!compilerOptions.removeComments) {
                 const originalNode = getOriginalNode(node, isAccessExpression);

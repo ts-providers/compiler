@@ -332,7 +332,6 @@ import {
 } from "./_namespaces/ts.js";
 import * as performance from "./_namespaces/ts.performance.js";
 import { logIfProviderFile, providerPackagePrefix } from "./providers/debugging.js";
-import { createTypeProviderHost, TypeProviderHost } from "./providers/host.js";
 import { ModuleImport } from "./providers/types.js";
 import { getProvidedFileName, getProvidedModuleName, getProviderSamplePath, isProvidedName, providedNameSeparator } from "./providers/utils.js";
 
@@ -1631,8 +1630,6 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
 
     let packageMap: Map<string, boolean> | undefined;
 
-    let typeProviderHost: TypeProviderHost;
-
     // The below settings are to track if a .js file should be add to the program if loaded via searching under node_modules.
     // This works as imported modules are discovered recursively in a depth first manner, specifically:
     // - For each root file, findSourceFile is called.
@@ -1987,7 +1984,6 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
         getBindAndCheckDiagnostics,
         getProgramDiagnostics,
         getTypeChecker,
-        getTypeProviderHost,
         getClassifiableNames,
         getCommonSourceDirectory,
         emit,
@@ -2900,10 +2896,6 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
 
     function getTypeChecker() {
         return typeChecker || (typeChecker = createTypeChecker(program));
-    }
-
-    function getTypeProviderHost() {
-        return typeProviderHost || (typeProviderHost = createTypeProviderHost());
     }
 
     function emit(
@@ -4325,7 +4317,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
                         ? getProvidedFileName(resolution.resolvedFileName, originalPackageName, importAttributes)
                         : resolution.resolvedFileName;
 
-                    console.log("SET NAME TO", resolution.resolvedFileName);
+                    // console.log("SET NAME TO", resolution.resolvedFileName);
 
                     resolution.packageId = resolution.packageId && !isProvidedName(resolution.packageId?.name)
                         ? { ...resolution.packageId, name: getProvidedModuleName(originalPackageName, importAttributes) }
@@ -4370,7 +4362,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
                     modulesWithElidedImports.set(file.path, true);
                 }
                 else if (shouldAddFile) {
-                    console.log("USING NAME", resolvedFileName);
+                    // console.log("USING NAME", resolvedFileName);
                     findSourceFile(
                         resolvedFileName,
                         /*isDefaultLib*/ false,
@@ -4772,7 +4764,6 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
 
         // Verify that all the emit files are unique and don't overwrite input files
         function verifyEmitFilePath(emitFileName: string | undefined, emitFilesSeen: Set<string>) {
-            // console.trace("VERIFY EMIT", emitFileName, emitFilesSeen);
             if (emitFileName) {
                 const emitFilePath = toPath(emitFileName);
                 // Report error if the output overwrites input file

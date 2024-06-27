@@ -423,6 +423,7 @@ import {
     YieldExpression,
 } from "./_namespaces/ts.js";
 import * as performance from "./_namespaces/ts.performance.js";
+import { getOutputPathsForProvidedFile } from "./providers/emit.js";
 import { providedNameSeparator } from "./providers/utils.js";
 
 const brackets = createBracketsMap();
@@ -524,19 +525,8 @@ export function getOutputPathsFor(sourceFile: SourceFile | Bundle, host: EmitHos
         return getOutputPathsForBundle(options, forceDtsPaths);
     }
     else {
-        // TODO(OR): Handle case when outDir is not set properly
-        // TODO(OR): Handle case when outFile is used
         if (sourceFile.scriptKind === ts.ScriptKind.Provided) {
-            const outDir = options.outDir!;
-            const hash = sourceFile.fileName.split(providedNameSeparator)[2];
-
-            const jsFilePath = !options.emitDeclarationOnly ? `${outDir}/${hash}.js` : undefined;
-            const sourceMapFilePath = jsFilePath ? `${outDir}/${hash}.js.map` : undefined;
-            const declarationFilePath = getEmitDeclarations(options) ? `${outDir}/${hash}.d.ts` : undefined;
-            const declarationMapPath = getAreDeclarationMapsEnabled(options) ? `${outDir}/${hash}.d.ts.map` : undefined;
-            return {
-                jsFilePath, sourceMapFilePath, declarationFilePath, declarationMapPath
-            }
+            return getOutputPathsForProvidedFile(sourceFile, options);
         }
 
         const ownOutputFilePath = getOwnEmitOutputFilePath(sourceFile.fileName, host, getOutputExtension(sourceFile.fileName, options));
