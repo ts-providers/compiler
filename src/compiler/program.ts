@@ -3587,7 +3587,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
         }
 
         for (const node of file.statements) {
-            collectModuleReferences(node, /*inAmbientModule*/ false);
+            collectModuleReferences(node, /*inAmbientModule*/ false, file.fileName);
         }
 
         if ((file.flags & NodeFlags.PossiblyContainsDynamicImport) || isJavaScriptFile) {
@@ -3605,7 +3605,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
 
         return;
 
-        function collectModuleReferences(node: Statement, inAmbientModule: boolean): void {
+        function collectModuleReferences(node: Statement, inAmbientModule: boolean, fileName: string): void {
             if (isAnyImportOrReExport(node)) {
                 let moduleNameExpr = getExternalModuleName(node);
 
@@ -3620,7 +3620,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
                         : undefined;
 
                     if (isProvided && attributes && !isProvidedName(moduleNameExpr.text)) {
-                        moduleNameExpr.text = getProvidedModuleName(moduleNameExpr.text, attributes);
+                        moduleNameExpr.text = getProvidedModuleName(moduleNameExpr.text, attributes, fileName);
                     }
 
                     const moduleImport: ModuleImport = { specifier: moduleNameExpr, isProvided, attributes };
@@ -3656,7 +3656,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
                         const body = (node as ModuleDeclaration).body as ModuleBlock;
                         if (body) {
                             for (const statement of body.statements) {
-                                collectModuleReferences(statement, /*inAmbientModule*/ true);
+                                collectModuleReferences(statement, /*inAmbientModule*/ true, fileName);
                             }
                         }
                     }
@@ -3934,9 +3934,6 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
         }
 
         // We haven't looked for this file, do so now and cache result
-
-        logIfProviderFile(fileName, "FIND NEW", "SAMPLE", getProviderSamplePath(importAttributes));
-
         const sourceFileOptions = getCreateSourceFileOptions(fileName, moduleResolutionCache, host, options);
         const file = host.getSourceFile(
             fileName,
@@ -4300,10 +4297,17 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
                 const resolution = resolutions[index]?.resolvedModule;
                 const isProvided = moduleImports[index]?.isProvided;
                 let moduleName = moduleNames[index].text;
+                let fixedUpParentReferences = false;
 
                 // TODO(OR): Handle this better
                 if (resolution && isProvided) {
-                    const importAttributes = moduleImports[index].attributes ?? factory.createImportAttributes(factory.createNodeArray());
+                    const importAttributes = moduleImports[index].attributes;
+                    Debug.assert(importAttributes);
+
+                    if (!fixedUpParentReferences) {
+                        setParentRecursive(file, /*incremental*/ true);
+                        fixedUpParentReferences = true;
+                    }
 
                     const [originalPackageName, providedModuleName] = isProvidedName(moduleName)
                         ? [moduleName.split(providedNameSeparator)[1], moduleName]

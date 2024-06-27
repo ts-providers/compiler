@@ -1,7 +1,7 @@
 import deasync from "deasync";
 import { dirname } from "path";
-import { createPrinter, createSourceFile, emptyArray, emptyMap, forEachChild, forEachChildRecursively, getLanguageVariant, ImportAttributes, Mutable, NewLineKind, Node, NodeFlags, noop, ReadonlyPragmaMap, ScriptKind, ScriptTarget, setParentRecursive, SourceFile, Statement, SyntaxKind, TransformFlags } from "../_namespaces/ts";
-import { getImportAttributesAsRecord, providedNameSeparator } from "./utils";
+import { createPrinter, createSourceFile, Debug, emptyArray, emptyMap, forEachChild, forEachChildRecursively, getDirectoryPath, getLanguageVariant, ImportAttributes, Mutable, NewLineKind, Node, NodeFlags, noop, ReadonlyPragmaMap, ScriptKind, ScriptTarget, setParentRecursive, SourceFile, Statement, SyntaxKind, TransformFlags } from "../_namespaces/ts";
+import { getImportAttributesAsRecord, getImportingFileDirectory, providedNameSeparator } from "./utils";
 
 export function createProvidedSourceFile(fileName: string, importAttributes: ImportAttributes, setParentNodes: boolean): SourceFile {
     const providerOptions = getImportAttributesAsRecord(importAttributes);
@@ -13,23 +13,24 @@ export function createProvidedSourceFile(fileName: string, importAttributes: Imp
     const providerPackagePath = dirname(originalFileName);
     const providerPackage = require(providerPackagePath);
     const providerGenerator = providerPackage.default;
+    const importingFilePath = getImportingFileDirectory(importAttributes);
+    Debug.assert(importingFilePath);
+
+    const context = { importingFilePath };
 
     if (typeof providerGenerator.provideDeclarationsSync === "function") {
-        const result = providerGenerator.provideDeclarationsSync(providerOptions);
+        const result = providerGenerator.provideDeclarationsSync(context, providerOptions);
         providedSourceFile = result.sourceFile;
     } else if (typeof providerGenerator.provideDeclarationsAsync === "function") {
-        const deasyncProvideDeclarations = deasync(providerGenerator.provideDeclarationsAsync) as (options: unknown) => { sourceFile: SourceFile };
-        const result = deasyncProvideDeclarations(providerOptions);
+        const deasyncProvideDeclarations = deasync(providerGenerator.provideDeclarationsAsync) as (context: unknown, options: unknown) => { sourceFile: SourceFile };
+        const result = deasyncProvideDeclarations(context, providerOptions);
         providedSourceFile = result.sourceFile;
     } else {
         console.error("INVALID PROVIDER PACKAGE");
-        return createSourceFile(fileName, "", ScriptTarget.ES5, /*isProvided*/ false);
+        return createEmptyFile(fileName);
     }
 
     const file = configureVirtualSourceFile(providedSourceFile, fileName);
-
-    // file.statements.forEach(s => (s as Mutable<Node>).transformFlags |= TransformFlags.ContainsTypeScript);
-
 
     if (setParentNodes) {
         file.statements.forEach(s => (s as Mutable<Statement>).parent = file);
@@ -117,4 +118,8 @@ function fixupNodeArrays(node: Node) {
             (arr as Mutable<typeof arr>).end = arr[arr.length - 1].end;
         }
     });
+}
+
+function createEmptyFile(fileName: string) {
+    return createSourceFile(fileName, "", ScriptTarget.ES5, /*isProvided*/ true);
 }
