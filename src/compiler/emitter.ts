@@ -424,7 +424,6 @@ import {
 } from "./_namespaces/ts.js";
 import * as performance from "./_namespaces/ts.performance.js";
 import { getOutputPathsForProvidedFile } from "./providers/emit.js";
-import { providedNameSeparator } from "./providers/utils.js";
 
 const brackets = createBracketsMap();
 

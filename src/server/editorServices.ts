@@ -1,4 +1,4 @@
-import { isProvidedName, providedNamePrefix } from "../compiler/providers/utils.js";
+import { isProvidedName } from "../compiler/providers/utils.js";
 import {
     addToSeen,
     arrayFrom,
@@ -3528,7 +3528,7 @@ export class ProjectService {
                 info = new ScriptInfo(this.host, fileName, scriptKind!, hasMixedContent, path, this.filenameToScriptInfoVersion.get(path));
             }
 
-            if (info.path.includes(providedNamePrefix)) {
+            if (isProvidedName(info.path)) {
                 console.log("SETTING PROVIDED INFO PATH", info.path);
             }
 

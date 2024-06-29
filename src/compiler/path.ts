@@ -17,7 +17,7 @@ import {
     some,
     startsWith,
 } from "./_namespaces/ts.js";
-import { isProvidedName, providedNamePrefix, providedNameSeparator } from "./providers/utils.js";
+import { getProvidedNameBase, isProvidedName } from "./providers/utils.js";
 
 /**
  * Internally, we represent paths as strings with '/' as the directory separator.
@@ -312,7 +312,7 @@ export function getDirectoryPath(path: string): string;
 /** @internal */
 export function getDirectoryPath(path: string): string {
     if (isProvidedName(path)) {
-        path = path.split(providedNameSeparator)[1];
+        path = getProvidedNameBase(path)!;
     }
 
     path = normalizeSlashes(path);
@@ -668,7 +668,7 @@ export function getNormalizedAbsolutePathWithoutRoot(fileName: string, currentDi
 
 /** @internal */
 export function toPath(fileName: string, basePath: string | undefined, getCanonicalFileName: (path: string) => string): Path {
-    if (fileName.startsWith(providedNamePrefix)) {
+    if (isProvidedName(fileName)) {
         return fileName as Path;
     }
 

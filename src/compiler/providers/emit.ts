@@ -1,5 +1,5 @@
 import { CompilerOptions, getAreDeclarationMapsEnabled, getEmitDeclarations, getEmitModuleKind, ModuleKind, SourceFile } from "../_namespaces/ts.js";
-import { providedNameSeparator } from "./utils.js";
+import { getProvidedNameHash } from "./utils.js";
 
 export const providedOutDir = "_provided";
 
@@ -10,7 +10,7 @@ export function getOutputPathsForProvidedFile(sourceFile: SourceFile, compilerOp
     const outDir = compilerOptions.outDir!;
     const moduleKind = getEmitModuleKind(compilerOptions);
     const extensionPrefix = getExtensionPrefixByModuleKind(moduleKind);
-    const hash = sourceFile.fileName.split(providedNameSeparator)[2];
+    const hash = getProvidedNameHash(sourceFile.fileName);
 
     const jsFilePath = !compilerOptions.emitDeclarationOnly ? `${outDir}/${providedOutDir}/${hash}.${extensionPrefix}js` : undefined;
     const sourceMapFilePath = jsFilePath ? `${outDir}/${providedOutDir}/${hash}.${extensionPrefix}js.map` : undefined;

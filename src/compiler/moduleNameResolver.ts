@@ -108,7 +108,7 @@ import {
     versionMajorMinor,
     VersionRange,
 } from "./_namespaces/ts.js";
-import { isProvidedName, providedNameSeparator } from "./providers/utils.js";
+import { getProvidedNameBase, isProvidedName } from "./providers/utils.js";
 
 /** @internal */
 export function trace(host: ModuleResolutionHost, message: DiagnosticMessage, ...args: any[]): void {
@@ -1809,7 +1809,7 @@ function nodeModuleNameResolverWorker(
     // TODO(OR): Handle this properly
     const isProvided = isProvidedName(moduleName);
     if (isProvided) {
-        moduleName = moduleName.split(providedNameSeparator)[1];
+        moduleName = getProvidedNameBase(moduleName)!;
     }
 
     const traceEnabled = isTraceEnabled(compilerOptions, host);

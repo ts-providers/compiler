@@ -333,7 +333,7 @@ import {
 import * as performance from "./_namespaces/ts.performance.js";
 import { logIfProviderFile, providerPackagePrefix } from "./providers/debugging.js";
 import { ModuleImport } from "./providers/types.js";
-import { getProvidedFileName, getProvidedModuleName, getProviderSamplePath, isProvidedName, providedNameSeparator } from "./providers/utils.js";
+import { createProvidedFileName, createProvidedModuleName, getProvidedNameBase, isProvidedName } from "./providers/utils.js";
 
 export function findConfigFile(searchPath: string, fileExists: (fileName: string) => boolean, configName = "tsconfig.json"): string | undefined {
     return forEachAncestorDirectory(searchPath, ancestor => {
@@ -1113,7 +1113,8 @@ export function loadWithModeAwareCache<Entry, SourceFile extends { scriptKind: S
     if (entries.length === 0) return emptyArray;
 
     if (containingSourceFile?.scriptKind === ScriptKind.Provided) {
-        containingFile = containingFile.split(providedNameSeparator)[1];
+        Debug.assert(isProvidedName(containingFile));
+        containingFile = getProvidedNameBase(containingFile)!;
     }
 
     const resolutions: Resolution[] = [];
@@ -3620,7 +3621,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
                         : undefined;
 
                     if (isProvided && attributes && !isProvidedName(moduleNameExpr.text)) {
-                        moduleNameExpr.text = getProvidedModuleName(moduleNameExpr.text, attributes, fileName);
+                        moduleNameExpr.text = createProvidedModuleName(moduleNameExpr.text, attributes, fileName);
                     }
 
                     const moduleImport: ModuleImport = { specifier: moduleNameExpr, isProvided, attributes };
@@ -4310,21 +4311,21 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
                     }
 
                     const [originalPackageName, providedModuleName] = isProvidedName(moduleName)
-                        ? [moduleName.split(providedNameSeparator)[1], moduleName]
-                        : [moduleName, getProvidedModuleName(moduleName, importAttributes)];
+                        ? [getProvidedNameBase(moduleName)!, moduleName]
+                        : [moduleName, createProvidedModuleName(moduleName, importAttributes)];
 
                     moduleName = providedModuleName;
 
                     console.log(resolution.resolvedFileName, originalPackageName, providedModuleName);
 
                     resolution.resolvedFileName = !isProvidedName(resolution.resolvedFileName)
-                        ? getProvidedFileName(resolution.resolvedFileName, originalPackageName, importAttributes)
+                        ? createProvidedFileName(resolution.resolvedFileName, originalPackageName, importAttributes)
                         : resolution.resolvedFileName;
 
                     // console.log("SET NAME TO", resolution.resolvedFileName);
 
                     resolution.packageId = resolution.packageId && !isProvidedName(resolution.packageId?.name)
-                        ? { ...resolution.packageId, name: getProvidedModuleName(originalPackageName, importAttributes) }
+                        ? { ...resolution.packageId, name: createProvidedModuleName(originalPackageName, importAttributes) }
                         : resolution.packageId;
                 }
 

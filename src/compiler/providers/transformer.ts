@@ -1,6 +1,6 @@
 import { Bundle, chainBundle, getDirectoryPath, getEmitModuleKind, getOwnEmitOutputFilePath, getRelativePathFromDirectory, ImportDeclaration, isImportDeclaration, Mutable, Node, SourceFile, StringLiteralLike, TransformationContext, visitEachChild, VisitResult } from "../_namespaces/ts.js";
 import { getExtensionPrefixByModuleKind, providedOutDir } from "./emit.js";
-import { providedNameSeparator } from "./utils.js";
+import { getProvidedNameHash } from "./utils.js";
 
 export function transformProvidedImports(context: TransformationContext): (x: SourceFile | Bundle) => SourceFile | Bundle {
     let currentFile: SourceFile;
@@ -24,7 +24,7 @@ export function transformProvidedImports(context: TransformationContext): (x: So
         // Remove import attributes and replace module specifier with relative path to a generated .js file.
         let declNode = node as ImportDeclaration;
         const specifierText = (declNode.moduleSpecifier as StringLiteralLike).text;
-        const providedImportHash = specifierText.split(providedNameSeparator)[2];
+        const providedImportHash = getProvidedNameHash(specifierText);
 
         console.log("\nTRANSFORMING PROVIDED IMPORT",  specifierText, providedImportHash);
 

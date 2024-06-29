@@ -1365,7 +1365,7 @@ export function createSourceFile(fileName: string, sourceText: string, languageV
             return (overrideSetExternalModuleIndicator || setExternalModuleIndicator)(file);
         };
         result = isProvided
-            ? createProvidedSourceFile(fileName, importAttributes!, true)
+            ? createProvidedSourceFile(fileName, importAttributes!)
             : Parser.parseSourceFile(fileName, sourceText, languageVersion, /*syntaxCursor*/ undefined, setParentNodes, scriptKind, setIndicator, jsDocParsingMode);
     }
 
@@ -9918,8 +9918,6 @@ namespace IncrementalParser {
             // if the text didn't change, then we can just return our current source file as-is.
             return sourceFile;
         }
-
-        logIfProviderFile(sourceFile.fileName, "UPDATE");
 
         if (sourceFile.statements.length === 0) {
             // If we don't have any statements in the current source file, then there's no real

@@ -1,49 +1,117 @@
 import deasync from "deasync";
 import { dirname } from "path";
-import { createPrinter, createSourceFile, Debug, emptyArray, emptyMap, forEachChild, forEachChildRecursively, getDirectoryPath, getLanguageVariant, ImportAttributes, Mutable, NewLineKind, Node, NodeFlags, noop, ReadonlyPragmaMap, ScriptKind, ScriptTarget, setParentRecursive, SourceFile, Statement, SyntaxKind, TransformFlags } from "../_namespaces/ts";
-import { getImportAttributesAsRecord, getImportingFileDirectory, providedNameSeparator } from "./utils";
+import { attachFileToDiagnostics, createPrinter, Debug, DiagnosticCategory, DiagnosticMessage, Diagnostics, DiagnosticWithDetachedLocation, emptyArray, emptyMap, factory, forEachChild, forEachChildRecursively, getLanguageVariant, ImportAttributes, ImportDeclaration, isImportDeclaration, Mutable, NewLineKind, Node, NodeFlags, noop, ReadonlyPragmaMap, ScriptKind, ScriptTarget, setParentRecursive, SourceFile, Statement, StringLiteral, SyntaxKind, TransformFlags } from "../_namespaces/ts";
+import { getImportAttributesAsRecord, getSourceFileDirectory, getImportingFileNode, getProvidedNameBase, isProvidedName, isSyncTypeProvider, isAsyncTypeProvider } from "./utils";
+import { createImportDiagnostic } from "./diagnostics.js";
+import { AsyncTypeProvider, ProvideDeclarations, ProviderContext, ProviderGeneratorResult, SyncTypeProvider } from "./interfaces.js";
 
-export function createProvidedSourceFile(fileName: string, importAttributes: ImportAttributes, setParentNodes: boolean): SourceFile {
+// TODO(OR): Revise what is exported from the `providers` directory
+
+export function createProvidedSourceFile(fileName: string, importAttributes: ImportAttributes): SourceFile {
+    const importingFile = getImportingFileNode(importAttributes);
+    // console.trace(importAttributes);
+    Debug.assert(importingFile);
+
+    const { file, diagnostics } = createProvidedSourceFileWorker(fileName, importAttributes, importingFile);
+
+    if (diagnostics) {
+        const attachedDiganostics = attachFileToDiagnostics(diagnostics, importingFile);
+        attachedDiganostics.forEach(d => importingFile.bindDiagnostics.push(d));
+    }
+
+    return file ?? createEmptyFile(fileName, importAttributes);
+}
+
+function createProvidedSourceFileWorker(fileName: string, importAttributes: ImportAttributes, importingFile: SourceFile): { file?: SourceFile, diagnostics?: DiagnosticWithDetachedLocation[] } {
+    const importingFilePath = getSourceFileDirectory(importingFile);
+    const importDeclaration = importAttributes.parent as ImportDeclaration;
+
+    Debug.assert(importingFilePath);
+    Debug.assert(isImportDeclaration(importDeclaration));
+
     const providerOptions = getImportAttributesAsRecord(importAttributes);
-    console.log("CREATING PROVIDED SOURCE FILE", fileName, `OPTIONS: '${JSON.stringify(providerOptions)}'`);
 
-    const originalFileName = fileName.split(providedNameSeparator)[1];
-    let providedSourceFile: SourceFile;
+    console.log("Creating provided source file", fileName, `'${JSON.stringify(providerOptions)}'`);
+
+    const moduleSpecifier = (importDeclaration.moduleSpecifier as StringLiteral).text;
+    const originalModuleName = isProvidedName(moduleSpecifier) ? getProvidedNameBase(moduleSpecifier) : moduleSpecifier;
+    const originalFileName = getProvidedNameBase(fileName);
+
+    Debug.assert(originalModuleName);
+    Debug.assert(originalFileName);
 
     const providerPackagePath = dirname(originalFileName);
-    const providerPackage = require(providerPackagePath);
-    const providerGenerator = providerPackage.default;
-    const importingFilePath = getImportingFileDirectory(importAttributes);
-    Debug.assert(importingFilePath);
+
+    let providerPackage;
+    let provider;
+
+    try {
+        providerPackage = require(providerPackagePath);
+        provider = providerPackage.default;
+    }
+    catch {
+        const message = Diagnostics.The_module_0_could_not_be_loaded_as_a_type_provider_Try_installing_packages_with_your_package_manager_then_rerun_the_command_or_restart_your_editor;
+        const errorDiagnostic = createImportDiagnostic(importDeclaration, importingFile, message, originalModuleName);
+    return { diagnostics: [errorDiagnostic] };
+    }
 
     const context = { importingFilePath };
+    let providedSourceFile: SourceFile;
 
-    if (typeof providerGenerator.provideDeclarationsSync === "function") {
-        const result = providerGenerator.provideDeclarationsSync(context, providerOptions);
-        providedSourceFile = result.sourceFile;
-    } else if (typeof providerGenerator.provideDeclarationsAsync === "function") {
-        const deasyncProvideDeclarations = deasync(providerGenerator.provideDeclarationsAsync) as (context: unknown, options: unknown) => { sourceFile: SourceFile };
-        const result = deasyncProvideDeclarations(context, providerOptions);
-        providedSourceFile = result.sourceFile;
-    } else {
-        console.error("INVALID PROVIDER PACKAGE");
-        return createEmptyFile(fileName);
+    try {
+        const provideDeclarations = isSyncTypeProvider(provider)
+            ? provider.provideDeclarationsSync
+            : isAsyncTypeProvider(provider)
+                ? deasync(provider.provideDeclarationsAsync) as ProvideDeclarations<object>
+                : undefined;
+
+        if (!provideDeclarations) {
+            const message: DiagnosticMessage = {
+                key: "abraka-dabra",
+                category: DiagnosticCategory.Error,
+                code: 42,
+                message: "The module '{0}' does not export a valid type provider as the default export."
+            }
+
+            const errorDiagnostic = createImportDiagnostic(importDeclaration.moduleSpecifier, importingFile, message, originalModuleName);
+            return { diagnostics: [errorDiagnostic] };
+        }
+
+        const result = provideDeclarations(context, providerOptions);
+
+        if (!result) {
+
+        }
+
+        if (result.generalDiagnostics) {
+
+        }
+
+        if (result.optionDiagnostics) {
+
+        }
+
+        if (result.sourceFile) {
+            providedSourceFile = result.sourceFile;
+        } else {
+            return {};
+        }
+    }
+    catch {
+        const message: DiagnosticMessage = {
+            key: "abraka-dabra",
+            category: DiagnosticCategory.Error,
+            code: 42,
+            message: "An unspecified error occured during type provider evaluation."
+        }
+
+        const errorDiagnostic = createImportDiagnostic(importDeclaration, importingFile, message);
+        return { diagnostics: [errorDiagnostic] };
     }
 
-    const file = configureVirtualSourceFile(providedSourceFile, fileName);
+    const file = configureVirtualSourceFile(providedSourceFile, fileName, importAttributes);
 
-    if (setParentNodes) {
-        file.statements.forEach(s => (s as Mutable<Statement>).parent = file);
-        setParentRecursive(file, true);
-    }
-
-    const recurse = (node: Node) => {
-        (node as Mutable<Node>).transformFlags |= TransformFlags.ContainsTypeScript;
-        forEachChild(node, recurse);
-    }
-
-    recurse(file);
-
+    // TODO(OR): Remove this
     const printer = createPrinter({
         newLine: NewLineKind.LineFeed,
         removeComments: false,
@@ -53,13 +121,12 @@ export function createProvidedSourceFile(fileName: string, importAttributes: Imp
     console.log("PROVIDED FILE:", fileName);
     console.log(printer.printFile(file));
 
-    file.importAttributes = importAttributes;
 
-    return file;
+    return { file, diagnostics: [] };
 }
 
 // Based on https://github.com/microsoft/TypeScript/pull/39784
-function configureVirtualSourceFile(file: SourceFile, fileName: string): SourceFile {
+function configureVirtualSourceFile(file: SourceFile, fileName: string, importAttributes: ImportAttributes): SourceFile {
     (file as Mutable<SourceFile>).flags |= NodeFlags.Ambient;
     (file as Mutable<SourceFile>).flags &= ~NodeFlags.Synthesized;
     (file as Mutable<SourceFile>).kind = SyntaxKind.SourceFile;
@@ -88,6 +155,18 @@ function configureVirtualSourceFile(file: SourceFile, fileName: string): SourceF
     // The above sets all node positions, but node _arrays_ still have `-1` for their pos and end.
     // We fix those up to use their constituent start and end positions here.
     fixupNodeArrays(file);
+
+    file.statements.forEach(s => (s as Mutable<Statement>).parent = file);
+    setParentRecursive(file, true);
+
+    const setContainsTypeScriptRecursive = (node: Node) => {
+        (node as Mutable<Node>).transformFlags |= TransformFlags.ContainsTypeScript;
+        forEachChild(node, setContainsTypeScriptRecursive);
+    }
+
+    setContainsTypeScriptRecursive(file);
+
+    file.importAttributes = importAttributes;
 
     return file;
 }
@@ -120,6 +199,13 @@ function fixupNodeArrays(node: Node) {
     });
 }
 
-function createEmptyFile(fileName: string) {
-    return createSourceFile(fileName, "", ScriptTarget.ES5, /*isProvided*/ true);
+function createEmptyFile(fileName: string, importAttributes: ImportAttributes) {
+    const emptyExport = factory.createExportDeclaration(/*modifiers*/ undefined, /*isTypeOnly*/ false, factory.createNamedExports([]));
+    const file = factory.createSourceFile([emptyExport], factory.createToken(SyntaxKind.EndOfFileToken), NodeFlags.None);
+    return configureVirtualSourceFile(file, fileName, importAttributes);
+}
+
+function hasTypeProviderFunction(typeProvider: any): boolean {
+    return typeof typeProvider.provideDeclarationsSync === "function"
+        || typeof typeProvider.provideDeclarationsAsync === "function";
 }

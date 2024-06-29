@@ -8317,5 +8317,9 @@
     "String literal import and export names are not supported when the '--module' flag is set to 'es2015' or 'es2020'.": {
         "category": "Error",
         "code": 18057
+    },
+    "The module '{0}' could not be loaded as a type provider. Try installing packages with your package manager, then rerun the command or restart your editor.": {
+        "category": "Error",
+        "code": 30000
     }
 }

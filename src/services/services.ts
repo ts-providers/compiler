@@ -1454,7 +1454,7 @@ export function createProvidedLanguageServiceSourceFile(
     scriptSnapshot: IScriptSnapshot,
     version: string,
 ): SourceFile {
-    const sourceFile = createProvidedSourceFile(fileName, importAttributes, true);
+    const sourceFile = createProvidedSourceFile(fileName, importAttributes);
     setSourceFileFields(sourceFile, scriptSnapshot, version);
     return sourceFile;
 }

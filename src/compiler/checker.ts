@@ -1117,7 +1117,7 @@ import {
 } from "./_namespaces/ts.js";
 import * as moduleSpecifiers from "./_namespaces/ts.moduleSpecifiers.js";
 import * as performance from "./_namespaces/ts.performance.js";
-import { getProvidedModuleName, isProvidedName } from "./providers/utils.js";
+import { createProvidedModuleName, getProvidedNameBase, isProvidedName } from "./providers/utils.js";
 
 const ambientModuleSymbolRegex = /^".+"$/;
 const anon = "(anonymous)" as __String & string;
@@ -3715,7 +3715,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         const isProvidedImport = isImportDeclaration(node?.parent) && node?.parent.isProvided;
 
         const moduleSymbol = isProvidedImport && isStringLiteralLike(node.parent.moduleSpecifier)
-            ? resolveExternalModule(node, getProvidedModuleName(node.parent.moduleSpecifier.text, importAttributes!), undefined, node, undefined)
+            ? resolveExternalModule(node, createProvidedModuleName(node.parent.moduleSpecifier.text, importAttributes!), undefined, node, undefined)
             : resolveExternalModuleName(node, node.parent.moduleSpecifier);
 
         if (moduleSymbol) {
@@ -4553,8 +4553,11 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
     function resolveExternalModuleName(location: Node, moduleReferenceExpression: Expression, ignoreErrors?: boolean): Symbol | undefined {
         const isClassic = getEmitModuleResolutionKind(compilerOptions) === ModuleResolutionKind.Classic;
-        const errorMessage = isClassic ?
-            Diagnostics.Cannot_find_module_0_Did_you_mean_to_set_the_moduleResolution_option_to_nodenext_or_to_add_aliases_to_the_paths_option
+        const isProvided = location && isImportDeclaration(location) && location.isProvided;
+        const errorMessage = isProvided
+        ? Diagnostics.The_module_0_could_not_be_loaded_as_a_type_provider_Try_installing_packages_with_your_package_manager_then_rerun_the_command_or_restart_your_editor
+        : isClassic
+            ? Diagnostics.Cannot_find_module_0_Did_you_mean_to_set_the_moduleResolution_option_to_nodenext_or_to_add_aliases_to_the_paths_option
             : Diagnostics.Cannot_find_module_0_or_its_corresponding_type_declarations;
         return resolveExternalModuleNameWorker(location, moduleReferenceExpression, ignoreErrors ? undefined : errorMessage);
     }
@@ -4771,12 +4774,14 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
                     }
                 }
                 else {
+                    const moduleName = isProvidedName(moduleReference) ? getProvidedNameBase(moduleReference)! : moduleReference;
+
                     if (host.getResolvedModule(currentSourceFile, moduleReference, mode)?.alternateResult) {
-                        const errorInfo = createModuleNotFoundChain(currentSourceFile, host, moduleReference, mode, moduleReference);
-                        errorOrSuggestion(/*isError*/ true, errorNode, chainDiagnosticMessages(errorInfo, moduleNotFoundError, moduleReference));
+                        const errorInfo = createModuleNotFoundChain(currentSourceFile, host, moduleName, mode, moduleName);
+                        errorOrSuggestion(/*isError*/ true, errorNode, chainDiagnosticMessages(errorInfo, moduleNotFoundError, moduleName));
                     }
                     else {
-                        error(errorNode, moduleNotFoundError, moduleReference);
+                        error(errorNode, moduleNotFoundError, moduleName);
                     }
                 }
             }

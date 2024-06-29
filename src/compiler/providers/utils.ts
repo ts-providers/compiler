@@ -1,27 +1,36 @@
 import { NotUndefined, sha1 } from "object-hash";
 import { Identifier, ImportAttributes, SourceFile, StringLiteral } from "../types";
 import { Debug, getDirectoryPath } from "../_namespaces/ts";
+import { AsyncTypeProvider, SyncTypeProvider } from "./interfaces.js";
 
-export const providedNameSeparator = "|";
-export const providedNamePrefix = `Provided${providedNameSeparator}`;
+const providedNameSeparator = "|";
+const providedNamePrefix = `Provided${providedNameSeparator}`;
 
-export function isProvidedName(name: string): boolean {
-    return name.startsWith(providedNamePrefix);
+export function isProvidedName(name?: string): boolean {
+    return name?.startsWith(providedNamePrefix) ?? false;
 }
 
-export function getProvidedFileName(fileName: string, packageName: string, importAttributes: ImportAttributes, importingFilePath?: string): string {
-    return `${providedNamePrefix}${fileName}${providedNameSeparator}${getProvidedImportHash(packageName, importAttributes, importingFilePath)}`;
+export function createProvidedFileName(fileName: string, packageName: string, importAttributes: ImportAttributes, importingFilePath?: string): string {
+    return `${providedNamePrefix}${fileName}${providedNameSeparator}${createImportHash(packageName, importAttributes, importingFilePath)}`;
 }
 
-export function getProvidedModuleName(packageName: string, importAttributes: ImportAttributes, importingFilePath?: string): string {
-    return `${providedNamePrefix}${packageName}${providedNameSeparator}${getProvidedImportHash(packageName, importAttributes, importingFilePath)}`;
+export function createProvidedModuleName(packageName: string, importAttributes: ImportAttributes, importingFilePath?: string): string {
+    return `${providedNamePrefix}${packageName}${providedNameSeparator}${createImportHash(packageName, importAttributes, importingFilePath)}`;
 }
 
-export function getProvidedImportHash(packageName: string, importAttributes: ImportAttributes, importingFilePath?: string): string {
+export function getProvidedNameBase(providedName?: string): string | undefined {
+    return providedName?.split(providedNameSeparator)[1];
+}
+
+export function getProvidedNameHash(providedName?: string): string | undefined {
+    return providedName?.split(providedNameSeparator)[2];
+}
+
+function createImportHash(packageName: string, importAttributes: ImportAttributes, importingFilePath?: string): string {
     Debug.assert(importAttributes);
     Debug.assert(!isProvidedName(packageName));
     const importOptions = getImportAttributesAsKeyValuePairs(importAttributes);
-    const importingFileDirectory = importingFilePath ? getDirectoryPath(importingFilePath) : getImportingFileDirectory(importAttributes);
+    const importingFileDirectory = importingFilePath ? getDirectoryPath(importingFilePath) : getSourceFileDirectory(getImportingFileNode(importAttributes));
     Debug.assert(importingFileDirectory);
     const result = createObjectHash({ packageName, importOptions, importingFileDirectory });
     console.log("PROVIDER HASH", packageName, importingFileDirectory, importOptions, result);
@@ -58,11 +67,19 @@ export function getImportAttributesAsRecord(attributes?: ImportAttributes): Reco
     return result;
 }
 
-export function getImportingFilePath(attributes?: ImportAttributes): string | undefined {
-    return (attributes?.parent?.parent as SourceFile)?.fileName;
+export function getImportingFileNode(attributes?: ImportAttributes): SourceFile| undefined {
+    return (attributes?.parent?.parent as SourceFile);
 }
 
-export function getImportingFileDirectory(attributes?: ImportAttributes): string | undefined {
-    const filePath = getImportingFilePath(attributes);
+export function getSourceFileDirectory(sourceFile?: SourceFile): string | undefined {
+    const filePath = sourceFile?.fileName;
     return filePath ? getDirectoryPath(filePath) : undefined;
+}
+
+export function isSyncTypeProvider(instance: unknown): instance is SyncTypeProvider<{}> {
+    return typeof (instance as SyncTypeProvider<{}>)?.provideDeclarationsSync === "function";
+}
+
+export function isAsyncTypeProvider(instance: unknown): instance is AsyncTypeProvider<{}> {
+    return typeof (instance as AsyncTypeProvider<{}>)?.provideDeclarationsAsync === "function";
 }
