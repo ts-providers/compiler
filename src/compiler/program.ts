@@ -3610,11 +3610,12 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
                     setParentRecursive(node, /*incremental*/ false); // we need parent data on imports before the program is fully bound, so we ensure it's set here
                     const isProvided = isImportDeclaration(node) && node.isProvided;
                     const attributes = isStatementWithImportAttributes(node) ? node.attributes : undefined;
-                    const providedName = isProvided && attributes && !isProvidedName(moduleNameExpr.text)
-                        ? createProvidedModuleName(moduleNameExpr.text, attributes, fileName)
-                        : undefined;
 
-                    const moduleImport: ModuleImport = { specifier: moduleNameExpr, isProvided, providedName, attributes };
+                    moduleNameExpr.text = isProvided && attributes && !isProvidedName(moduleNameExpr.text)
+                        ? createProvidedModuleName(moduleNameExpr.text, attributes, fileName)
+                        : moduleNameExpr.text;
+
+                    const moduleImport: ModuleImport = { specifier: moduleNameExpr, isProvided, attributes };
                     imports = append(imports, moduleImport);
                     if (!usesUriStyleNodeCoreModules && currentNodeModulesDepth === 0 && !file.isDeclarationFile) {
                         usesUriStyleNodeCoreModules = startsWith((moduleNameExpr).text, "node:");

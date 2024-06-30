@@ -547,7 +547,7 @@ function addSyntheticNodes(nodes: Node[], pos: number, end: number, parent: Node
         const textPos = scanner.getTokenEnd();
         if (textPos <= end) {
             if (token === SyntaxKind.Identifier) {
-                if (hasTabstop(parent)) {
+                if (hasTabstop(parent) || parent.kind === SyntaxKind.ImportClause && scanner.getTokenValue() === "provided") {
                     continue;
                 }
                 Debug.fail(`Did not expect ${Debug.formatSyntaxKind(parent.kind)} to have an Identifier in its trivia`);
