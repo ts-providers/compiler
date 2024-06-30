@@ -2465,6 +2465,7 @@ export class AutoImportProviderProject extends Project {
             for (const name of arrayFrom(dependencyNames.keys())) {
                 // TODO(OR): Handle this properly
                 if (name.includes(providerPackagePrefix)) {
+                    console.log("SKIPPING PROVIDED FILE", name);
                     continue;
                 }
 

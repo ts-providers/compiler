@@ -1,9 +1,10 @@
 import deasync from "deasync";
 import { dirname } from "path";
-import { attachFileToDiagnostics, createPrinter, Debug, DiagnosticCategory, DiagnosticMessage, Diagnostics, DiagnosticWithDetachedLocation, emptyArray, emptyMap, factory, forEachChild, forEachChildRecursively, getLanguageVariant, ImportAttributes, ImportDeclaration, isImportDeclaration, Mutable, NewLineKind, Node, NodeFlags, noop, ReadonlyPragmaMap, ScriptKind, ScriptTarget, setParentRecursive, SourceFile, Statement, StringLiteral, SyntaxKind, TransformFlags } from "../_namespaces/ts";
+import { attachFileToDiagnostics, createPrinter, Debug, DiagnosticCategory, DiagnosticMessage, Diagnostics, DiagnosticWithDetachedLocation, emptyArray, emptyMap, factory, forEachChild, forEachChildRecursively, getLanguageVariant, ImportAttributes, ImportDeclaration, isImportDeclaration, Mutable, Node, NodeFlags, noop, ReadonlyPragmaMap, ScriptKind, ScriptTarget, setParentRecursive, SourceFile, Statement, StringLiteral, SyntaxKind, TransformFlags } from "../_namespaces/ts";
 import { getImportAttributesAsRecord, getSourceFileDirectory, getImportingFileNode, getProvidedNameBase, isProvidedName, isSyncTypeProvider, isAsyncTypeProvider } from "./utils";
 import { createImportDiagnostic } from "./diagnostics.js";
-import { AsyncTypeProvider, ProvideDeclarations, ProviderContext, ProviderGeneratorResult, SyncTypeProvider } from "./interfaces.js";
+import { ProvideDeclarations } from "./interfaces.js";
+import { printSourceFile as logSourceFileText } from "./debugging.js";
 
 // TODO(OR): Revise what is exported from the `providers` directory
 
@@ -77,22 +78,14 @@ function createProvidedSourceFileWorker(fileName: string, importAttributes: Impo
             return { diagnostics: [errorDiagnostic] };
         }
 
-        const result = provideDeclarations(context, providerOptions);
+        const providerResult = provideDeclarations(context, providerOptions) ?? {};
 
-        if (!result) {
-
-        }
-
-        if (result.generalDiagnostics) {
+        if (providerResult.optionDiagnostics) {
 
         }
 
-        if (result.optionDiagnostics) {
-
-        }
-
-        if (result.sourceFile) {
-            providedSourceFile = result.sourceFile;
+        if (providerResult.sourceFile) {
+            providedSourceFile = providerResult.sourceFile;
         } else {
             return {};
         }
@@ -109,24 +102,16 @@ function createProvidedSourceFileWorker(fileName: string, importAttributes: Impo
         return { diagnostics: [errorDiagnostic] };
     }
 
-    const file = configureVirtualSourceFile(providedSourceFile, fileName, importAttributes);
+    configureVirtualSourceFile(providedSourceFile, fileName, importAttributes);
 
     // TODO(OR): Remove this
-    const printer = createPrinter({
-        newLine: NewLineKind.LineFeed,
-        removeComments: false,
-        omitTrailingSemicolon: true
-    });
+    logSourceFileText(providedSourceFile);
 
-    console.log("PROVIDED FILE:", fileName);
-    console.log(printer.printFile(file));
-
-
-    return { file, diagnostics: [] };
+    return { file: providedSourceFile, diagnostics: [] };
 }
 
 // Based on https://github.com/microsoft/TypeScript/pull/39784
-function configureVirtualSourceFile(file: SourceFile, fileName: string, importAttributes: ImportAttributes): SourceFile {
+function configureVirtualSourceFile(file: SourceFile, fileName: string, importAttributes: ImportAttributes) {
     (file as Mutable<SourceFile>).flags |= NodeFlags.Ambient;
     (file as Mutable<SourceFile>).flags &= ~NodeFlags.Synthesized;
     (file as Mutable<SourceFile>).kind = SyntaxKind.SourceFile;
@@ -146,7 +131,7 @@ function configureVirtualSourceFile(file: SourceFile, fileName: string, importAt
     file.languageVariant = getLanguageVariant(ScriptKind.TS);
     file.scriptKind = ScriptKind.Provided;
     file.externalModuleIndicator = file.statements[0];
-
+    file.importAttributes = importAttributes;
 
     unsynthesizeFile(file);
     (file.endOfFileToken as Mutable<typeof file.endOfFileToken>).pos = file.text.length;
@@ -165,10 +150,6 @@ function configureVirtualSourceFile(file: SourceFile, fileName: string, importAt
     }
 
     setContainsTypeScriptRecursive(file);
-
-    file.importAttributes = importAttributes;
-
-    return file;
 }
 
 // We need the generated AST nodes to behave as a normal nodes parsed from a text file in the rest of the compiler.
@@ -183,7 +164,6 @@ const unsynthetizationPrinter = createPrinter({}, {
             (node as Mutable<typeof node>).end = getTextPos();
         }
     },
-
 });
 
 function unsynthesizeFile(file: SourceFile) {
@@ -199,13 +179,9 @@ function fixupNodeArrays(node: Node) {
     });
 }
 
-function createEmptyFile(fileName: string, importAttributes: ImportAttributes) {
+function createEmptyFile(fileName: string, importAttributes: ImportAttributes): SourceFile {
     const emptyExport = factory.createExportDeclaration(/*modifiers*/ undefined, /*isTypeOnly*/ false, factory.createNamedExports([]));
     const file = factory.createSourceFile([emptyExport], factory.createToken(SyntaxKind.EndOfFileToken), NodeFlags.None);
-    return configureVirtualSourceFile(file, fileName, importAttributes);
-}
-
-function hasTypeProviderFunction(typeProvider: any): boolean {
-    return typeof typeProvider.provideDeclarationsSync === "function"
-        || typeof typeProvider.provideDeclarationsAsync === "function";
+    configureVirtualSourceFile(file, fileName, importAttributes);
+    return file;
 }

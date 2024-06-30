@@ -1,18 +1,15 @@
+import { createPrinter, NewLineKind,  SourceFile } from "../_namespaces/ts.js";
+
 export const providerPackagePrefix = "@ts-providers";
-export const providerPackageIndex = "@ts-providers/csv/dist/index.d.ts";
-const printLog = false;
-const printTrace = false;
 
-export function logIfProviderFile(fileName: string, actionName: string, ...args: any[]) {
-    if (printLog && fileName) {
-        console.log(`${actionName}\n${fileName}`);
-        for (const arg of args) {
-            console.log(arg);
-        }
-        if (printTrace) {
-            console.trace();
-        }
-        console.log();
-    }
+export function printSourceFile(file: SourceFile) {
+    const printer = createPrinter({
+        newLine: NewLineKind.LineFeed,
+        removeComments: false,
+        omitTrailingSemicolon: true
+    });
+
+    console.log("\nFile:", file.fileName);
+    console.log(printer.printFile(file));
+    console.log();
 }
-

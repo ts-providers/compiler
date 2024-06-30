@@ -403,7 +403,6 @@ import {
 } from "./_namespaces/ts.js";
 import * as performance from "./_namespaces/ts.performance.js";
 import { createProvidedSourceFile } from "./providers/codegen.js";
-import { logIfProviderFile } from "./providers/debugging.js";
 
 const enum SignatureFlags {
     None = 0,

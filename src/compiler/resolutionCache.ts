@@ -79,7 +79,6 @@ import {
     moduleLiteralResolutionNameAndModeGetter,
     ScriptKind,
 } from "./_namespaces/ts.js";
-import { providerPackagePrefix } from "./providers/debugging.js";
 import { ModuleImport } from "./providers/types.js";
 
 /** @internal */
@@ -1157,10 +1156,6 @@ export function createResolutionCache(resolutionHost: ResolutionCacheHost, rootD
                 watchFailedLookupLocationOfResolution(resolution);
             }
             else {
-                if (name.includes(providerPackagePrefix)) {
-                    console.log("ADDING PROVIDER RESOLUTION", name, filePath);
-                }
-
                 nonRelativeExternalModuleResolutions.add(name, resolution);
             }
             const resolved = getResolutionWithResolvedFileName(resolution);
@@ -1440,9 +1435,6 @@ export function createResolutionCache(resolutionHost: ResolutionCacheHost, rootD
         syncDirWatcherRemove?: boolean,
     ) {
         Debug.checkDefined(resolution.files).delete(filePath);
-        if (resolution.affectingLocations?.some(r => r.includes(providerPackagePrefix))) {
-            console.trace("DECREMENTING PROVIDER REF");
-        }
         resolution.refCount!--;
         if (resolution.refCount) {
             return;

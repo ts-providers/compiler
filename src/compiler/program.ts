@@ -331,7 +331,6 @@ import {
     writeFileEnsuringDirectories,
 } from "./_namespaces/ts.js";
 import * as performance from "./_namespaces/ts.performance.js";
-import { logIfProviderFile, providerPackagePrefix } from "./providers/debugging.js";
 import { ModuleImport } from "./providers/types.js";
 import { createProvidedFileName, createProvidedModuleName, getProvidedNameBase, isProvidedName } from "./providers/utils.js";
 
@@ -3521,7 +3520,6 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     }
 
     function processRootFile(fileName: string, isDefaultLib: boolean, ignoreNoDefaultLib: boolean, reason: FileIncludeReason) {
-        logIfProviderFile(fileName, "processRootFile", FileIncludeKind[reason.kind]);
         processSourceFile(normalizePath(fileName), isDefaultLib, ignoreNoDefaultLib, /*packageId*/ undefined, reason, /*isProvided*/ false);
     }
 
@@ -3594,11 +3592,6 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
         if ((file.flags & NodeFlags.PossiblyContainsDynamicImport) || isJavaScriptFile) {
             collectDynamicImportOrRequireOrJsDocImportCalls(file);
         }
-
-        if (file.fileName.includes(providerPackagePrefix) || file.fileName.includes("src")) {
-            // console.log("\nCOLLECTED IMPORTS", imports, "\n");
-        }
-
 
         file.imports = imports || emptyArray;
         file.moduleAugmentations = moduleAugmentations || emptyArray;
@@ -4262,17 +4255,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     }
 
     function processImportedModules(file: SourceFile) {
-        if (file.fileName.includes(providerPackagePrefix) || file.fileName.includes("src")) {
-            // console.log("\nSTART IMPORTS", file.fileName, "\n");
-        }
-
         collectExternalModuleReferences(file);
-
-        if (file.fileName.includes(providerPackagePrefix) || file.fileName.includes("src")) {
-            // console.log("== IMPORTS BEGIN ==");
-            // file.imports.map(i => `${i.specifier.text} -- ${getProviderSamplePath(i.attributes)}`).forEach(s => console.log(s));
-            // console.log("== IMPORTS END ==");
-        }
 
         if (file.imports.length || file.moduleAugmentations.length) {
             // Because global augmentation doesn't have string literal name, we can check for global augmentation as such.
@@ -4280,12 +4263,6 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
             const moduleNames = moduleImports.map(m => m.specifier);
             const resolutions = resolvedModulesProcessing?.get(file.path) ||
                 resolveModuleNamesReusingOldState(moduleImports, file);
-
-            // if (file.fileName.includes(providerPackagePrefix) || file.fileName.includes("src")) {
-            //     console.log("== resolutions BEGIN ==");
-            //     resolutions.forEach(s => console.log(s));
-            //     console.log("== resolutions END ==");
-            // }
 
             Debug.assert(resolutions.length === moduleImports.length);
 
@@ -4321,8 +4298,6 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
                     resolution.resolvedFileName = !isProvidedName(resolution.resolvedFileName)
                         ? createProvidedFileName(resolution.resolvedFileName, originalPackageName, importAttributes)
                         : resolution.resolvedFileName;
-
-                    // console.log("SET NAME TO", resolution.resolvedFileName);
 
                     resolution.packageId = resolution.packageId && !isProvidedName(resolution.packageId?.name)
                         ? { ...resolution.packageId, name: createProvidedModuleName(originalPackageName, importAttributes) }

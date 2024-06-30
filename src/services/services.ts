@@ -1,6 +1,7 @@
 import { createProvidedSourceFile } from "../compiler/providers/codegen.js";
 import { providerPackagePrefix } from "../compiler/providers/debugging.js";
 import { ModuleImport } from "../compiler/providers/types.js";
+import { isProvidedName } from "../compiler/providers/utils.js";
 import {
     __String,
     ApplicableRefactorInfo,
@@ -1409,7 +1410,9 @@ class SyntaxTreeCache {
         const version = this.host.getScriptVersion(fileName);
         let sourceFile: SourceFile | undefined;
 
-        if (this.currentFileName !== fileName || scriptKind === ScriptKind.Provided || fileName.includes(providerPackagePrefix)) {
+        Debug.assert(fileName.includes(providerPackagePrefix) === (scriptKind === ScriptKind.Provided));
+
+        if (this.currentFileName !== fileName || scriptKind === ScriptKind.Provided) {
             // This is a new file, just parse it
             const options: CreateSourceFileOptions = {
                 languageVersion: ScriptTarget.Latest,
@@ -1475,7 +1478,7 @@ export function createLanguageServiceSourceFile(
 export function updateLanguageServiceSourceFile(sourceFile: SourceFile, scriptSnapshot: IScriptSnapshot, version: string, textChangeRange: TextChangeRange | undefined, aggressiveChecks?: boolean): SourceFile {
     // If we were given a text change range, and our version or open-ness changed, then
     // incrementally parse this file.
-    Debug.assert(!sourceFile.fileName.includes(providerPackagePrefix));
+    Debug.assert(!isProvidedName(sourceFile.fileName));
     if (textChangeRange) {
         if (version !== sourceFile.version) {
             let newText: string;
