@@ -3609,18 +3609,15 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
                 if (moduleNameExpr && isStringLiteral(moduleNameExpr) && moduleNameExpr.text && (!inAmbientModule || !isExternalModuleNameRelative(moduleNameExpr.text))) {
                     setParentRecursive(node, /*incremental*/ false); // we need parent data on imports before the program is fully bound, so we ensure it's set here
                     const isProvided = isImportDeclaration(node) && node.isProvided;
-                    const attributes = isStatementWithImportAttributes(node)
-                        ? node.attributes
+                    const attributes = isStatementWithImportAttributes(node) ? node.attributes : undefined;
+                    const providedName = isProvided && attributes && !isProvidedName(moduleNameExpr.text)
+                        ? createProvidedModuleName(moduleNameExpr.text, attributes, fileName)
                         : undefined;
 
-                    if (isProvided && attributes && !isProvidedName(moduleNameExpr.text)) {
-                        moduleNameExpr.text = createProvidedModuleName(moduleNameExpr.text, attributes, fileName);
-                    }
-
-                    const moduleImport: ModuleImport = { specifier: moduleNameExpr, isProvided, attributes };
+                    const moduleImport: ModuleImport = { specifier: moduleNameExpr, isProvided, providedName, attributes };
                     imports = append(imports, moduleImport);
                     if (!usesUriStyleNodeCoreModules && currentNodeModulesDepth === 0 && !file.isDeclarationFile) {
-                        usesUriStyleNodeCoreModules = startsWith(moduleNameExpr.text, "node:");
+                        usesUriStyleNodeCoreModules = startsWith((moduleNameExpr).text, "node:");
                     }
                 }
             }
@@ -3684,9 +3681,9 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
                     const moduleNameExpr = getExternalModuleName(node);
                     if (moduleNameExpr && isStringLiteral(moduleNameExpr) && moduleNameExpr.text) {
                         setParentRecursive(node, /*incremental*/ false);
-                    const attributes = node.attributes;
-                    const moduleImport: ModuleImport = { specifier: moduleNameExpr, isProvided: false, attributes };
-                    imports = append(imports, moduleImport);
+                        const attributes = node.attributes;
+                        const moduleImport: ModuleImport = { specifier: moduleNameExpr, isProvided: false, attributes };
+                        imports = append(imports, moduleImport);
                     }
                 }
             }
@@ -4279,8 +4276,8 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
 
                 // TODO(OR): Handle this better
                 if (resolution && isProvided) {
-                    const importAttributes = moduleImports[index].attributes;
-                    Debug.assert(importAttributes);
+                    const importAttributes = moduleImports[index].attributes
+                        ?? factory.createImportAttributes(factory.createNodeArray(emptyArray));
 
                     if (!fixedUpParentReferences) {
                         setParentRecursive(file, /*incremental*/ true);

@@ -10,8 +10,10 @@ import { printSourceFile as logSourceFileText } from "./debugging.js";
 
 export function createProvidedSourceFile(fileName: string, importAttributes: ImportAttributes): SourceFile {
     const importingFile = getImportingFileNode(importAttributes);
-    // console.trace(importAttributes);
-    Debug.assert(importingFile);
+
+    if (!importingFile) {
+        return createEmptyFile(fileName, importAttributes);
+    }
 
     const { file, diagnostics } = createProvidedSourceFileWorker(fileName, importAttributes, importingFile);
 
@@ -32,6 +34,7 @@ function createProvidedSourceFileWorker(fileName: string, importAttributes: Impo
 
     const providerOptions = getImportAttributesAsRecord(importAttributes);
 
+    // TODO(OR): Remove this
     console.log("Creating provided source file", fileName, `'${JSON.stringify(providerOptions)}'`);
 
     const moduleSpecifier = (importDeclaration.moduleSpecifier as StringLiteral).text;

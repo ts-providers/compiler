@@ -1,4 +1,3 @@
-import { providerPackagePrefix } from "../compiler/providers/debugging.js";
 import * as ts from "./_namespaces/ts.js";
 import {
     addRange,
@@ -2457,18 +2456,13 @@ export class AutoImportProviderProject extends Project {
             packageJson.peerDependencies?.forEach((_, dependencyName) => addDependency(dependencyName));
         }
 
+        // TODO(OR): Remove this
         console.log("DEPENDENCY NAMES", [...dependencyNames?.entries() ?? []]);
 
         let dependenciesAdded = 0;
         if (dependencyNames) {
             const symlinkCache = hostProject.getSymlinkCache();
             for (const name of arrayFrom(dependencyNames.keys())) {
-                // TODO(OR): Handle this properly
-                if (name.includes(providerPackagePrefix)) {
-                    console.log("SKIPPING PROVIDED FILE", name);
-                    continue;
-                }
-
                 // Avoid creating a large project that would significantly slow down time to editor interactivity
                 if (dependencySelection === PackageJsonAutoImportPreference.Auto && dependenciesAdded > this.maxDependencies) {
                     hostProject.log(`AutoImportProviderProject: attempted to add more than ${this.maxDependencies} dependencies. Aborting.`);

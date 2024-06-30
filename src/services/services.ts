@@ -1,5 +1,4 @@
 import { createProvidedSourceFile } from "../compiler/providers/codegen.js";
-import { providerPackagePrefix } from "../compiler/providers/debugging.js";
 import { ModuleImport } from "../compiler/providers/types.js";
 import { isProvidedName } from "../compiler/providers/utils.js";
 import {
@@ -527,6 +526,15 @@ function createChildren(node: Node, sourceFile: SourceFileLike | undefined): rea
     // Restoring the scanner position ensures that.
     pos = node.pos;
     node.forEachChild(processNode, processNodes);
+
+    const badChildren = children.filter(c => c.pos < 0 || c.end < 0);
+
+    if (badChildren.length > 0) {
+        console.log("BAD CHILDREN");
+        console.log(badChildren.length);
+        console.log(badChildren);
+    }
+
     addSyntheticNodes(children, pos, node.end, node);
     scanner.setText(undefined);
     return children;
@@ -542,7 +550,7 @@ function addSyntheticNodes(nodes: Node[], pos: number, end: number, parent: Node
                 if (hasTabstop(parent)) {
                     continue;
                 }
-                // Debug.fail(`Did not expect ${Debug.formatSyntaxKind(parent.kind)} to have an Identifier in its trivia`);
+                Debug.fail(`Did not expect ${Debug.formatSyntaxKind(parent.kind)} to have an Identifier in its trivia`);
             }
             nodes.push(createNode(token, pos, textPos, parent));
         }
@@ -1409,8 +1417,6 @@ class SyntaxTreeCache {
         const scriptKind = getScriptKind(fileName, this.host);
         const version = this.host.getScriptVersion(fileName);
         let sourceFile: SourceFile | undefined;
-
-        Debug.assert(fileName.includes(providerPackagePrefix) === (scriptKind === ScriptKind.Provided));
 
         if (this.currentFileName !== fileName || scriptKind === ScriptKind.Provided) {
             // This is a new file, just parse it

@@ -4000,6 +4000,9 @@ export function createScanner(languageVersion: ScriptTarget, skipTrivia: boolean
     }
 
     function resetTokenState(position: number) {
+        if (pos < 0)
+            console.trace("SYNTH NODE", pos, position);
+
         Debug.assert(position >= 0);
         pos = position;
         fullStartPos = position;

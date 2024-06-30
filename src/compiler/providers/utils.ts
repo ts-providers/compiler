@@ -1,6 +1,6 @@
 import { NotUndefined, sha1 } from "object-hash";
 import { Identifier, ImportAttributes, SourceFile, StringLiteral } from "../types";
-import { Debug, getDirectoryPath } from "../_namespaces/ts";
+import { Debug, emptyArray, factory, getDirectoryPath } from "../_namespaces/ts";
 import { AsyncTypeProvider, SyncTypeProvider } from "./interfaces.js";
 
 const providedNameSeparator = "|";
@@ -27,11 +27,9 @@ export function getProvidedNameHash(providedName?: string): string | undefined {
 }
 
 function createImportHash(packageName: string, importAttributes: ImportAttributes, importingFilePath?: string): string {
-    Debug.assert(importAttributes);
     Debug.assert(!isProvidedName(packageName));
-    const importOptions = getImportAttributesAsKeyValuePairs(importAttributes);
+    const importOptions = getImportAttributesAsKeyValuePairs(importAttributes) ?? [];
     const importingFileDirectory = importingFilePath ? getDirectoryPath(importingFilePath) : getSourceFileDirectory(getImportingFileNode(importAttributes));
-    Debug.assert(importingFileDirectory);
     const result = createObjectHash({ packageName, importOptions, importingFileDirectory });
     console.log("PROVIDER HASH", packageName, importingFileDirectory, importOptions, result);
     return result;
