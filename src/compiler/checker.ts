@@ -47941,10 +47941,6 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     function checkSourceFileWorker(node: SourceFile) {
         const links = getNodeLinks(node);
 
-        if (!node.fileName.includes(".d.")) {
-            console.log("STARTING TO CHECK FILE", node.fileName, node.moduleName);
-        }
-
         if (!(links.flags & NodeCheckFlags.TypeChecked)) {
             if (skipTypeChecking(node, compilerOptions, host)) {
                 return;

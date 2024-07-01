@@ -402,7 +402,7 @@ export function createGetSourceFile(
     readFile: ProgramHost<any>["readFile"],
     setParentNodes: boolean | undefined,
 ): CompilerHost["getSourceFile"] {
-    return (fileName, languageVersionOrOptions, isProvided, onError, shouldCreateNewSourceFile, importAttributes) => {
+    return (fileName, languageVersionOrOptions, isProvided, onError, shouldCreateNewSourceFile, importAttributes, compilerOptions) => {
         let text: string | undefined;
 
         if (isProvided) {
@@ -422,7 +422,7 @@ export function createGetSourceFile(
             }
         }
 
-        return text !== undefined ? createSourceFile(fileName, text, languageVersionOrOptions, isProvided, setParentNodes, /*scriptKind*/ undefined, importAttributes) : undefined;
+        return text !== undefined ? createSourceFile(fileName, text, languageVersionOrOptions, isProvided, setParentNodes, /*scriptKind*/ undefined, importAttributes, compilerOptions) : undefined;
     };
 }
 
@@ -559,14 +559,14 @@ export function changeCompilerHostLikeToUseCache(
         return setReadFileCache(key, fileName);
     };
 
-    const getSourceFileWithCache: CompilerHost["getSourceFile"] | undefined = getSourceFile ? (fileName, languageVersionOrOptions, isProvided, onError, shouldCreateNewSourceFile, importAttributes) => {
+    const getSourceFileWithCache: CompilerHost["getSourceFile"] | undefined = getSourceFile ? (fileName, languageVersionOrOptions, isProvided, onError, shouldCreateNewSourceFile, importAttributes, compilerOptions) => {
         const key = toPath(fileName);
         const impliedNodeFormat: ResolutionMode = typeof languageVersionOrOptions === "object" ? languageVersionOrOptions.impliedNodeFormat : undefined;
         const forImpliedNodeFormat = sourceFileCache.get(impliedNodeFormat);
         const value = forImpliedNodeFormat?.get(key);
         if (value) return value;
 
-        let sourceFile = getSourceFile(fileName, languageVersionOrOptions, isProvided, onError, shouldCreateNewSourceFile, importAttributes);
+        let sourceFile = getSourceFile(fileName, languageVersionOrOptions, isProvided, onError, shouldCreateNewSourceFile, importAttributes, compilerOptions);
 
         if (sourceFile && (isDeclarationFileName(fileName) || fileExtensionIs(fileName, Extension.Json))) {
             sourceFileCache.set(impliedNodeFormat, (forImpliedNodeFormat || new Map()).set(key, sourceFile));
@@ -1596,8 +1596,6 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
         }
     }
 
-    // console.log("CREATE PROGRAM", JSON.stringify(createProgramOptions));
-
     const reportInvalidIgnoreDeprecations = memoize(() => createOptionValueDiagnostic("ignoreDeprecations", Diagnostics.Invalid_value_for_ignoreDeprecations));
 
     let processingDefaultLibFiles: SourceFile[] | undefined;
@@ -2581,7 +2579,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
             const importAttributes = oldSourceFile.importAttributes;
             let newSourceFile = host.getSourceFileByPath
                 ? host.getSourceFileByPath(oldSourceFile.fileName, oldSourceFile.resolvedPath, sourceFileOptions, isProvided, /*onError*/ undefined, shouldCreateNewSourceFile, importAttributes)
-                : host.getSourceFile(oldSourceFile.fileName, sourceFileOptions, isProvided, /*onError*/ undefined, shouldCreateNewSourceFile, importAttributes); // TODO: GH#18217
+                : host.getSourceFile(oldSourceFile.fileName, sourceFileOptions, isProvided, /*onError*/ undefined, shouldCreateNewSourceFile, importAttributes, options); // TODO: GH#18217
 
             if (!newSourceFile) {
                 return StructureIsReused.Not;
@@ -3773,10 +3771,10 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     }
 
     /** This has side effects through `findSourceFile`. */
-    function processSourceFile(fileName: string, isDefaultLib: boolean, ignoreNoDefaultLib: boolean, packageId: PackageId | undefined, reason: FileIncludeReason, isProvided: boolean, importAttributes?: ImportAttributes): void {
+    function processSourceFile(fileName: string, isDefaultLib: boolean, ignoreNoDefaultLib: boolean, packageId: PackageId | undefined, reason: FileIncludeReason, isProvided: boolean, importAttributes?: ImportAttributes, compilerOptions?: CompilerOptions): void {
         getSourceFileFromReferenceWorker(
             fileName,
-            fileName => findSourceFile(fileName, isDefaultLib, ignoreNoDefaultLib, reason, packageId, isProvided, importAttributes), // TODO: GH#18217
+            fileName => findSourceFile(fileName, isDefaultLib, ignoreNoDefaultLib, reason, packageId, isProvided, importAttributes, compilerOptions), // TODO: GH#18217
             (diagnostic, ...args) => addFilePreprocessingFileExplainingDiagnostic(/*file*/ undefined, reason, diagnostic, args),
             reason,
         );
@@ -3809,14 +3807,14 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     }
 
     // Get source file from normalized fileName
-    function findSourceFile(fileName: string, isDefaultLib: boolean, ignoreNoDefaultLib: boolean, reason: FileIncludeReason, packageId: PackageId | undefined, isProvided: boolean, importAttributes?: ImportAttributes): SourceFile | undefined {
+    function findSourceFile(fileName: string, isDefaultLib: boolean, ignoreNoDefaultLib: boolean, reason: FileIncludeReason, packageId: PackageId | undefined, isProvided: boolean, importAttributes?: ImportAttributes, compilerOptions?: CompilerOptions): SourceFile | undefined {
         tracing?.push(tracing.Phase.Program, "findSourceFile", {
             fileName,
             isDefaultLib: isDefaultLib || undefined,
             fileIncludeKind: (FileIncludeKind as any)[reason.kind],
         });
 
-        const result = findSourceFileWorker(fileName, isDefaultLib, ignoreNoDefaultLib, reason, packageId, isProvided, importAttributes);
+        const result = findSourceFileWorker(fileName, isDefaultLib, ignoreNoDefaultLib, reason, packageId, isProvided, importAttributes, compilerOptions);
         tracing?.pop();
         return result;
     }
@@ -3833,7 +3831,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
             { languageVersion, impliedNodeFormat: result, setExternalModuleIndicator, jsDocParsingMode: host.jsDocParsingMode };
     }
 
-    function findSourceFileWorker(fileName: string, isDefaultLib: boolean, ignoreNoDefaultLib: boolean, reason: FileIncludeReason, packageId: PackageId | undefined, isProvided: boolean, importAttributes?: ImportAttributes): SourceFile | undefined {
+    function findSourceFileWorker(fileName: string, isDefaultLib: boolean, ignoreNoDefaultLib: boolean, reason: FileIncludeReason, packageId: PackageId | undefined, isProvided: boolean, importAttributes?: ImportAttributes, compilerOptions?: CompilerOptions): SourceFile | undefined {
         const path = toPath(fileName);
 
         if (!isProvided && useSourceOfProjectReferenceRedirect) {
@@ -3854,7 +3852,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
             }
             if (source) {
                 const file = isString(source) ?
-                    findSourceFile(source, isDefaultLib, ignoreNoDefaultLib, reason, packageId, isProvided) :
+                    findSourceFile(source, isDefaultLib, ignoreNoDefaultLib, reason, packageId, isProvided, importAttributes, compilerOptions) :
                     undefined;
                 if (file) addFileToFilesByName(file, path, fileName, /*redirectedPath*/ undefined);
                 return file;
@@ -3933,7 +3931,8 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
             isProvided,
             hostErrorMessage => addFilePreprocessingFileExplainingDiagnostic(/*file*/ undefined, reason, Diagnostics.Cannot_read_file_0_Colon_1, [fileName, hostErrorMessage]),
             shouldCreateNewSourceFile,
-            importAttributes
+            importAttributes,
+            compilerOptions
         );
 
         if (packageId) {
@@ -4348,7 +4347,8 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
                         { kind: FileIncludeKind.Import, file: file.path, index },
                         resolution.packageId,
                         isProvided,
-                        moduleImports[index].attributes
+                        moduleImports[index].attributes,
+                        options
                     );
                 }
 

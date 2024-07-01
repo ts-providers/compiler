@@ -8321,5 +8321,13 @@
     "The module '{0}' could not be loaded as a type provider. Try installing packages with your package manager, then rerun the command or restart your editor.": {
         "category": "Error",
         "code": 30000
+    },
+    "The module '{0}' does not export a valid type provider as the default export.": {
+        "category": "Error",
+        "code": 30010
+    },
+    "An unspecified error occured during type provider evaluation.": {
+        "category": "Error",
+        "code": 30020
     }
 }

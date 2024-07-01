@@ -23,7 +23,7 @@ export function getProvidedNameBase(providedName?: string): string | undefined {
 }
 
 export function getProvidedNameHash(providedName?: string): string | undefined {
-    return providedName?.split(providedNameSeparator)[2];
+    return providedName?.split(providedNameSeparator)[2].split(".")[0];
 }
 
 function createImportHash(packageName: string, importAttributes: ImportAttributes, importingFilePath?: string): string {
@@ -31,7 +31,7 @@ function createImportHash(packageName: string, importAttributes: ImportAttribute
     const importOptions = getImportAttributesAsKeyValuePairs(importAttributes) ?? [];
     const importingFileDirectory = importingFilePath ? getDirectoryPath(importingFilePath) : getSourceFileDirectory(getImportingFileNode(importAttributes));
     const result = createObjectHash({ packageName, importOptions, importingFileDirectory });
-    console.log("PROVIDER HASH", packageName, importingFileDirectory, importOptions, result);
+    // console.log("PROVIDER HASH", packageName, importingFileDirectory, importOptions, result);
     return result;
 }
 

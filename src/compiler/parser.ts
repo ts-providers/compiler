@@ -43,6 +43,7 @@ import {
     CommentDirective,
     commentPragmas,
     CommentRange,
+    CompilerOptions,
     ComputedPropertyName,
     concatenate,
     ConditionalExpression,
@@ -1342,7 +1343,7 @@ function setExternalModuleIndicator(sourceFile: SourceFile) {
     sourceFile.externalModuleIndicator = isFileProbablyExternalModule(sourceFile);
 }
 
-export function createSourceFile(fileName: string, sourceText: string, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, isProvided: boolean, setParentNodes = false, scriptKind?: ScriptKind, importAttributes?: ImportAttributes): SourceFile {
+export function createSourceFile(fileName: string, sourceText: string, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, isProvided: boolean, setParentNodes = false, scriptKind?: ScriptKind, importAttributes?: ImportAttributes, compilerOptions?: CompilerOptions): SourceFile {
     tracing?.push(tracing.Phase.Parse, "createSourceFile", { path: fileName }, /*separateBeginAndEnd*/ true);
     performance.mark("beforeParse");
     let result: SourceFile;
@@ -1364,7 +1365,7 @@ export function createSourceFile(fileName: string, sourceText: string, languageV
             return (overrideSetExternalModuleIndicator || setExternalModuleIndicator)(file);
         };
         result = isProvided
-            ? createProvidedSourceFile(fileName, importAttributes!)
+            ? createProvidedSourceFile(fileName, importAttributes!, compilerOptions)
             : Parser.parseSourceFile(fileName, sourceText, languageVersion, /*syntaxCursor*/ undefined, setParentNodes, scriptKind, setIndicator, jsDocParsingMode);
     }
 

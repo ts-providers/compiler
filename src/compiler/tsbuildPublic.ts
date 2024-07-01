@@ -161,6 +161,8 @@ export interface BuildOptions {
     /** @internal */ generateCpuProfile?: string;
     /** @internal */ generateTrace?: string;
 
+    runtimeTaget?: CompilerOptions["runtimeTarget"];
+
     [option: string]: CompilerOptionsValue | undefined;
 }
 

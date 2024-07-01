@@ -26,20 +26,11 @@ export function transformProvidedImports(context: TransformationContext): (x: So
         const specifierText = (declNode.moduleSpecifier as StringLiteralLike).text;
         const providedImportHash = getProvidedNameHash(specifierText);
 
-        console.log("\nTRANSFORMING PROVIDED IMPORT",  specifierText, providedImportHash);
-
-        const host = context.getEmitHost();
-
         const outDir = context.getCompilerOptions().outDir!;
         const fileOutput = getOwnEmitOutputFilePath(currentFile.fileName, context.getEmitHost(), ".js");
         const fileOutputDir = getDirectoryPath(fileOutput);
         const relativePathToOutDir = getRelativePathFromDirectory(fileOutputDir, outDir, false) || ".";
 
-        console.log(outDir);
-        console.log(fileOutput);
-        console.log(relativePathToOutDir);
-
-        console.log("\n");
         const moduleKind = getEmitModuleKind(context.getCompilerOptions());
         const extensionPrefix = getExtensionPrefixByModuleKind(moduleKind)
         const specifier = factory.createStringLiteral(`${relativePathToOutDir}/${providedOutDir}/${providedImportHash}.${extensionPrefix}js`);

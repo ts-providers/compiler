@@ -302,7 +302,6 @@ export function transformTypeScript(context: TransformationContext) {
      * @param node A SourceFile node.
      */
     function transformSourceFile(node: SourceFile) {
-        console.log("TS TRANSFORM", node.fileName, node.isDeclarationFile, node.scriptKind);
         if (node.isDeclarationFile) {
             return node;
         }

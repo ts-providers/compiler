@@ -1,21 +1,21 @@
 import deasync from "deasync";
 import { dirname } from "path";
-import { attachFileToDiagnostics, createPrinter, Debug, DiagnosticCategory, DiagnosticMessage, Diagnostics, DiagnosticWithDetachedLocation, emptyArray, emptyMap, factory, forEachChild, forEachChildRecursively, getLanguageVariant, ImportAttributes, ImportDeclaration, isImportDeclaration, Mutable, Node, NodeFlags, noop, ReadonlyPragmaMap, ScriptKind, ScriptTarget, setParentRecursive, SourceFile, Statement, StringLiteral, SyntaxKind, TransformFlags } from "../_namespaces/ts";
-import { getImportAttributesAsRecord, getSourceFileDirectory, getImportingFileNode, getProvidedNameBase, isProvidedName, isSyncTypeProvider, isAsyncTypeProvider } from "./utils";
-import { createImportDiagnostic } from "./diagnostics.js";
-import { ProvideDeclarations } from "./interfaces.js";
+import { attachFileToDiagnostics, CompilerOptions, createPrinter, Debug, DiagnosticCategory, DiagnosticMessage, Diagnostics, DiagnosticWithDetachedLocation, emptyArray, emptyMap, factory, forEachChild, forEachChildRecursively, getLanguageVariant, ImportAttributes, ImportDeclaration, isImportDeclaration, Mutable, Node, NodeFlags, noop, ReadonlyPragmaMap, ScriptKind, ScriptTarget, setParentRecursive, SourceFile, Statement, StringLiteral, SyntaxKind, TransformFlags } from "../_namespaces/ts";
+import { getImportAttributesAsRecord, getSourceFileDirectory, getImportingFileNode, getProvidedNameBase, isProvidedName, isSyncTypeProvider, isAsyncTypeProvider, getProvidedNameHash } from "./utils";
+import { createImportDiagnostics, createImportOptionSpecificDiagnostics } from "./diagnostics.js";
+import { ProvideDeclarations, ProviderContext } from "./interfaces.js";
 import { printSourceFile as logSourceFileText } from "./debugging.js";
 
 // TODO(OR): Revise what is exported from the `providers` directory
 
-export function createProvidedSourceFile(fileName: string, importAttributes: ImportAttributes): SourceFile {
+export function createProvidedSourceFile(fileName: string, importAttributes: ImportAttributes, compilerOptions?: CompilerOptions): SourceFile {
     const importingFile = getImportingFileNode(importAttributes);
 
     if (!importingFile) {
         return createEmptyFile(fileName, importAttributes);
     }
 
-    const { file, diagnostics } = createProvidedSourceFileWorker(fileName, importAttributes, importingFile);
+    const { file, diagnostics } = createProvidedSourceFileWorker(fileName, importAttributes, importingFile, compilerOptions);
 
     if (diagnostics) {
         const attachedDiganostics = attachFileToDiagnostics(diagnostics, importingFile);
@@ -25,7 +25,7 @@ export function createProvidedSourceFile(fileName: string, importAttributes: Imp
     return file ?? createEmptyFile(fileName, importAttributes);
 }
 
-function createProvidedSourceFileWorker(fileName: string, importAttributes: ImportAttributes, importingFile: SourceFile): { file?: SourceFile, diagnostics?: DiagnosticWithDetachedLocation[] } {
+function createProvidedSourceFileWorker(fileName: string, importAttributes: ImportAttributes, importingFile: SourceFile, compilerOptions?: CompilerOptions): { file?: SourceFile, diagnostics?: DiagnosticWithDetachedLocation[] } {
     const importingFilePath = getSourceFileDirectory(importingFile);
     const importDeclaration = importAttributes.parent as ImportDeclaration;
 
@@ -46,6 +46,7 @@ function createProvidedSourceFileWorker(fileName: string, importAttributes: Impo
 
     const providerPackagePath = dirname(originalFileName);
 
+    const diagnostics: DiagnosticWithDetachedLocation[] = [];
     let providerPackage;
     let provider;
 
@@ -55,11 +56,16 @@ function createProvidedSourceFileWorker(fileName: string, importAttributes: Impo
     }
     catch {
         const message = Diagnostics.The_module_0_could_not_be_loaded_as_a_type_provider_Try_installing_packages_with_your_package_manager_then_rerun_the_command_or_restart_your_editor;
-        const errorDiagnostic = createImportDiagnostic(importDeclaration, importingFile, message, originalModuleName);
-    return { diagnostics: [errorDiagnostic] };
+        diagnostics.push(...createImportDiagnostics(importDeclaration, importingFile, [message], originalModuleName));
+        return { diagnostics };
     }
 
-    const context = { importingFilePath };
+    const context: ProviderContext = {
+        importingFilePath,
+        importHash: getProvidedNameHash(fileName) ?? "",
+        runtimeTarget: compilerOptions?.runtimeTarget
+    };
+
     let providedSourceFile: SourceFile;
 
     try {
@@ -70,51 +76,45 @@ function createProvidedSourceFileWorker(fileName: string, importAttributes: Impo
                 : undefined;
 
         if (!provideDeclarations) {
-            const message: DiagnosticMessage = {
-                key: "abraka-dabra",
-                category: DiagnosticCategory.Error,
-                code: 42,
-                message: "The module '{0}' does not export a valid type provider as the default export."
-            }
-
-            const errorDiagnostic = createImportDiagnostic(importDeclaration.moduleSpecifier, importingFile, message, originalModuleName);
-            return { diagnostics: [errorDiagnostic] };
+            const message = Diagnostics.The_module_0_does_not_export_a_valid_type_provider_as_the_default_export;
+            diagnostics.push(...createImportDiagnostics(importDeclaration.moduleSpecifier, importingFile, [message], originalModuleName));
+            return { diagnostics };
         }
 
         const providerResult = provideDeclarations(context, providerOptions) ?? {};
 
-        if (providerResult.optionDiagnostics) {
-
+        if (providerResult.generalDiagnostics) {
+            diagnostics.push(...createImportDiagnostics(importDeclaration, importingFile, providerResult.generalDiagnostics));
         }
+
+        providerResult.optionDiagnostics?.forEach((messages, optionName) => {
+            diagnostics.push(...createImportOptionSpecificDiagnostics(optionName, importAttributes, importingFile, messages));
+        });
 
         if (providerResult.sourceFile) {
             providedSourceFile = providerResult.sourceFile;
         } else {
-            return {};
+            return { diagnostics };
         }
     }
     catch {
-        const message: DiagnosticMessage = {
-            key: "abraka-dabra",
-            category: DiagnosticCategory.Error,
-            code: 42,
-            message: "An unspecified error occured during type provider evaluation."
-        }
+        console.log("CRASHED PROVIDER CALL");
 
-        const errorDiagnostic = createImportDiagnostic(importDeclaration, importingFile, message);
-        return { diagnostics: [errorDiagnostic] };
+        const message = Diagnostics.An_unspecified_error_occured_during_type_provider_evaluation;
+        const diagnostics = createImportDiagnostics(importDeclaration, importingFile, [message]);
+        return { diagnostics };
     }
 
-    configureVirtualSourceFile(providedSourceFile, fileName, importAttributes);
+    configureProvidedSourceFile(providedSourceFile, fileName, importAttributes);
 
     // TODO(OR): Remove this
     logSourceFileText(providedSourceFile);
 
-    return { file: providedSourceFile, diagnostics: [] };
+    return { file: providedSourceFile, diagnostics };
 }
 
 // Based on https://github.com/microsoft/TypeScript/pull/39784
-function configureVirtualSourceFile(file: SourceFile, fileName: string, importAttributes: ImportAttributes) {
+function configureProvidedSourceFile(file: SourceFile, fileName: string, importAttributes: ImportAttributes) {
     (file as Mutable<SourceFile>).flags |= NodeFlags.Ambient;
     (file as Mutable<SourceFile>).flags &= ~NodeFlags.Synthesized;
     (file as Mutable<SourceFile>).kind = SyntaxKind.SourceFile;
@@ -185,6 +185,6 @@ function fixupNodeArrays(node: Node) {
 function createEmptyFile(fileName: string, importAttributes: ImportAttributes): SourceFile {
     const emptyExport = factory.createExportDeclaration(/*modifiers*/ undefined, /*isTypeOnly*/ false, factory.createNamedExports([]));
     const file = factory.createSourceFile([emptyExport], factory.createToken(SyntaxKind.EndOfFileToken), NodeFlags.None);
-    configureVirtualSourceFile(file, fileName, importAttributes);
+    configureProvidedSourceFile(file, fileName, importAttributes);
     return file;
 }

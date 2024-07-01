@@ -1,4 +1,4 @@
-import { Diagnostic, SourceFile } from "../_namespaces/ts.js";
+import {  CompilerOptions, DiagnosticMessage, SourceFile } from "../_namespaces/ts.js";
 
 export interface SyncTypeProvider<TOptions extends object> {
     provideDeclarationsSync: ProvideDeclarations<TOptions>
@@ -12,11 +12,12 @@ export type ProvideDeclarations<TOptions extends object> = (context: ProviderCon
 
 export interface ProviderContext {
     importingFilePath: string;
-    runtimeTarget?: "browser" | "bun" | "deno" | "node";
+    importHash: string;
+    runtimeTarget?: CompilerOptions["runtimeTarget"];
 }
 
 export interface ProviderGeneratorResult {
     sourceFile?: SourceFile;
-    generalDiagnostics?: Diagnostic[];
-    optionDiagnostics?: Map<string, Diagnostic[]>;
+    generalDiagnostics?: DiagnosticMessage[];
+    optionDiagnostics?: Map<string, DiagnosticMessage[]>;
 }

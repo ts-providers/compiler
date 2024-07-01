@@ -330,7 +330,8 @@ export function createDocumentRegistryInternal(useCaseSensitiveFileNames?: boole
         // logIfProviderFile(fileName, "acquireOrUpdateDocument", "SAMPLE", getProviderSamplePath(importAttributes), keyWithMode, "KIND", scriptKind, "ACQPATH", path);
 
         if (isProvided) {
-            const sourceFile = createProvidedLanguageServiceSourceFile(fileName, importAttributes!, scriptSnapshot, version);
+            const compilerOptions = (compilationSettingsOrHost as MinimalResolutionCacheHost)?.getCompilationSettings?.() ?? compilationSettingsOrHost;
+            const sourceFile = createProvidedLanguageServiceSourceFile(fileName, importAttributes!, scriptSnapshot, version, compilerOptions);
             if (externalCache) {
                 externalCache.setDocument(keyWithMode, path, sourceFile);
             }
