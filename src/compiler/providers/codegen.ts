@@ -1,10 +1,10 @@
-import deasync from "deasync";
+import { awaitSync } from "@kaciras/deasync";
 import { dirname } from "path";
-import { attachFileToDiagnostics, CompilerOptions, createPrinter, Debug, DiagnosticCategory, DiagnosticMessage, Diagnostics, DiagnosticWithDetachedLocation, emptyArray, emptyMap, factory, forEachChild, forEachChildRecursively, getLanguageVariant, ImportAttributes, ImportDeclaration, isImportDeclaration, Mutable, Node, NodeFlags, noop, ReadonlyPragmaMap, ScriptKind, ScriptTarget, setParentRecursive, SourceFile, Statement, StringLiteral, SyntaxKind, TransformFlags } from "../_namespaces/ts";
-import { getImportAttributesAsRecord, getSourceFileDirectory, getImportingFileNode, getProvidedNameBase, isProvidedName, isSyncTypeProvider, isAsyncTypeProvider, getProvidedNameHash } from "./utils";
-import { createImportDiagnostics, createImportOptionSpecificDiagnostics } from "./diagnostics.js";
-import { ProvideDeclarations, ProviderContext } from "./interfaces.js";
+import { attachFileToDiagnostics, CompilerOptions, createPrinter, Debug, Diagnostics, DiagnosticWithDetachedLocation, emptyArray, emptyMap, factory, forEachChild, forEachChildRecursively, getLanguageVariant, ImportAttributes, ImportDeclaration, isImportDeclaration, Mutable, Node, NodeFlags, noop, ReadonlyPragmaMap, ScriptKind, ScriptTarget, setParentRecursive, SourceFile, Statement, StringLiteral, SyntaxKind, TransformFlags } from "../_namespaces/ts";
 import { printSourceFile as logSourceFileText } from "./debugging.js";
+import { createImportDiagnostics, createImportOptionSpecificDiagnostics } from "./diagnostics.js";
+import { getImportAttributesAsRecord, getImportingFileNode, getProvidedNameBase, getProvidedNameHash, getSourceFileDirectory, isAsyncTypeProvider, isProvidedName, isSyncTypeProvider } from "./utils";
+import { ProviderContext, ProvideSourceFile } from "./types.js";
 
 // TODO(OR): Revise what is exported from the `providers` directory
 
@@ -69,19 +69,31 @@ function createProvidedSourceFileWorker(fileName: string, importAttributes: Impo
     let providedSourceFile: SourceFile;
 
     try {
-        const provideDeclarations = isSyncTypeProvider(provider)
-            ? provider.provideDeclarationsSync
+        const provideSourceFile = isSyncTypeProvider(provider)
+            ? provider.provideSourceFileSync
             : isAsyncTypeProvider(provider)
-                ? deasync(provider.provideDeclarationsAsync) as ProvideDeclarations<object>
+                ? ((context, options) => {
+                    const promise = provider.provideSourceFileAsync(context, options);
+                    return awaitSync(promise);
+                }) as ProvideSourceFile<object>
                 : undefined;
 
-        if (!provideDeclarations) {
+        if (!provideSourceFile) {
             const message = Diagnostics.The_module_0_does_not_export_a_valid_type_provider_as_the_default_export;
             diagnostics.push(...createImportDiagnostics(importDeclaration.moduleSpecifier, importingFile, [message], originalModuleName));
             return { diagnostics };
         }
 
-        const providerResult = provideDeclarations(context, providerOptions) ?? {};
+        console.log("Retrieving provided source file using", provideSourceFile);
+
+        let providerResult = provideSourceFile(providerOptions, context) ?? {};
+
+        if (providerResult.requiresAsync === true && isAsyncTypeProvider(provider)) {
+            // Retry with async
+            console.log("Type provider indicated that the specified options are supported only in async mode. Retrying.")
+            const promise = provider.provideSourceFileAsync(providerOptions, context);
+            providerResult = awaitSync(promise);
+        }
 
         if (providerResult.generalDiagnostics) {
             diagnostics.push(...createImportDiagnostics(importDeclaration, importingFile, providerResult.generalDiagnostics));
@@ -92,7 +104,7 @@ function createProvidedSourceFileWorker(fileName: string, importAttributes: Impo
         });
 
         if (providerResult.sourceFile) {
-            providedSourceFile = providerResult.sourceFile;
+            providedSourceFile = providerResult.sourceFile as unknown as SourceFile;
         } else {
             return { diagnostics };
         }
@@ -188,3 +200,23 @@ function createEmptyFile(fileName: string, importAttributes: ImportAttributes): 
     configureProvidedSourceFile(file, fileName, importAttributes);
     return file;
 }
+
+// function deasyncPromise(promise: Promise<unknown>) {
+//     let result: unknown = false;
+//     let error = false;
+//     let done = false;
+//     promise.then(function (res) {
+//         result = res;
+//     }, function (err) {
+//         error = err;
+//     }).then(function () {
+//         done = true;
+//     });
+//     while (!done) {
+//         deasync.runLoopOnce();
+//     }
+//     if (error) {
+//         throw error;
+//     }
+//     return result;
+// };

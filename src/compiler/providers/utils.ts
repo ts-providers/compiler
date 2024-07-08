@@ -1,7 +1,7 @@
 import { NotUndefined, sha1 } from "object-hash";
 import { Identifier, ImportAttributes, SourceFile, StringLiteral } from "../types";
-import { Debug, emptyArray, factory, getDirectoryPath } from "../_namespaces/ts";
-import { AsyncTypeProvider, SyncTypeProvider } from "./interfaces.js";
+import { Debug, getDirectoryPath } from "../_namespaces/ts";
+import { AsyncTypeProvider, SyncTypeProvider } from "./types.js";
 
 const providedNameSeparator = "|";
 const providedNamePrefix = `Provided${providedNameSeparator}`;
@@ -75,9 +75,9 @@ export function getSourceFileDirectory(sourceFile?: SourceFile): string | undefi
 }
 
 export function isSyncTypeProvider(instance: unknown): instance is SyncTypeProvider<{}> {
-    return typeof (instance as SyncTypeProvider<{}>)?.provideDeclarationsSync === "function";
+    return typeof (instance as SyncTypeProvider<{}>)?.provideSourceFileSync === "function";
 }
 
 export function isAsyncTypeProvider(instance: unknown): instance is AsyncTypeProvider<{}> {
-    return typeof (instance as AsyncTypeProvider<{}>)?.provideDeclarationsAsync === "function";
+    return typeof (instance as AsyncTypeProvider<{}>)?.provideSourceFileAsync === "function";
 }

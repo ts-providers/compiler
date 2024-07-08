@@ -13,7 +13,6 @@ export function createImportOptionSpecificDiagnostics(optionName: string, import
     Debug.assert(isSourceFile(importingFile));
 
     const attribute = importAttributes.elements.find(a => isIdentifier(a.name) && a.name.escapedText === optionName || isStringLiteral(a.name) && a.name.text === optionName);
-    console.log("ATTRIBUTE DIAGNOSTIC", optionName, attribute);
     const node = attribute ? attribute : importAttributes;
     const text = getTextOfNode(node);
     const startPos = importingFile.text.indexOf(text);

@@ -113,7 +113,7 @@
         "npm": "8.19.4"
     },
     "dependencies": {
-        "deasync": "0.1.30",
+        "@kaciras/deasync": "1.0.4",
         "object-hash": "3.0.0"
     }
 }
