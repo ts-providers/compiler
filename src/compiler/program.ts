@@ -206,7 +206,6 @@ import {
     isRequireCall,
     isRootedDiskPath,
     isSourceFileJS,
-    isStatementWithImportAttributes,
     isString,
     isStringLiteral,
     isStringLiteralLike,
@@ -1681,13 +1680,11 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     ) => readonly ResolvedModuleWithFailedLookupLocations[];
     const hasInvalidatedResolutions = host.hasInvalidatedResolutions || returnFalse;
     if (host.resolveModuleNameLiterals) {
-        console.log("MODULE RESOLVER = resolveModuleNameLiterals");
         actualResolveModuleNamesWorker = (moduleImports, containingFile, redirectedReference, options, containingSourceFile, reusedNames) =>
             host.resolveModuleNameLiterals!(moduleImports.map(m => m.specifier), containingFile, redirectedReference, options, containingSourceFile, reusedNames);
         moduleResolutionCache = host.getModuleResolutionCache?.();
     }
     else if (host.resolveModuleNames) {
-        console.log("MODULE RESOLVER = resolveModuleNames");
         actualResolveModuleNamesWorker = (moduleImports, containingFile, redirectedReference, options, containingSourceFile, reusedNames) =>
             host.resolveModuleNames!(
                 moduleImports.map(m => getModuleResolutionName(m.specifier)),
@@ -1708,7 +1705,6 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     }
     else {
         // TODO(OR): Provider aware resolution cache
-        console.log("MODULE RESOLVER = loadWithModeAwareCache");
         moduleResolutionCache = createModuleResolutionCache(currentDirectory, getCanonicalFileName, options);
         actualResolveModuleNamesWorker = (moduleImports, containingFile, redirectedReference, options, containingSourceFile) =>
             loadWithModeAwareCache(
@@ -3607,7 +3603,7 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
                 if (moduleNameExpr && isStringLiteral(moduleNameExpr) && moduleNameExpr.text && (!inAmbientModule || !isExternalModuleNameRelative(moduleNameExpr.text))) {
                     setParentRecursive(node, /*incremental*/ false); // we need parent data on imports before the program is fully bound, so we ensure it's set here
                     const isProvided = isImportDeclaration(node) && node.isProvided;
-                    const attributes = isStatementWithImportAttributes(node) ? node.attributes : undefined;
+                    const attributes = node.kind === SyntaxKind.ImportDeclaration ? node.attributes : undefined;
 
                     moduleNameExpr.text = isProvided && attributes && !isProvidedName(moduleNameExpr.text)
                         ? createProvidedModuleName(moduleNameExpr.text, attributes, fileName)

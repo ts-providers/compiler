@@ -5586,9 +5586,6 @@ export type AnyImportOrRequireStatement = AnyImportSyntax | RequireVariableState
 export type AnyImportOrReExport = AnyImportSyntax | ExportDeclaration;
 
 /** @internal */
-export type StatementWithImportAttributes = ImportDeclaration | ExportDeclaration;
-
-/** @internal */
 export interface ValidImportTypeNode extends ImportTypeNode {
     argument: LiteralTypeNode & { literal: StringLiteral; };
 }

@@ -26,7 +26,7 @@ export function getProvidedNameHash(providedName?: string): string | undefined {
     return providedName?.split(providedNameSeparator)[2].split(".")[0];
 }
 
-function createImportHash(packageName: string, importAttributes: ImportAttributes, importingFilePath?: string): string {
+export function createImportHash(packageName: string, importAttributes: ImportAttributes, importingFilePath?: string): string {
     Debug.assert(!isProvidedName(packageName));
     const importOptions = getImportAttributesAsKeyValuePairs(importAttributes) ?? [];
     const importingFileDirectory = importingFilePath ? getDirectoryPath(importingFilePath) : getSourceFileDirectory(getImportingFileNode(importAttributes));

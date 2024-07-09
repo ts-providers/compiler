@@ -1,9 +1,9 @@
 // WARNING: The script `configurePrerelease.ts` uses a regexp to parse out these values.
 // If changing the text in this section, be sure to test `configurePrerelease` too.
-export const versionMajorMinor = "5.6";
+export const versionMajorMinor = "5.5";
 // The following is baselined as a literal template type without intervention
 /** The version of the TypeScript compiler release */
-export const version: string = `${versionMajorMinor}.0-dev`;
+export const version: string = `${versionMajorMinor}.3-dev`;
 
 /**
  * Type of objects whose values are all of the same type.

@@ -3,7 +3,7 @@ import { dirname } from "path";
 import { attachFileToDiagnostics, CompilerOptions, createPrinter, Debug, Diagnostics, DiagnosticWithDetachedLocation, emptyArray, emptyMap, factory, forEachChild, forEachChildRecursively, getLanguageVariant, ImportAttributes, ImportDeclaration, isImportDeclaration, Mutable, Node, NodeFlags, noop, ReadonlyPragmaMap, ScriptKind, ScriptTarget, setParentRecursive, SourceFile, Statement, StringLiteral, SyntaxKind, TransformFlags } from "../_namespaces/ts";
 import { printSourceFile as logSourceFileText } from "./debugging.js";
 import { createImportDiagnostics, createImportOptionSpecificDiagnostics } from "./diagnostics.js";
-import { getImportAttributesAsRecord, getImportingFileNode, getProvidedNameBase, getProvidedNameHash, getSourceFileDirectory, isAsyncTypeProvider, isProvidedName, isSyncTypeProvider } from "./utils";
+import { createImportHash, getImportAttributesAsRecord, getImportingFileNode, getProvidedNameBase, getProvidedNameHash, getSourceFileDirectory, isAsyncTypeProvider, isProvidedName, isSyncTypeProvider } from "./utils";
 import { ProviderContext, ProvideSourceFile } from "./types.js";
 
 // TODO(OR): Revise what is exported from the `providers` directory
@@ -50,9 +50,13 @@ function createProvidedSourceFileWorker(fileName: string, importAttributes: Impo
     let providerPackage;
     let provider;
 
+    console.log("PROVIDER LOAD", fileName, originalFileName, importingFilePath, providerPackagePath);
+
     try {
         providerPackage = require(providerPackagePath);
+        console.log("PROVIDER LOAD 2", providerPackage);
         provider = providerPackage.default;
+        console.log("PROVIDER LOAD 3", provider);
     }
     catch {
         const message = Diagnostics.The_module_0_could_not_be_loaded_as_a_type_provider_Try_installing_packages_with_your_package_manager_then_rerun_the_command_or_restart_your_editor;
@@ -62,7 +66,7 @@ function createProvidedSourceFileWorker(fileName: string, importAttributes: Impo
 
     const context: ProviderContext = {
         importingFilePath,
-        importHash: getProvidedNameHash(fileName) ?? "",
+        importHash: createImportHash(originalModuleName, importAttributes, importingFilePath) ?? "",
         runtimeTarget: compilerOptions?.runtimeTarget
     };
 
@@ -200,23 +204,3 @@ function createEmptyFile(fileName: string, importAttributes: ImportAttributes): 
     configureProvidedSourceFile(file, fileName, importAttributes);
     return file;
 }
-
-// function deasyncPromise(promise: Promise<unknown>) {
-//     let result: unknown = false;
-//     let error = false;
-//     let done = false;
-//     promise.then(function (res) {
-//         result = res;
-//     }, function (err) {
-//         error = err;
-//     }).then(function () {
-//         done = true;
-//     });
-//     while (!done) {
-//         deasync.runLoopOnce();
-//     }
-//     if (error) {
-//         throw error;
-//     }
-//     return result;
-// };

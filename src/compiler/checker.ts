@@ -47102,7 +47102,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
             }
 
             const mode = (moduleKind === ModuleKind.NodeNext) && declaration.moduleSpecifier && getUsageModeForExpression(declaration.moduleSpecifier);
-            if (mode !== ModuleKind.ESNext && moduleKind !== ModuleKind.ESNext && moduleKind !== ModuleKind.Preserve) {
+            if (mode !== ModuleKind.ESNext && moduleKind !== ModuleKind.ESNext && moduleKind !== ModuleKind.Preserve && (!isImportDeclaration(declaration) || !declaration.isProvided)) {
                 const message = isImportAttributes
                     ? moduleKind === ModuleKind.NodeNext
                         ? Diagnostics.Import_attributes_are_not_allowed_on_statements_that_compile_to_CommonJS_require_calls
@@ -49912,8 +49912,6 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     function initializeTypeChecker() {
         // Bind all source files and propagate errors
         const files = host.getSourceFiles();
-
-        console.log("BINDING", files.filter(f => isProvidedName(f.fileName)).map(f => f.fileName));
 
         for (const file of files) {
             bindSourceFile(file, compilerOptions);

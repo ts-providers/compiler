@@ -3144,7 +3144,6 @@ function createBinder(): (file: SourceFile, options: CompilerOptions) => void {
         else {
             file.symbol.globalExports = file.symbol.globalExports || createSymbolTable();
             declareSymbol(file.symbol.globalExports, file.symbol, node, SymbolFlags.Alias, SymbolFlags.AliasExcludes);
-            console.log("BINDING NAMESPACE IN", file.fileName);
         }
     }
 

@@ -518,7 +518,6 @@ import {
     startsWith,
     startsWithUseStrict,
     Statement,
-    StatementWithImportAttributes,
     StringLiteral,
     StringLiteralLike,
     StringLiteralType,
@@ -587,7 +586,6 @@ import {
     WriteFileCallbackData,
     YieldExpression,
 } from "./_namespaces/ts.js";
-import { isProvidedName } from "./providers/utils.js";
 
 /** @internal */
 export const resolvingEmptyArray: never[] = [];
@@ -2119,16 +2117,6 @@ export function hasPossibleExternalModuleReference(node: Node): node is AnyImpor
 /** @internal */
 export function isAnyImportOrReExport(node: Node): node is AnyImportOrReExport {
     return isAnyImportSyntax(node) || isExportDeclaration(node);
-}
-
-export function isStatementWithImportAttributes(node: Node): node is StatementWithImportAttributes {
-    switch (node.kind) {
-        case SyntaxKind.ImportDeclaration:
-        case SyntaxKind.ExportDeclaration:
-            return true;
-        default:
-            return false;
-    }
 }
 
 /** @internal */
