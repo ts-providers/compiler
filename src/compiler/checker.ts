@@ -46874,10 +46874,10 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
             }
         }
         if (!isImportEqualsDeclaration(node) && node.attributes) {
-            const diagnostic = node.attributes.token === SyntaxKind.WithKeyword ? Diagnostics.Import_attribute_values_must_be_string_literal_expressions : Diagnostics.Import_assertion_values_must_be_string_literal_expressions;
+            const diagnostic = node.attributes.token === SyntaxKind.WithKeyword ? Diagnostics.Import_attribute_values_must_be_string_numeric_or_boolean_literal_expressions : Diagnostics.Import_assertion_values_must_be_string_literal_expressions;
             let hasError = false;
             for (const attr of node.attributes.elements) {
-                if (!isStringLiteral(attr.value)) {
+                if (!isStringLiteral(attr.value) && !isNumericLiteral(attr.value) && !isBooleanLiteral(attr.value)) {
                     hasError = true;
                     error(attr.value, diagnostic);
                 }

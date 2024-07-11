@@ -2,7 +2,7 @@
     "name": "@ts-providers/compiler",
     "author": "Microsoft Corp.",
     "homepage": "https://www.typescriptlang.org/",
-    "version": "5.5.3-providers-v7",
+    "version": "5.5.3-providers-v10",
     "license": "Apache-2.0",
     "description": "Fork of TypeScript with experimental support for type providers.",
     "keywords": [

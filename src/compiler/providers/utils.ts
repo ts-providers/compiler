@@ -1,6 +1,6 @@
 import { NotUndefined, sha1 } from "object-hash";
-import { Identifier, ImportAttributes, SourceFile, StringLiteral } from "../types";
-import { Debug, getDirectoryPath } from "../_namespaces/ts";
+import { Identifier, ImportAttributes, SourceFile, StringLiteral, SyntaxKind } from "../types";
+import { Debug, getDirectoryPath, isBooleanLiteral, isIdentifier, isNumericLiteral, isStringLiteralLike } from "../_namespaces/ts";
 import { AsyncTypeProvider, SyncTypeProvider } from "./types.js";
 
 const providedNameSeparator = "|";
@@ -49,11 +49,20 @@ export function getProviderSamplePath(importAttributes?: ImportAttributes): stri
 }
 
 export function getImportAttributesAsKeyValuePairs(attributes?: ImportAttributes) {
-    return attributes?.elements.map(e => ({ key: (e.name as Identifier).escapedText, value: (e.value as StringLiteral).text }));
+    return attributes?.elements.map(e => {
+        const key = isIdentifier(e.name) ? e.name.escapedText : (e.name as StringLiteral).text;
+        const value = isNumericLiteral(e.value)
+                ? Number(e.value.text)
+                : isBooleanLiteral(e.value)
+                    ? e.value.kind === SyntaxKind.TrueKeyword
+                    : (e.value as StringLiteral).text;
+
+        return { key, value };
+    });
 }
 
-export function getImportAttributesAsRecord(attributes?: ImportAttributes): Record<string, string> {
-    const result: Record<string, string> = {};
+export function getImportAttributesAsRecord(attributes?: ImportAttributes): Record<string, string | number | boolean> {
+    const result: Record<string, string | number | boolean> = {};
 
     if (attributes) {
         const keyValuePairs = getImportAttributesAsKeyValuePairs(attributes) ?? [];

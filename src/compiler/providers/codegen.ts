@@ -33,6 +33,7 @@ function createProvidedSourceFileWorker(fileName: string, importAttributes: Impo
     Debug.assert(isImportDeclaration(importDeclaration));
 
     const providerOptions = getImportAttributesAsRecord(importAttributes);
+    console.log("== OPTIONS ==", providerOptions);
 
     // TODO(OR): Remove this
     console.log("Creating provided source file", fileName, `'${JSON.stringify(providerOptions)}'`);
@@ -50,13 +51,9 @@ function createProvidedSourceFileWorker(fileName: string, importAttributes: Impo
     let providerPackage;
     let provider;
 
-    console.log("PROVIDER LOAD", fileName, originalFileName, importingFilePath, providerPackagePath);
-
     try {
         providerPackage = require(providerPackagePath);
-        console.log("PROVIDER LOAD 2", providerPackage);
         provider = providerPackage.default;
-        console.log("PROVIDER LOAD 3", provider);
     }
     catch {
         const message = Diagnostics.The_module_0_could_not_be_loaded_as_a_type_provider_Try_installing_packages_with_your_package_manager_then_rerun_the_command_or_restart_your_editor;

@@ -634,9 +634,10 @@ interface ImportAssertions {
 
 /**
  * The type for the `with` property of the optional second argument to `import()`.
+ * Note (OR): The value type is extended in order to support richer provided import options.
  */
 interface ImportAttributes {
-    [key: string]: string;
+    [key: string]: string | number | boolean;
 }
 
 interface Math {

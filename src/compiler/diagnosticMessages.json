@@ -3863,7 +3863,7 @@
         "category": "Error",
         "code": 2857
     },
-    "Import attribute values must be string literal expressions.": {
+    "Import attribute values must be string, numeric, or boolean literal expressions.": {
         "category": "Error",
         "code": 2858
     },
