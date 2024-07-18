@@ -1,4 +1,4 @@
-import { CompilerOptions, getAreDeclarationMapsEnabled, getEmitDeclarations, getEmitModuleKind, ModuleKind, SourceFile } from "../_namespaces/ts.js";
+import { CompilerOptions, getAreDeclarationMapsEnabled, getDirectoryPath, getEmitDeclarations, getEmitModuleKind, ModuleKind, SourceFile } from "../_namespaces/ts.js";
 import { getProvidedNameHash } from "./utils.js";
 
 export const providedOutDir = "_provided";
@@ -7,7 +7,7 @@ export function getOutputPathsForProvidedFile(sourceFile: SourceFile, compilerOp
     // TODO(OR): Handle case when outDir is not set properly
     // TODO(OR): Handle case when outFile is used
 
-    const outDir = compilerOptions.outDir!;
+    const outDir = getOutDirOrDefault(compilerOptions, sourceFile.path);
     const moduleKind = getEmitModuleKind(compilerOptions);
     const extensionPrefix = getExtensionPrefixByModuleKind(moduleKind);
     const hash = getProvidedNameHash(sourceFile.fileName);
@@ -19,6 +19,10 @@ export function getOutputPathsForProvidedFile(sourceFile: SourceFile, compilerOp
     return {
         jsFilePath, sourceMapFilePath, declarationFilePath, declarationMapPath
     }
+}
+
+export function getOutDirOrDefault(compilerOptions: CompilerOptions, currentFilePath: string): string {
+    return compilerOptions.outDir ? compilerOptions.outDir : compilerOptions.rootDir ? compilerOptions.rootDir : getDirectoryPath(currentFilePath);
 }
 
 export function getExtensionPrefixByModuleKind(moduleKind: ModuleKind): string {

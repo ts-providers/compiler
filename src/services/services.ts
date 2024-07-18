@@ -527,14 +527,6 @@ function createChildren(node: Node, sourceFile: SourceFileLike | undefined): rea
     pos = node.pos;
     node.forEachChild(processNode, processNodes);
 
-    const badChildren = children.filter(c => c.pos < 0 || c.end < 0);
-
-    if (badChildren.length > 0) {
-        console.log("BAD CHILDREN");
-        console.log(badChildren.length);
-        console.log(badChildren);
-    }
-
     addSyntheticNodes(children, pos, node.end, node);
     scanner.setText(undefined);
     return children;

@@ -4704,7 +4704,6 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
             }
             if (moduleNotFoundError) {
                 // report errors only if it was requested
-                console.log("MODULE NOT FOUND", moduleReference);
                 error(errorNode, Diagnostics.File_0_is_not_a_module, sourceFile.fileName);
             }
             return undefined;
@@ -19352,7 +19351,6 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
                     const symbolFromModule = node.isTypeOf ? undefined : getSymbol(getExportsOfSymbol(mergedResolvedSymbol), current.escapedText, meaning);
                     const next = symbolFromModule ?? symbolFromVariable;
                     if (!next) {
-                        console.log("NAMESPACE NO EXPORTED MEMBER (getTypeFromImportTypeNode)", declarationNameToString(current));
                         error(current, Diagnostics.Namespace_0_has_no_exported_member_1, getFullyQualifiedName(currentNamespace), declarationNameToString(current));
                         return links.resolvedType = errorType;
                     }

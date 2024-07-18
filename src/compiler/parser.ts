@@ -8421,7 +8421,6 @@ namespace Parser {
         const name = tokenIsIdentifierOrKeyword(token()) ? parseIdentifierName() : parseLiteralLikeNode(SyntaxKind.StringLiteral) as StringLiteral;
         parseExpected(SyntaxKind.ColonToken);
         const value = parseAssignmentExpressionOrHigher(/*allowReturnTypeInArrowFunction*/ true);
-        console.log("ATTRIBUTE VALUE", isIdentifierNode(name) ? name.escapedText : "", value);
         return finishNode(factory.createImportAttribute(name, value), pos);
     }
 

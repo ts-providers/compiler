@@ -187,6 +187,7 @@ function getScriptTransformers(compilerOptions: CompilerOptions, customTransform
 function getDeclarationTransformers(customTransformers?: CustomTransformers) {
     const transformers: TransformerFactory<SourceFile | Bundle>[] = [];
     transformers.push(transformDeclarations);
+    transformers.push(transformProvidedImports);
     addRange(transformers, customTransformers && map(customTransformers.afterDeclarations, wrapDeclarationTransformerFactory));
     return transformers;
 }

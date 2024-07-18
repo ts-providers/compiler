@@ -2456,9 +2456,6 @@ export class AutoImportProviderProject extends Project {
             packageJson.peerDependencies?.forEach((_, dependencyName) => addDependency(dependencyName));
         }
 
-        // TODO(OR): Remove this
-        console.log("DEPENDENCY NAMES", [...dependencyNames?.entries() ?? []]);
-
         let dependenciesAdded = 0;
         if (dependencyNames) {
             const symlinkCache = hostProject.getSymlinkCache();
@@ -2480,10 +2477,8 @@ export class AutoImportProviderProject extends Project {
                     host,
                     program.getModuleResolutionCache(),
                 );
-                console.log("BEFORE FILE ADDED 1 PACKAGE DIR", packageJson?.packageDirectory);
                 if (packageJson) {
                     const entrypoints = getRootNamesFromPackageJson(packageJson, program, symlinkCache);
-                    console.log("BEFORE FILE ADDED 1 ENTRYPOINTS", entrypoints?.length, entrypoints ?? []);
                     if (entrypoints) {
                         dependenciesAdded += addRootNames(entrypoints);
                         continue;
@@ -2627,14 +2622,10 @@ export class AutoImportProviderProject extends Project {
             ...this.compilerOptionsOverrides,
         };
 
-        console.log("AUTO IMPORT CREATE", hostProject.getRootFiles());
-
         const rootNames = this.getRootFileNames(dependencySelection, hostProject, host, compilerOptions);
         if (!rootNames.length) {
             return undefined;
         }
-
-        console.log("AUTO IMPORT CREATE 2", rootNames);
 
         return new AutoImportProviderProject(hostProject, rootNames, documentRegistry, compilerOptions);
     }

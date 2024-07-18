@@ -1588,8 +1588,6 @@ export class Session<TMessage = string> implements EventSender {
 
         const unmappedDefinitionAndBoundSpan = project.getLanguageService().getDefinitionAndBoundSpan(file, position);
 
-        console.log("RETURN DEFS", unmappedDefinitionAndBoundSpan?.definitions?.map(d => `${d.file?.scriptKind} -- ${d.fileName} -- ${d.file?.fileName}`));
-
         if (!unmappedDefinitionAndBoundSpan || !unmappedDefinitionAndBoundSpan.definitions) {
             return {
                 definitions: emptyArray,

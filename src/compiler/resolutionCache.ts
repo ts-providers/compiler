@@ -936,8 +936,6 @@ export function createResolutionCache(resolutionHost: ResolutionCacheHost, rootD
                 if (resolution !== existingResolution) {
                     watchFailedLookupLocationsOfExternalModuleResolutions(name, resolution, path, getResolutionWithResolvedFileName, deferWatchingNonRelativeResolution);
                     if (existingResolution) {
-                        console.log("STOP WATCH EXISTING");
-                        console.log([...existingResolution.files?.values() ?? []]);
                         stopWatchFailedLookupLocationOfResolution(existingResolution, path, getResolutionWithResolvedFileName);
                     }
                 }
@@ -987,11 +985,7 @@ export function createResolutionCache(resolutionHost: ResolutionCacheHost, rootD
             // Stop watching and remove the unused name
             resolutionsInFile.forEach((resolution, name, mode) => {
                 if (!seenNamesInFile.has(name, mode)) {
-                    console.log("STOP WATCH 2b");
-                    console.log(name, mode);
-                    console.log("---");
                     seenNamesInFile.forEach((_t, n) => console.log(n));
-                    console.log("---");
                     stopWatchFailedLookupLocationOfResolution(resolution, path, getResolutionWithResolvedFileName);
                     resolutionsInFile.delete(name, mode);
                 }
