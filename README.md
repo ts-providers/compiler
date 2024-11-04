@@ -1,46 +1,64 @@
 
-# TypeScript
+# TypeScript with type providers
 
-**This is an experimental fork of TypeScript which adds support for type providers.**
+**This is an experimental fork of the TypeScript compiler which adds support for F#-style type providers.**
 
-[TypeScript](https://www.typescriptlang.org/) is a language for application-scale JavaScript. TypeScript adds optional types to JavaScript that support tools for large-scale JavaScript applications for any browser, for any host, on any OS. TypeScript compiles to readable, standards-based JavaScript. Try it out at the [playground](https://www.typescriptlang.org/play/), and stay up to date via [our blog](https://blogs.msdn.microsoft.com/typescript) and [Twitter account](https://twitter.com/typescript).
+![Provider usafe](./docs/images//provider-demo.gif)
 
-Find others who are using TypeScript at [our community page](https://www.typescriptlang.org/community/).
+## Installation
 
-## Installing
-
-For the latest stable version:
+You can install the compiler with:
 
 ```bash
-npm install -D typescript
+# Local installation
+npm install --save-dev @ts-providers/compiler
+
+# Global instllation
+npm install -g @ts-providers/compiler
 ```
 
-For our nightly builds:
+Then it can be invoked with `tsc-providers` command (directly in shell for global installation, or in NPM scripts for local installation). It does not conflict with any existing `tsc` installation.
 
-```bash
-npm install -D typescript@next
+### VS Code set up
+
+You can use the modified compiler as the language server in VS Code. First, create or modify the file `.vscode/settings.json` under the root of your workspace and, depending on your installation, add settings such as this:
+
+```json
+"typescript.tsdk": "./node_modules/@ts-providers/compiler/lib",
+"typescript.enablePromptUseWorkspaceTsdk": true
 ```
 
-## Contribute
+Second, restart the editor, open any TypeScript file in the project, and accept the pop-up prompt for changing TypeScript version.
 
-There are many ways to [contribute](https://github.com/microsoft/TypeScript/blob/main/CONTRIBUTING.md) to TypeScript.
-* [Submit bugs](https://github.com/microsoft/TypeScript/issues) and help us verify fixes as they are checked in.
-* Review the [source code changes](https://github.com/microsoft/TypeScript/pulls).
-* Engage with other TypeScript users and developers on [StackOverflow](https://stackoverflow.com/questions/tagged/typescript).
-* Help each other in the [TypeScript Community Discord](https://discord.gg/typescript).
-* Join the [#typescript](https://twitter.com/search?q=%23TypeScript) discussion on Twitter.
-* [Contribute bug fixes](https://github.com/microsoft/TypeScript/blob/main/CONTRIBUTING.md).
+## Usage
 
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see
-the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com)
-with any additional questions or comments.
+There are a few example type provider packages available for basic data formats:
 
-## Documentation
+- CSV: `npm install @ts-providers/csv`
+- XML: `npm install @ts-providers/csv`
+- JSON-Zod (generates Zod validation schema): `npm install @ts-providers/csv`
 
-*  [TypeScript in 5 minutes](https://www.typescriptlang.org/docs/handbook/typescript-in-5-minutes.html)
-*  [Programming handbook](https://www.typescriptlang.org/docs/handbook/intro.html)
-*  [Homepage](https://www.typescriptlang.org/)
+To use a type provider in your code, add the relevant package and use the `import provided` syntax, e.g.:
 
-## Roadmap
+```typescript
+import provided * as Csv from "@ts-providers/csv" with { sample: "../data/sample.csv" };
 
-For details on our planned features and future direction, please refer to our [roadmap](https://github.com/microsoft/TypeScript/wiki/Roadmap).
+const data = await Csv.loadFile("../data/actual.csv");
+
+function processData(data: Csv.Row[]) { ... }
+```
+
+This generates types and data access code from the specified sample. The code is used for type checking and is emitted along with your code
+
+You can use "Go to definition" to inspect the 
+
+## Implementing a type provider package
+
+TODO
+
+## Issues
+
+The main issues to be solved for a production-ready implementation:
+
+- Cleaner handling and better caching of the provided AST. Currently, the provided source files are treated as regular files with "virtualized" file paths and identifiers.
+- Less hacky async provider execution. This might not have a solution without significant rewrite of the entire compiler which is designed as a fully synchronous program. Currently, async providers are executed synchronously using the Node.js plugin `deasync`.
